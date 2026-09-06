@@ -26,7 +26,7 @@ Secure customer cloud-storage SaaS built with Next.js, PostgreSQL, Prisma 8, Aut
 cp .env.example .env
 ```
 
-Fill in PostgreSQL and AWS values on your machine only.
+Fill in PostgreSQL and AWS values on your machine only. See **[docs/infrastructure-setup.md](docs/infrastructure-setup.md)** for the full AWS/PostgreSQL setup guide (including what to do while AWS MFA access is being recovered).
 
 2. Validate required env vars:
 
@@ -82,10 +82,16 @@ See `.env.example`. Minimum required values:
 
 ## AWS S3 requirements
 
+See **[docs/infrastructure-setup.md](docs/infrastructure-setup.md)** for bucket, IAM, and MFA recovery guidance.
+
+Summary:
+
 - Private bucket with block public access enabled
 - Least-privilege IAM permissions for object read/write/delete
 - Preferred region: `ap-south-1`
 - Object key pattern: `users/{userId}/files/{fileId}`
+- IAM policy template: [`docs/aws/iam-s3-least-privilege.json`](docs/aws/iam-s3-least-privilege.json)
+- E2E checklist (run before merge): [`docs/e2e-validation-checklist.md`](docs/e2e-validation-checklist.md)
 
 ## Security notes
 
@@ -107,6 +113,11 @@ See `.env.example`. Minimum required values:
 - `npm run build` — emit contract and production build
 - `npm run contract:emit` — regenerate Prisma 8 contract artefacts
 - `npm run lint` — ESLint
+- `npm test` — automated security and policy tests
+- `npm run check:env` — validate local `.env` (no secrets printed)
+- `npm run db:migrate` — apply migrations safely (non-destructive)
+- `npm run db:status` — report migration status
+- `npm run test:e2e-smoke` — smoke checks after DB/S3/dev server are configured
 
 ## Repository
 
