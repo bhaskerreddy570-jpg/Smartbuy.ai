@@ -2,39 +2,24 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
-import { hasAdminRole } from './authorization';
+import { isAdminUser } from './authorization';
 import { hashSessionToken } from './session';
 import { isCustomerAccountLocked } from './customer-accounts';
 
 const adminApiRoot = join(import.meta.dirname, '..', '..', 'app', 'api', 'admin');
+const adminLibRoot = join(import.meta.dirname);
 
 describe('admin authorization and security helpers', () => {
-  it('supports ADMIN and SUPER_ADMIN role checks', () => {
+  it('supports only ADMIN role authorization', () => {
     assert.equal(
-      hasAdminRole(
-        {
-          id: '1',
-          email: 'admin@example.com',
-          displayName: null,
-          role: 'ADMIN',
-          mfaEnabled: false,
-        },
-        ['ADMIN'],
-      ),
+      isAdminUser({
+        id: '1',
+        email: 'admin@example.com',
+        displayName: null,
+        role: 'ADMIN',
+        mfaEnabled: false,
+      }),
       true,
-    );
-    assert.equal(
-      hasAdminRole(
-        {
-          id: '1',
-          email: 'admin@example.com',
-          displayName: null,
-          role: 'ADMIN',
-          mfaEnabled: false,
-        },
-        ['SUPER_ADMIN'],
-      ),
-      false,
     );
   });
 
@@ -78,13 +63,14 @@ describe('admin authorization and security helpers', () => {
     assert.match(lockRouteSource, /writeAdminAuditLog/);
   });
 
-  it('restricts recovery initiation to SUPER_ADMIN only', () => {
+  it('requires authenticated ADMIN for recovery initiation', () => {
     const initiateSource = readFileSync(
       join(adminApiRoot, 'recovery', 'initiate', 'route.ts'),
       'utf8',
     );
 
-    assert.match(initiateSource, /requireAdminRole\(request, \['SUPER_ADMIN'\]\)/);
+    assert.match(initiateSource, /requireAdminSession/);
+    assert.doesNotMatch(initiateSource, /SUPER_ADMIN/);
   });
 
   it('keeps backup and data-recovery hooks authorization-protected', () => {
@@ -125,5 +111,39 @@ describe('admin authorization and security helpers', () => {
 
     assert.match(loginSource, /revokeAllAdminSessions/);
     assert.match(loginSource, /createAdminSession/);
+  });
+
+  it('does not retain SUPER_ADMIN authorization anywhere in admin lib', () => {
+    const files = [
+      'authorization.ts',
+      'login.ts',
+      'session.ts',
+      'bootstrap.ts',
+      'change-password.ts',
+      'recovery.ts',
+    ];
+
+    for (const file of files) {
+      const source = readFileSync(join(adminLibRoot, file), 'utf8');
+      assert.doesNotMatch(source, /SUPER_ADMIN/);
+    }
+  });
+
+  it('requires current password for authenticated password changes', () => {
+    const changePasswordRoute = readFileSync(
+      join(adminApiRoot, 'auth', 'change-password', 'route.ts'),
+      'utf8',
+    );
+    const changePasswordLib = readFileSync(
+      join(adminLibRoot, 'change-password.ts'),
+      'utf8',
+    );
+
+    assert.match(changePasswordRoute, /currentPassword/);
+    assert.match(changePasswordRoute, /confirmPassword/);
+    assert.match(changePasswordRoute, /requireAdminSession/);
+    assert.match(changePasswordLib, /verifyAdminPassword/);
+    assert.match(changePasswordLib, /revokeAllAdminSessions/);
+    assert.match(changePasswordLib, /ADMIN_PASSWORD_CHANGED/);
   });
 });

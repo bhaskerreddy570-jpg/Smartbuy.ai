@@ -13,7 +13,7 @@ export default async function AdminRecoveryHandoffPage() {
     cookieStore.get(ADMIN_SESSION_COOKIE)?.value,
   );
 
-  if (!admin || admin.role !== 'SUPER_ADMIN') {
+  if (!admin || admin.role !== 'ADMIN') {
     redirect('/admin/login');
   }
 

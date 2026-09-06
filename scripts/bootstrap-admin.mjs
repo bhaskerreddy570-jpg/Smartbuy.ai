@@ -1,47 +1,47 @@
 #!/usr/bin/env node
 /**
- * One-time local bootstrap for the first admin user.
+ * One-time provisioning for the initial ADMIN account.
  * Reads credentials from environment variables only — never hard-coded.
  *
- * Required env vars:
+ * Preferred env vars:
+ *   ADMIN_INITIAL_EMAIL
+ *   ADMIN_INITIAL_PASSWORD
+ * Optional:
+ *   ADMIN_INITIAL_DISPLAY_NAME
+ *
+ * Legacy aliases (still supported):
  *   ADMIN_BOOTSTRAP_EMAIL
  *   ADMIN_BOOTSTRAP_PASSWORD
- * Optional:
  *   ADMIN_BOOTSTRAP_DISPLAY_NAME
- *   ADMIN_BOOTSTRAP_ROLE=SUPER_ADMIN|ADMIN
  */
 import 'dotenv/config';
-import { createBootstrapAdminUser } from '../src/lib/admin/login.ts';
-import { hashAdminPassword } from '../src/lib/admin/password.ts';
+import { provisionInitialAdmin } from '../src/lib/admin/bootstrap.ts';
 
 async function main() {
-  const email = process.env.ADMIN_BOOTSTRAP_EMAIL?.trim();
-  const password = process.env.ADMIN_BOOTSTRAP_PASSWORD?.trim();
+  const result = await provisionInitialAdmin();
 
-  if (!email || !password) {
-    console.error(
-      'Missing ADMIN_BOOTSTRAP_EMAIL or ADMIN_BOOTSTRAP_PASSWORD in environment.',
-    );
-    process.exit(2);
+  switch (result.status) {
+    case 'created':
+      console.log(`Initial ADMIN created for ${result.email}.`);
+      console.log('Sign in at /admin/login and change the password after first login.');
+      return;
+    case 'already_exists':
+      console.log(`ADMIN already exists for ${result.email}. No changes were made.`);
+      return;
+    case 'missing_credentials':
+      console.error(
+        'Missing ADMIN_INITIAL_EMAIL or ADMIN_INITIAL_PASSWORD in environment.',
+      );
+      process.exit(2);
+      return;
+    case 'invalid_credentials':
+      console.error(result.reason);
+      process.exit(2);
+      return;
+    default:
+      console.error('Unable to provision initial ADMIN.');
+      process.exit(1);
   }
-
-  if (password.length < 12) {
-    console.error('ADMIN_BOOTSTRAP_PASSWORD must be at least 12 characters.');
-    process.exit(2);
-  }
-
-  const passwordHash = await hashAdminPassword(password);
-  const role =
-    process.env.ADMIN_BOOTSTRAP_ROLE === 'ADMIN' ? 'ADMIN' : 'SUPER_ADMIN';
-
-  const admin = await createBootstrapAdminUser({
-    email,
-    passwordHash,
-    displayName: process.env.ADMIN_BOOTSTRAP_DISPLAY_NAME?.trim(),
-    role,
-  });
-
-  console.log(`Admin user created: ${admin.email} (${role})`);
 }
 
 main().catch((error) => {
