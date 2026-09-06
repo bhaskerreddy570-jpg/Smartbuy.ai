@@ -87,7 +87,7 @@ See **[docs/infrastructure-setup.md](docs/infrastructure-setup.md)** for bucket,
 Summary:
 
 - Private bucket with block public access enabled
-- Least-privilege IAM permissions for object read/write/delete
+- Least-privilege IAM: `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` on `users/*` (`GetObject` covers HeadObject)
 - Preferred region: `ap-south-1`
 - Object key pattern: `users/{userId}/files/{fileId}`
 - IAM policy template: [`docs/aws/iam-s3-least-privilege.json`](docs/aws/iam-s3-least-privilege.json)

@@ -65,6 +65,7 @@ export async function createDownloadUrl(params: {
   });
 }
 
+/** Server-side metadata read after upload. IAM: authorized by s3:GetObject (not a separate HeadObject action). */
 export async function getObjectMetadata(storageKey: string): Promise<{
   size: bigint;
   contentType?: string;

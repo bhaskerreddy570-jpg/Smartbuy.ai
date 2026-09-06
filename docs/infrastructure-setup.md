@@ -127,10 +127,13 @@ Attach the policy template at [`docs/aws/iam-s3-least-privilege.json`](./aws/iam
 
 Replace `YOUR-PRIVATE-BUCKET-NAME` with your bucket name before creating the policy.
 
-Permissions granted:
+Permissions required on `arn:aws:s3:::YOUR-BUCKET/users/*`:
 
-- `s3:PutObject`, `s3:GetObject`, `s3:HeadObject`, `s3:DeleteObject` on `users/*`
-- `s3:ListBucket` with prefix condition `users/*` (optional but useful for debugging)
+- `s3:PutObject`
+- `s3:GetObject` (also covers S3 HeadObject calls used at upload completion)
+- `s3:DeleteObject`
+
+A separate `s3:HeadObject` IAM action is **not** required for this application.
 
 Do **not** grant `s3:*`, public ACL permissions, or `Principal: "*"` bucket policies.
 
