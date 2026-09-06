@@ -1,0 +1,176 @@
+import type { PoolClient } from 'pg';
+import { randomUUID } from 'node:crypto';
+import { buildStorageKey } from '@/lib/storage/keys';
+import {
+  reserveStorageBytes,
+  setUserStorageUsed,
+  withLockedUser,
+} from '@/lib/storage/quota-reservation';
+import { exceedsStorageQuota, adjustStorageUsedForActualSize } from '@/lib/storage/quota';
+
+type PendingUploadRow = {
+  id: string;
+  userId: string;
+  name: string;
+  storageKey: string;
+  size: string;
+  status: 'PENDING' | 'READY';
+};
+
+export type CreatedPendingUpload = {
+  fileId: string;
+  storageKey: string;
+  reservedBytes: bigint;
+};
+
+export async function createPendingUpload(params: {
+  userId: string;
+  fileName: string;
+  originalName: string;
+  mimeType: string;
+  uploadSize: bigint;
+}): Promise<
+  | { ok: true; file: CreatedPendingUpload }
+  | { ok: false; reason: 'quota_exceeded' | 'not_found' }
+> {
+  try {
+    return await withLockedUser(params.userId, async (user, client) => {
+      const reservation = reserveStorageBytes(user, params.uploadSize);
+      if (!reservation.ok) {
+        return { ok: false, reason: 'quota_exceeded' };
+      }
+
+      const fileId = randomUUID();
+      const storageKey = buildStorageKey(params.userId, fileId);
+
+      await client.query(
+        `INSERT INTO file (
+          id, "userId", name, "originalName", "storageKey", size, "mimeType", status, "updatedAt"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', NOW())`,
+        [
+          fileId,
+          params.userId,
+          params.fileName,
+          params.originalName,
+          storageKey,
+          params.uploadSize.toString(),
+          params.mimeType,
+        ],
+      );
+
+      await setUserStorageUsed(client, params.userId, reservation.nextStorageUsed);
+
+      return {
+        ok: true,
+        file: {
+          fileId,
+          storageKey,
+          reservedBytes: params.uploadSize,
+        },
+      };
+    });
+  } catch {
+    return { ok: false, reason: 'not_found' };
+  }
+}
+
+export async function releaseReservedStorage(
+  client: PoolClient,
+  userId: string,
+  reservedBytes: bigint,
+): Promise<void> {
+  const current = await client.query<{ storageUsed: string }>(
+    'SELECT "storageUsed" FROM "user" WHERE id = $1 FOR UPDATE',
+    [userId],
+  );
+
+  if (current.rowCount !== 1) {
+    return;
+  }
+
+  const storageUsed = BigInt(current.rows[0].storageUsed);
+  const nextUsed =
+    storageUsed >= reservedBytes ? storageUsed - reservedBytes : BigInt(0);
+
+  await setUserStorageUsed(client, userId, nextUsed);
+}
+
+export async function releaseReservedStorageForUser(
+  userId: string,
+  reservedBytes: bigint,
+): Promise<void> {
+  await withLockedUser(userId, async (_user, client) => {
+    await releaseReservedStorage(client, userId, reservedBytes);
+  });
+}
+
+export async function finalizePendingUpload(params: {
+  userId: string;
+  fileId: string;
+  actualSize: bigint;
+}): Promise<
+  | { ok: true; status: 'READY'; alreadyComplete: boolean }
+  | { ok: false; reason: 'not_found' | 'quota_exceeded' }
+> {
+  return withLockedUser(params.userId, async (user, client) => {
+    const fileResult = await client.query<PendingUploadRow>(
+      `SELECT id, "userId", name, "storageKey", size, status
+       FROM file
+       WHERE id = $1 AND "userId" = $2 AND "deletedAt" IS NULL
+       FOR UPDATE`,
+      [params.fileId, params.userId],
+    );
+
+    if (fileResult.rowCount !== 1) {
+      return { ok: false, reason: 'not_found' };
+    }
+
+    const file = fileResult.rows[0];
+
+    if (file.status === 'READY') {
+      return { ok: true, status: 'READY', alreadyComplete: true };
+    }
+
+    const reservedSize = BigInt(file.size);
+    const sizeDelta = params.actualSize - reservedSize;
+    const nextStorageUsed = adjustStorageUsedForActualSize(
+      user.storageUsed,
+      reservedSize,
+      params.actualSize,
+    );
+
+    if (sizeDelta > BigInt(0) && exceedsStorageQuota(user.storageUsed, sizeDelta, user.storageQuota)) {
+      return { ok: false, reason: 'quota_exceeded' };
+    }
+
+    if (nextStorageUsed < BigInt(0)) {
+      return { ok: false, reason: 'quota_exceeded' };
+    }
+
+    const updated = await client.query(
+      `UPDATE file
+       SET size = $1, status = 'READY', "updatedAt" = NOW()
+       WHERE id = $2 AND "userId" = $3 AND status = 'PENDING'`,
+      [params.actualSize.toString(), params.fileId, params.userId],
+    );
+
+    if (updated.rowCount !== 1) {
+      const refreshed = await client.query<{ status: 'PENDING' | 'READY' }>(
+        'SELECT status FROM file WHERE id = $1 AND "userId" = $2',
+        [params.fileId, params.userId],
+      );
+
+      if (refreshed.rowCount === 1 && refreshed.rows[0].status === 'READY') {
+        return { ok: true, status: 'READY', alreadyComplete: true };
+      }
+
+      return { ok: false, reason: 'not_found' };
+    }
+
+    await setUserStorageUsed(client, params.userId, nextStorageUsed);
+
+    return { ok: true, status: 'READY', alreadyComplete: false };
+  });
+}
+
+export { reserveStorageBytes };

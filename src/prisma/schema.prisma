@@ -1,0 +1,97 @@
+// Cloud Storage Platform data contract (Prisma 8)
+
+enum FileStatus {
+  PENDING
+  READY
+}
+
+enum Plan {
+  FREE
+  BASIC
+  PRO
+  BUSINESS
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  EXPIRED
+}
+
+enum BillingPeriod {
+  MONTHLY
+  ANNUAL
+}
+
+model User {
+  id           Uuid     @id @default(uuid())
+  name         String?
+  email        String   @unique
+  passwordHash String
+  storageQuota BigInt
+  storageUsed  BigInt   @default(0)
+  createdAt    TimestamptzString @default(now())
+  updatedAt    temporal.updatedAtString()
+
+  files         File[]
+  folders       Folder[]
+  subscriptions Subscription[]
+}
+
+model File {
+  id           Uuid       @id @default(uuid())
+  userId       Uuid
+  name         String
+  originalName String
+  storageKey   String     @unique
+  size         BigInt
+  mimeType     String
+  status       FileStatus
+  folderId     Uuid?
+  createdAt    TimestamptzString @default(now())
+  updatedAt    temporal.updatedAtString()
+  deletedAt    TimestamptzString?
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder Folder? @relation(fields: [folderId], references: [id])
+
+  @@index([userId])
+  @@index([folderId])
+  @@index([userId, status])
+}
+
+model Folder {
+  id        Uuid     @id @default(uuid())
+  userId    Uuid
+  name      String
+  parentId  Uuid?
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   Folder?  @relation("FolderTree", fields: [parentId], references: [id])
+  children Folder[] @relation("FolderTree")
+  files    File[]
+
+  @@index([userId])
+  @@index([parentId])
+}
+
+model Subscription {
+  id            Uuid               @id @default(uuid())
+  userId        Uuid
+  plan          Plan
+  status        SubscriptionStatus
+  storageQuota  BigInt
+  billingPeriod BillingPeriod?
+  startDate     TimestamptzString  @default(now())
+  renewalDate   TimestamptzString?
+  cancelledAt   TimestamptzString?
+  createdAt     TimestamptzString  @default(now())
+  updatedAt     temporal.updatedAtString()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
