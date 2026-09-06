@@ -64,15 +64,16 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         throw new Error(payload?.error ?? "Upload request failed");
       }
 
-      const { fileId, uploadUrl } = (await requestResponse.json()) as {
+      const { fileId, uploadUrl, contentType } = (await requestResponse.json()) as {
         fileId: string;
         uploadUrl: string;
+        contentType: string;
       };
 
       const uploadResponse = await fetch(uploadUrl, {
         method: "PUT",
         headers: {
-          "Content-Type": file.type || "application/octet-stream",
+          "Content-Type": contentType || "application/octet-stream",
         },
         body: file,
       });

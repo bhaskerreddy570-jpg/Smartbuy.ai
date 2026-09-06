@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
 import { db, orm } from '@/lib/db';
-import { getObjectMetadata } from '@/lib/storage/s3';
+import { deleteObject, getObjectMetadata } from '@/lib/storage/s3';
 import { getOwnedFileIncludingPending } from '@/lib/storage/files';
+import { validateUploadFilename } from '@/lib/storage/validation';
 
 const completeSchema = z.object({
   fileId: z.string().uuid(),
@@ -32,6 +33,13 @@ export async function POST(request: Request) {
       return notFoundResponse();
     }
 
+    const filenameValidation = validateUploadFilename(file.name);
+    if (!filenameValidation.ok) {
+      await deleteObject(file.storageKey).catch(() => undefined);
+      await orm.File.where({ id: file.id, userId: user.id }).delete();
+      return NextResponse.json({ error: filenameValidation.reason }, { status: 415 });
+    }
+
     if (file.status === 'READY') {
       return NextResponse.json({ fileId: file.id, status: file.status });
     }
@@ -49,6 +57,7 @@ export async function POST(request: Request) {
       BigInt(dbUser.storageUsed) - BigInt(file.size) + metadata.size;
 
     if (adjustedUsed > BigInt(dbUser.storageQuota)) {
+      await deleteObject(file.storageKey).catch(() => undefined);
       await orm.File.where({ id: file.id, userId: user.id }).delete();
       return NextResponse.json({ error: 'Storage quota exceeded' }, { status: 403 });
     }
@@ -56,7 +65,6 @@ export async function POST(request: Request) {
     await db.transaction(async (tx) => {
       await tx.orm.public.File.where({ id: file.id, userId: user.id }).update({
         size: metadata.size,
-        mimeType: metadata.contentType ?? file.mimeType,
         status: 'READY',
       });
 

@@ -6,13 +6,13 @@ import { orm } from '@/lib/db';
 import { buildStorageKey } from '@/lib/storage/keys';
 import { createUploadUrl } from '@/lib/storage/s3';
 import {
-  isAllowedMimeType,
-  sanitizeFilename,
+  normalizeStoredMimeType,
+  validateUploadRequest,
 } from '@/lib/storage/validation';
 
 const uploadRequestSchema = z.object({
-  fileName: z.string().min(1).max(255),
-  mimeType: z.string().min(1).max(255),
+  fileName: z.string().min(1).max(512),
+  mimeType: z.string().max(255).optional().default('application/octet-stream'),
   size: z.number().int().positive(),
 });
 
@@ -39,8 +39,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'File exceeds maximum upload size' }, { status: 413 });
     }
 
-    if (!isAllowedMimeType(parsed.data.mimeType)) {
-      return NextResponse.json({ error: 'File type is not allowed' }, { status: 415 });
+    const filenameValidation = validateUploadRequest({
+      fileName: parsed.data.fileName,
+      mimeType: parsed.data.mimeType,
+    });
+
+    if (!filenameValidation.ok) {
+      return NextResponse.json({ error: filenameValidation.reason }, { status: 415 });
     }
 
     const dbUser = await orm.User.where({ id: user.id })
@@ -55,15 +60,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Storage quota exceeded' }, { status: 403 });
     }
 
-    const safeName = sanitizeFilename(parsed.data.fileName);
+    const storedMimeType = normalizeStoredMimeType(parsed.data.mimeType);
 
     const file = await orm.File.create({
       userId: user.id,
-      name: safeName,
-      originalName: safeName,
+      name: filenameValidation.sanitizedName,
+      originalName: filenameValidation.sanitizedName,
       storageKey: 'pending',
       size: uploadSize,
-      mimeType: parsed.data.mimeType,
+      mimeType: storedMimeType,
       status: 'PENDING',
     });
 
@@ -75,13 +80,13 @@ export async function POST(request: Request) {
 
     const uploadUrl = await createUploadUrl({
       storageKey,
-      mimeType: parsed.data.mimeType,
       size: uploadSize,
     });
 
     return NextResponse.json({
       fileId: file.id,
       uploadUrl,
+      contentType: 'application/octet-stream',
     });
   } catch (uploadError) {
     console.error('Upload request failed', uploadError);

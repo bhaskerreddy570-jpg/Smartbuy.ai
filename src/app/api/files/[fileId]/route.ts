@@ -25,7 +25,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
   }
 
   try {
-    const downloadUrl = await createDownloadUrl(file.storageKey);
+    const downloadUrl = await createDownloadUrl({
+      storageKey: file.storageKey,
+      fileName: file.name,
+    });
     return NextResponse.json({ downloadUrl, fileName: file.name });
   } catch (downloadError) {
     console.error('Download URL generation failed', downloadError);

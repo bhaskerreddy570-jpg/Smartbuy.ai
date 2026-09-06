@@ -75,6 +75,10 @@ See `.env.example`. Minimum required values:
 - Browser receives short-lived presigned URLs, not permanent credentials
 - File ownership is verified on the server for every file operation
 - Unauthorized access attempts return generic not-found responses
+- General-purpose storage: normal file types are allowed; executable/script extensions are blocked server-side
+- S3 objects are stored with neutral `application/octet-stream`; original MIME metadata is kept in the database only
+- Downloads use `Content-Disposition: attachment` to reduce in-browser execution risk
+- Optional `BLOCKED_FILE_EXTENSIONS` can extend the default blocked-extension list
 
 ## Scripts
 

@@ -7,6 +7,10 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { appConfig, requireS3Config } from '@/lib/config';
+import { buildSafeContentDisposition } from '@/lib/storage/file-policy';
+
+/** Stored objects use a neutral type; original type is kept in database metadata only. */
+export const STORAGE_OBJECT_CONTENT_TYPE = 'application/octet-stream';
 
 function createS3Client(): S3Client {
   const { region } = requireS3Config();
@@ -25,7 +29,6 @@ function createS3Client(): S3Client {
 
 export async function createUploadUrl(params: {
   storageKey: string;
-  mimeType: string;
   size: bigint;
 }): Promise<string> {
   const { bucket } = requireS3Config();
@@ -34,7 +37,7 @@ export async function createUploadUrl(params: {
   const command = new PutObjectCommand({
     Bucket: bucket,
     Key: params.storageKey,
-    ContentType: params.mimeType,
+    ContentType: STORAGE_OBJECT_CONTENT_TYPE,
     ContentLength: Number(params.size),
   });
 
@@ -43,13 +46,18 @@ export async function createUploadUrl(params: {
   });
 }
 
-export async function createDownloadUrl(storageKey: string): Promise<string> {
+export async function createDownloadUrl(params: {
+  storageKey: string;
+  fileName: string;
+}): Promise<string> {
   const { bucket } = requireS3Config();
   const client = createS3Client();
 
   const command = new GetObjectCommand({
     Bucket: bucket,
-    Key: storageKey,
+    Key: params.storageKey,
+    ResponseContentType: STORAGE_OBJECT_CONTENT_TYPE,
+    ResponseContentDisposition: buildSafeContentDisposition(params.fileName),
   });
 
   return getSignedUrl(client, command, {
