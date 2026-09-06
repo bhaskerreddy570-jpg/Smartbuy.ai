@@ -26,7 +26,13 @@ export function LoginForm() {
     });
 
     if (result?.error) {
-      setError("Invalid email or password");
+      if (result.error === "Configuration") {
+        setError(
+          "Sign-in is temporarily unavailable. Please try again later or contact support.",
+        );
+      } else {
+        setError("Invalid email or password");
+      }
       setLoading(false);
       return;
     }

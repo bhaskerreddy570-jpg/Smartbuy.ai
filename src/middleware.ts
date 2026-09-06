@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { requestHasAdminSessionCookie } from '@/lib/admin/session-cookie';
+import { resolveAuthSecret } from '@/lib/server-env';
 
 function hasAdminSessionCookie(request: NextRequest): boolean {
   return requestHasAdminSessionCookie(request.headers.get('cookie'));
@@ -31,10 +32,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-  });
+  const authSecret = resolveAuthSecret();
+  const token = authSecret
+    ? await getToken({
+        req: request,
+        secret: authSecret,
+      })
+    : null;
 
   const isLoggedIn = Boolean(token?.sub);
   const isAuthPage = pathname === '/login' || pathname === '/register';

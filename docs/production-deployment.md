@@ -40,8 +40,9 @@ Set in **Project → Settings → Environment Variables → Production**:
 | Variable | Value |
 |----------|-------|
 | `DATABASE_URL` | From Vercel Neon integration (use **pooled** URL for runtime) |
-| `AUTH_SECRET` | New: `openssl rand -base64 32` (do not reuse dev) |
-| `AUTH_URL` | `https://YOUR-PROJECT.vercel.app` until custom domain; update later |
+| `POSTGRES_URL` | Accepted fallback if Neon injects this name instead of `DATABASE_URL` |
+| `AUTH_SECRET` | New: `openssl rand -base64 32` (do not reuse dev). `NEXTAUTH_SECRET` is also accepted. |
+| `AUTH_URL` | Optional on Vercel when `trustHost` is enabled; otherwise `https://YOUR-PROJECT.vercel.app` |
 | `AWS_REGION` | `ap-south-1` |
 | `AWS_S3_BUCKET` | `cloudstorenow-storage-777929922747-ap-south-1-an` |
 | `AWS_ACCESS_KEY_ID` | Existing `CloudStoreNowApp` key (server-side only) |
@@ -68,9 +69,9 @@ Requirements in Vercel → **Environment Variables** → **Production**:
 | `DATABASE_URL` | Production (runtime) | Pooled Neon URL for serverless functions |
 | `DATABASE_URL_UNPOOLED` | Production (build + runtime) | Direct Neon URL for migrations during deploy |
 
-If `DATABASE_URL_UNPOOLED` is unset, the build script falls back to `DATABASE_URL`.
+If `DATABASE_URL_UNPOOLED` is unset, the build script falls back to `DATABASE_URL`, `POSTGRES_URL`, or other supported Neon/Vercel names.
 
-Redeploy production after setting these variables. The build log should show `Applying safe Prisma migrations before build`.
+Production builds on Vercel now **fail fast** when `AUTH_SECRET` (or `NEXTAUTH_SECRET`) or a database URL is missing, instead of deploying a broken login flow.
 
 ### Option B — Manual from a trusted machine
 

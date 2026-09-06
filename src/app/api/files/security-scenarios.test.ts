@@ -85,6 +85,15 @@ describe('security scenarios (logic-level)', () => {
     assert.equal(validateUploadFilename('payload.exe.pdf').ok, false);
   });
 
+  it('landing page does not expose storage infrastructure to customers', () => {
+    const landingSource = readFileSync(
+      join(projectRoot, 'app/page.tsx'),
+      'utf8',
+    );
+
+    assert.doesNotMatch(landingSource, /AWS|S3 bucket|Neon|Vercel|PostgreSQL/i);
+  });
+
   it('AWS credentials and bucket config stay server-side only', () => {
     const s3Source = readFileSync(join(projectRoot, 'lib/storage/s3.ts'), 'utf8');
     const dashboardSource = readFileSync(

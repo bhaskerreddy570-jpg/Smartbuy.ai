@@ -22,8 +22,8 @@ export default async function HomePage() {
             Secure personal cloud storage built for growth.
           </h1>
           <p className="mt-6 text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Create an account, upload your files to private AWS S3 storage, and
-            manage your personal storage quota from a secure dashboard.
+            Create an account, securely store your files, and manage your
+            personal cloud storage from a private dashboard.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
@@ -32,12 +32,6 @@ export default async function HomePage() {
             >
               Get started
             </Link>
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center rounded-xl border border-zinc-300 px-5 py-3 font-medium transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
-            >
-              Sign in
-            </Link>
           </div>
         </section>
 
@@ -45,7 +39,7 @@ export default async function HomePage() {
           {[
             {
               title: "Private by default",
-              body: "Customer files stay in a private S3 bucket with server-side authorization.",
+              body: "Your files stay in secure cloud storage with server-side authorization.",
             },
             {
               title: "Per-user isolation",

@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { Session } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 import { orm } from '@/lib/db';
+import { requireAuthSecret } from '@/lib/server-env';
 
 const NextAuth = NextAuthImport as (config: Record<string, unknown>) => {
   handlers: { GET: (req: Request) => Promise<Response>; POST: (req: Request) => Promise<Response> };
@@ -19,6 +20,7 @@ const credentialsSchema = z.object({
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: requireAuthSecret(),
   trustHost: true,
   pages: {
     signIn: '/login',
@@ -41,7 +43,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const user = await orm.User.where({
           email: parsed.data.email.toLowerCase(),
-        }).first();
+        })
+          .select('id', 'email', 'name', 'passwordHash', 'lockedAt')
+          .first();
 
         if (!user) {
           return null;

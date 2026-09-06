@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import {
+  getEnvPresence,
+  resolveAuthSecret,
+  resolveAuthUrl,
+  resolveDatabaseUrl,
+} from '@/lib/server-env';
 
 const REQUIRED_USER_COLUMNS = [
   'email',
@@ -9,22 +15,28 @@ const REQUIRED_USER_COLUMNS = [
 ] as const;
 
 export async function GET() {
-  const databaseUrlConfigured = Boolean(process.env.DATABASE_URL?.trim());
+  const envPresence = getEnvPresence();
+  const databaseUrl = resolveDatabaseUrl();
+  const authSecretConfigured = Boolean(resolveAuthSecret());
+  const authUrlConfigured = Boolean(resolveAuthUrl());
 
-  if (!databaseUrlConfigured) {
+  if (!databaseUrl) {
     return NextResponse.json(
       {
         ok: false,
+        authSecretConfigured,
+        authUrlConfigured,
         databaseUrlConfigured: false,
         connected: false,
         userTableExists: false,
         userSchemaReady: false,
+        envPresence,
       },
       { status: 503 },
     );
   }
 
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL!.trim() });
+  const pool = new Pool({ connectionString: databaseUrl });
 
   try {
     await pool.query('SELECT 1');
@@ -54,15 +66,19 @@ export async function GET() {
       );
     }
 
-    const ok = userTableExists && userSchemaReady;
+    const ok =
+      authSecretConfigured && userTableExists && userSchemaReady;
 
     return NextResponse.json(
       {
         ok,
+        authSecretConfigured,
+        authUrlConfigured,
         databaseUrlConfigured: true,
         connected: true,
         userTableExists,
         userSchemaReady,
+        envPresence,
       },
       { status: ok ? 200 : 503 },
     );
@@ -71,10 +87,13 @@ export async function GET() {
     return NextResponse.json(
       {
         ok: false,
+        authSecretConfigured,
+        authUrlConfigured,
         databaseUrlConfigured: true,
         connected: false,
         userTableExists: false,
         userSchemaReady: false,
+        envPresence,
       },
       { status: 503 },
     );
