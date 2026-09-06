@@ -4,6 +4,10 @@ import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
 import { db, orm } from '@/lib/db';
 import { deleteObject, getObjectMetadata } from '@/lib/storage/s3';
 import { getOwnedFileIncludingPending } from '@/lib/storage/files';
+import {
+  exceedsStorageQuota,
+  storageUsedAfterUpload,
+} from '@/lib/storage/quota';
 import { validateUploadFilename } from '@/lib/storage/validation';
 
 const completeSchema = z.object({
@@ -53,14 +57,17 @@ export async function POST(request: Request) {
       return notFoundResponse();
     }
 
-    const adjustedUsed =
-      BigInt(dbUser.storageUsed) - BigInt(file.size) + metadata.size;
+    const storageUsed = BigInt(dbUser.storageUsed);
 
-    if (adjustedUsed > BigInt(dbUser.storageQuota)) {
+    if (
+      exceedsStorageQuota(storageUsed, metadata.size, BigInt(dbUser.storageQuota))
+    ) {
       await deleteObject(file.storageKey).catch(() => undefined);
       await orm.File.where({ id: file.id, userId: user.id }).delete();
       return NextResponse.json({ error: 'Storage quota exceeded' }, { status: 403 });
     }
+
+    const nextStorageUsed = storageUsedAfterUpload(storageUsed, metadata.size);
 
     await db.transaction(async (tx) => {
       await tx.orm.public.File.where({ id: file.id, userId: user.id }).update({
@@ -69,7 +76,7 @@ export async function POST(request: Request) {
       });
 
       await tx.orm.public.User.where({ id: user.id }).update({
-        storageUsed: BigInt(dbUser.storageUsed) + metadata.size,
+        storageUsed: nextStorageUsed,
       });
     });
 

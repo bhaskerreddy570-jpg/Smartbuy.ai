@@ -4,6 +4,7 @@ import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
 import { appConfig } from '@/lib/config';
 import { orm } from '@/lib/db';
 import { buildStorageKey } from '@/lib/storage/keys';
+import { exceedsStorageQuota } from '@/lib/storage/quota';
 import { createUploadUrl } from '@/lib/storage/s3';
 import {
   normalizeStoredMimeType,
@@ -56,7 +57,13 @@ export async function POST(request: Request) {
       return notFoundResponse();
     }
 
-    if (dbUser.storageUsed + uploadSize > dbUser.storageQuota) {
+    if (
+      exceedsStorageQuota(
+        BigInt(dbUser.storageUsed),
+        uploadSize,
+        BigInt(dbUser.storageQuota),
+      )
+    ) {
       return NextResponse.json({ error: 'Storage quota exceeded' }, { status: 403 });
     }
 
