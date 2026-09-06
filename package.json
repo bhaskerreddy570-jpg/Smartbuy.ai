@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --experimental-test-module-mocks --import tsx --test src/**/*.test.ts",
+    "test:integration": "node --experimental-test-module-mocks --import tsx --test src/**/*.integration.test.ts",
+    "test:admin-security": "node --experimental-test-module-mocks --import tsx --test src/lib/admin/**/*.test.ts",
     "check:env": "bash scripts/check-env.sh",
     "db:migrate": "bash scripts/apply-migration.sh",
     "db:status": "bash scripts/migration-status.sh",
