@@ -92,6 +92,7 @@ Summary:
 - Object key pattern: `users/{userId}/files/{fileId}`
 - IAM policy template: [`docs/aws/iam-s3-least-privilege.json`](docs/aws/iam-s3-least-privilege.json)
 - E2E checklist (run before merge): [`docs/e2e-validation-checklist.md`](docs/e2e-validation-checklist.md)
+- Admin / break-glass foundation: [`docs/admin-break-glass.md`](docs/admin-break-glass.md)
 
 ## Security notes
 

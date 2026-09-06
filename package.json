@@ -8,10 +8,13 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --experimental-test-module-mocks --import tsx --test src/**/*.test.ts",
+    "test:integration": "node --experimental-test-module-mocks --import tsx --test src/**/*.integration.test.ts",
+    "test:admin-security": "node --experimental-test-module-mocks --import tsx --test src/lib/admin/**/*.test.ts",
     "check:env": "bash scripts/check-env.sh",
     "db:migrate": "bash scripts/apply-migration.sh",
     "db:status": "bash scripts/migration-status.sh",
     "test:e2e-smoke": "node scripts/e2e-smoke.mjs",
+    "admin:bootstrap": "node --import tsx scripts/bootstrap-admin.mjs",
     "postinstall": "prisma skills sync || exit 0",
     "contract:emit": "prisma contract emit"
   },
