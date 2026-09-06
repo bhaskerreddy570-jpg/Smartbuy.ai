@@ -6,7 +6,7 @@ import { getClientIp, getUserAgent } from '@/lib/admin/request-context';
 
 const completeSchema = z.object({
   email: z.string().email().max(255),
-  token: z.string().min(16).max(256),
+  token: z.string().min(32).max(256),
   newPassword: z
     .string()
     .min(12)
@@ -33,7 +33,8 @@ export async function POST(request: Request) {
     });
 
     if (result === 'invalid' || result === 'denied') {
-      return NextResponse.json({ error: 'Invalid or expired recovery token' }, { status: 400 });
+      const status = result === 'denied' ? 429 : 400;
+      return NextResponse.json({ error: 'Invalid or expired recovery token' }, { status });
     }
 
     return NextResponse.json({ success: true });

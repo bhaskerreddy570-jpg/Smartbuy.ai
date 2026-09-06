@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { orm } from '@/lib/db';
+import { sanitizeAuditMetadata } from '@/lib/admin/audit-sanitize';
 
 export type AdminAuditAction =
   | 'ADMIN_LOGIN_SUCCESS'
@@ -23,13 +24,15 @@ export async function writeAdminAuditLog(params: {
   ipAddress?: string | null;
   userAgent?: string | null;
 }): Promise<void> {
+  const safeMetadata = sanitizeAuditMetadata(params.metadata);
+
   await orm.AdminAuditLog.create({
     id: randomUUID(),
     adminUserId: params.adminUserId ?? null,
     action: params.action,
     targetType: params.targetType ?? null,
     targetId: params.targetId ?? null,
-    metadata: params.metadata ? JSON.stringify(params.metadata) : null,
+    metadata: safeMetadata ? JSON.stringify(safeMetadata) : null,
     ipAddress: params.ipAddress ?? null,
     userAgent: params.userAgent ?? null,
   });

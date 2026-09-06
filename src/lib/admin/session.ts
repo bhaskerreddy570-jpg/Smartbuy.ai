@@ -1,9 +1,25 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { Pool } from 'pg';
 import { orm } from '@/lib/db';
 import { adminConfig } from '@/lib/admin/config';
 import { ADMIN_SESSION_COOKIE } from '@/lib/admin/session-cookie';
 
 export { ADMIN_SESSION_COOKIE };
+
+let pool: Pool | null = null;
+
+function getPool(): Pool {
+  const connectionString = process.env.DATABASE_URL?.trim();
+  if (!connectionString) {
+    throw new Error('DATABASE_URL is not configured');
+  }
+
+  if (!pool) {
+    pool = new Pool({ connectionString });
+  }
+
+  return pool;
+}
 
 export function hashSessionToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -46,6 +62,16 @@ export async function revokeAdminSession(token: string): Promise<void> {
   await orm.AdminSession.where({ id: session.id }).update({
     revokedAt: new Date().toISOString(),
   });
+}
+
+export async function revokeAllAdminSessions(adminUserId: string): Promise<void> {
+  await getPool().query(
+    `UPDATE "adminSession"
+     SET "revokedAt" = NOW()
+     WHERE "adminUserId" = $1
+       AND "revokedAt" IS NULL`,
+    [adminUserId],
+  );
 }
 
 export type AdminSessionUser = {

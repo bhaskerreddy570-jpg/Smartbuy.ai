@@ -21,6 +21,13 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/admin/login', request.nextUrl));
     }
 
+    if (
+      pathname === '/admin/recovery-handoff' &&
+      !hasAdminSessionCookie(request)
+    ) {
+      return NextResponse.redirect(new URL('/admin/login', request.nextUrl));
+    }
+
     return NextResponse.next();
   }
 

@@ -11,6 +11,7 @@ import {
 import {
   buildAdminSessionCookie,
   createAdminSession,
+  revokeAllAdminSessions,
 } from '@/lib/admin/session';
 
 export type AdminLoginResult =
@@ -125,6 +126,8 @@ export async function authenticateAdminLogin(params: {
     });
     return { ok: false, reason: 'mfa_failed' };
   }
+
+  await revokeAllAdminSessions(adminUser.id);
 
   const session = await createAdminSession({
     adminUserId: adminUser.id,

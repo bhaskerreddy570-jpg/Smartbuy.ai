@@ -18,6 +18,16 @@ export const adminConfig = {
   accountLockThreshold: Number(
     process.env.ADMIN_ACCOUNT_LOCK_THRESHOLD ?? DEFAULT_ACCOUNT_LOCK_THRESHOLD,
   ),
+  recoveryTokenTtlHours: Number(process.env.ADMIN_RECOVERY_TOKEN_TTL_HOURS ?? 1),
+  recoveryInitiateRateLimitMax: Number(
+    process.env.ADMIN_RECOVERY_INITIATE_RATE_LIMIT_MAX ?? 3,
+  ),
+  recoveryCompleteRateLimitMax: Number(
+    process.env.ADMIN_RECOVERY_COMPLETE_RATE_LIMIT_MAX ?? 5,
+  ),
+  recoveryRateLimitWindowMinutes: Number(
+    process.env.ADMIN_RECOVERY_RATE_LIMIT_WINDOW_MINUTES ?? 15,
+  ),
 };
 
 export function getAdminSessionSecret(): string {

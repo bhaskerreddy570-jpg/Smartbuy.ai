@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdminRole } from '@/lib/admin/authorization';
 import { orm } from '@/lib/db';
 import { issueAdminRecoveryToken } from '@/lib/admin/recovery';
+import { buildRecoveryHandoffCookie } from '@/lib/admin/recovery-handoff';
 import { getClientIp, getUserAgent } from '@/lib/admin/request-context';
 
 const initiateSchema = z.object({
@@ -38,16 +39,27 @@ export async function POST(request: Request) {
     });
 
     if (!issued) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Recovery request denied or rate limited' },
+        { status: 429 },
+      );
     }
 
-    return NextResponse.json({
-      success: true,
-      message:
-        'Recovery token issued. Deliver through your secure out-of-band channel; it is never stored in plaintext.',
-      expiresAt: issued.expiresAt.toISOString(),
-      recoveryToken: issued.token,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message:
+          'Recovery token issued. Open the one-time handoff page to copy it securely.',
+        expiresAt: issued.expiresAt.toISOString(),
+        handoffPath: '/admin/recovery-handoff',
+      },
+      {
+        headers: {
+          'Set-Cookie': buildRecoveryHandoffCookie(issued.token),
+          'Cache-Control': 'no-store',
+        },
+      },
+    );
   } catch {
     return NextResponse.json({ error: 'Unable to initiate recovery' }, { status: 500 });
   }

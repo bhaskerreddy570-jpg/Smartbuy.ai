@@ -37,9 +37,21 @@ Sign in at `/admin/login`.
 | `/api/admin/customers/:userId/lock` | POST | Admin |
 | `/api/admin/customers/:userId/lock` | DELETE | Admin |
 | `/api/admin/recovery/initiate` | POST | SUPER_ADMIN |
-| `/api/admin/recovery/complete` | POST | Public (token) |
+| `/api/admin/recovery/complete` | POST | Public (requires valid recovery token + email + new password) |
+| `/admin/recovery-handoff` | GET | SUPER_ADMIN one-time token handoff page |
 | `/api/admin/operations/backup` | POST | Admin |
 | `/api/admin/operations/data-recovery` | POST | Admin |
+
+## Recovery token security
+
+- Tokens are `randomBytes(32)` base64url values
+- Only SHA-256 hashes are stored in PostgreSQL
+- Tokens expire after 1 hour by default
+- Single-use atomic completion clears `recoveryTokenHash`
+- Initiation/completion are rate limited via audit-log counters
+- Tokens are **not** returned in initiate JSON responses
+- SUPER_ADMIN copies the token once from `/admin/recovery-handoff`
+- Audit metadata is sanitized to exclude passwords, tokens, sessions, and AWS/database secrets
 
 ## Future MFA
 
