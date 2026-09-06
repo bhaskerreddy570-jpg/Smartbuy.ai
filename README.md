@@ -20,13 +20,19 @@ Secure customer cloud-storage SaaS built with Next.js, PostgreSQL, Prisma 8, Aut
 
 ## Local setup
 
-1. Copy environment variables:
+1. Copy environment variables locally (never commit `.env`):
 
 ```bash
 cp .env.example .env
 ```
 
-2. Configure `.env` with PostgreSQL and AWS values. Never commit `.env`.
+Fill in PostgreSQL and AWS values on your machine only.
+
+2. Validate required env vars:
+
+```bash
+npm run check:env
+```
 
 3. Install dependencies:
 
@@ -40,16 +46,28 @@ npm install --legacy-peer-deps
 npm run contract:emit
 ```
 
-5. Apply migrations to your development database:
+5. Apply migrations to your development database (safe, non-destructive):
 
 ```bash
-npx prisma db migrate --db "$DATABASE_URL"
+npm run db:migrate
 ```
 
-6. Start the development server:
+6. Check migration status:
+
+```bash
+npm run db:status
+```
+
+7. Start the development server:
 
 ```bash
 npm run dev
+```
+
+8. After PostgreSQL, S3, and the dev server are configured, run smoke checks:
+
+```bash
+npm run test:e2e-smoke
 ```
 
 ## Required environment variables
@@ -79,6 +97,9 @@ See `.env.example`. Minimum required values:
 - S3 objects are stored with neutral `application/octet-stream`; original MIME metadata is kept in the database only
 - Downloads use `Content-Disposition: attachment` to reduce in-browser execution risk
 - Optional `BLOCKED_FILE_EXTENSIONS` can extend the default blocked-extension list
+- Quota is reserved atomically at upload request using `SELECT ... FOR UPDATE`
+- Upload completion is idempotent for concurrent completion requests
+- Optional antivirus hook is disabled by default (`ANTIVIRUS_SCAN_ENABLED`)
 
 ## Scripts
 

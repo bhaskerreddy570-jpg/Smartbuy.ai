@@ -1,18 +1,32 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
-import { db, orm } from '@/lib/db';
+import { orm } from '@/lib/db';
+import { runAntivirusScanHook } from '@/lib/storage/antivirus';
 import { deleteObject, getObjectMetadata } from '@/lib/storage/s3';
 import { getOwnedFileIncludingPending } from '@/lib/storage/files';
 import {
-  exceedsStorageQuota,
-  storageUsedAfterUpload,
-} from '@/lib/storage/quota';
+  finalizePendingUpload,
+  releaseReservedStorageForUser,
+} from '@/lib/storage/upload-lifecycle';
 import { validateUploadFilename } from '@/lib/storage/validation';
 
 const completeSchema = z.object({
   fileId: z.string().uuid(),
 });
+
+async function cleanupPendingUpload(params: {
+  userId: string;
+  fileId: string;
+  storageKey: string;
+  reservedBytes: bigint;
+}): Promise<void> {
+  await deleteObject(params.storageKey).catch(() => undefined);
+  await orm.File.where({ id: params.fileId, userId: params.userId }).delete();
+  await releaseReservedStorageForUser(params.userId, params.reservedBytes).catch(
+    () => undefined,
+  );
+}
 
 export async function POST(request: Request) {
   const { error, user } = await requireAuthUser();
@@ -39,8 +53,12 @@ export async function POST(request: Request) {
 
     const filenameValidation = validateUploadFilename(file.name);
     if (!filenameValidation.ok) {
-      await deleteObject(file.storageKey).catch(() => undefined);
-      await orm.File.where({ id: file.id, userId: user.id }).delete();
+      await cleanupPendingUpload({
+        userId: user.id,
+        fileId: file.id,
+        storageKey: file.storageKey,
+        reservedBytes: BigInt(file.size),
+      });
       return NextResponse.json({ error: filenameValidation.reason }, { status: 415 });
     }
 
@@ -49,36 +67,54 @@ export async function POST(request: Request) {
     }
 
     const metadata = await getObjectMetadata(file.storageKey);
-    const dbUser = await orm.User.where({ id: user.id })
-      .select('storageQuota', 'storageUsed')
-      .first();
+    const reservedBytes = BigInt(file.size);
 
-    if (!dbUser) {
+    const scanResult = await runAntivirusScanHook({
+      userId: user.id,
+      fileId: file.id,
+      storageKey: file.storageKey,
+      fileName: file.name,
+      size: metadata.size,
+      mimeType: file.mimeType,
+    });
+
+    if (scanResult.status === 'infected') {
+      await cleanupPendingUpload({
+        userId: user.id,
+        fileId: file.id,
+        storageKey: file.storageKey,
+        reservedBytes,
+      });
+      return NextResponse.json({ error: 'File rejected by security policy' }, { status: 415 });
+    }
+
+    if (scanResult.status !== 'skipped' && scanResult.status !== 'clean') {
+      console.info('Antivirus hook result', {
+        fileId: file.id,
+        userId: user.id,
+        result: scanResult,
+      });
+    }
+
+    const finalizeResult = await finalizePendingUpload({
+      userId: user.id,
+      fileId: file.id,
+      actualSize: metadata.size,
+    });
+
+    if (!finalizeResult.ok) {
+      if (finalizeResult.reason === 'quota_exceeded') {
+        await cleanupPendingUpload({
+          userId: user.id,
+          fileId: file.id,
+          storageKey: file.storageKey,
+          reservedBytes,
+        });
+        return NextResponse.json({ error: 'Storage quota exceeded' }, { status: 403 });
+      }
+
       return notFoundResponse();
     }
-
-    const storageUsed = BigInt(dbUser.storageUsed);
-
-    if (
-      exceedsStorageQuota(storageUsed, metadata.size, BigInt(dbUser.storageQuota))
-    ) {
-      await deleteObject(file.storageKey).catch(() => undefined);
-      await orm.File.where({ id: file.id, userId: user.id }).delete();
-      return NextResponse.json({ error: 'Storage quota exceeded' }, { status: 403 });
-    }
-
-    const nextStorageUsed = storageUsedAfterUpload(storageUsed, metadata.size);
-
-    await db.transaction(async (tx) => {
-      await tx.orm.public.File.where({ id: file.id, userId: user.id }).update({
-        size: metadata.size,
-        status: 'READY',
-      });
-
-      await tx.orm.public.User.where({ id: user.id }).update({
-        storageUsed: nextStorageUsed,
-      });
-    });
 
     return NextResponse.json({ fileId: file.id, status: 'READY' });
   } catch (completeError) {

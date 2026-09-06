@@ -12,3 +12,11 @@ export function storageUsedAfterUpload(
 ): bigint {
   return storageUsed + uploadedBytes;
 }
+
+export function adjustStorageUsedForActualSize(
+  storageUsed: bigint,
+  reservedBytes: bigint,
+  actualBytes: bigint,
+): bigint {
+  return storageUsed + (actualBytes - reservedBytes);
+}

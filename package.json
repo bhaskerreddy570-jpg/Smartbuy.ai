@@ -8,6 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --experimental-test-module-mocks --import tsx --test src/**/*.test.ts",
+    "check:env": "bash scripts/check-env.sh",
+    "db:migrate": "bash scripts/apply-migration.sh",
+    "db:status": "bash scripts/migration-status.sh",
+    "test:e2e-smoke": "node scripts/e2e-smoke.mjs",
     "postinstall": "prisma skills sync || exit 0",
     "contract:emit": "prisma contract emit"
   },

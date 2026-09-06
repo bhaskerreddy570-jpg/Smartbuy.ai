@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  adjustStorageUsedForActualSize,
   exceedsStorageQuota,
   storageUsedAfterUpload,
 } from './quota';
@@ -33,5 +34,16 @@ describe('storage quota helpers', () => {
     assert.equal(incorrectLegacyCheck <= quota, true);
 
     assert.equal(exceedsStorageQuota(used, actualSize, quota), true);
+  });
+
+  it('adjusts reserved quota to actual uploaded size', () => {
+    assert.equal(
+      adjustStorageUsedForActualSize(BigInt(100), BigInt(50), BigInt(60)),
+      BigInt(110),
+    );
+    assert.equal(
+      adjustStorageUsedForActualSize(BigInt(100), BigInt(50), BigInt(40)),
+      BigInt(90),
+    );
   });
 });

@@ -2,10 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
 import { appConfig } from '@/lib/config';
-import { orm } from '@/lib/db';
-import { buildStorageKey } from '@/lib/storage/keys';
-import { exceedsStorageQuota } from '@/lib/storage/quota';
 import { createUploadUrl } from '@/lib/storage/s3';
+import { createPendingUpload } from '@/lib/storage/upload-lifecycle';
 import {
   normalizeStoredMimeType,
   validateUploadRequest,
@@ -49,49 +47,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: filenameValidation.reason }, { status: 415 });
     }
 
-    const dbUser = await orm.User.where({ id: user.id })
-      .select('storageQuota', 'storageUsed')
-      .first();
+    const storedMimeType = normalizeStoredMimeType(parsed.data.mimeType);
 
-    if (!dbUser) {
+    const pendingUpload = await createPendingUpload({
+      userId: user.id,
+      fileName: filenameValidation.sanitizedName,
+      originalName: filenameValidation.sanitizedName,
+      mimeType: storedMimeType,
+      uploadSize,
+    });
+
+    if (!pendingUpload.ok) {
+      if (pendingUpload.reason === 'quota_exceeded') {
+        return NextResponse.json({ error: 'Storage quota exceeded' }, { status: 403 });
+      }
+
       return notFoundResponse();
     }
 
-    if (
-      exceedsStorageQuota(
-        BigInt(dbUser.storageUsed),
-        uploadSize,
-        BigInt(dbUser.storageQuota),
-      )
-    ) {
-      return NextResponse.json({ error: 'Storage quota exceeded' }, { status: 403 });
-    }
-
-    const storedMimeType = normalizeStoredMimeType(parsed.data.mimeType);
-
-    const file = await orm.File.create({
-      userId: user.id,
-      name: filenameValidation.sanitizedName,
-      originalName: filenameValidation.sanitizedName,
-      storageKey: 'pending',
-      size: uploadSize,
-      mimeType: storedMimeType,
-      status: 'PENDING',
-    });
-
-    const storageKey = buildStorageKey(user.id, file.id);
-
-    await orm.File.where({ id: file.id, userId: user.id }).update({
-      storageKey,
-    });
-
     const uploadUrl = await createUploadUrl({
-      storageKey,
+      storageKey: pendingUpload.file.storageKey,
       size: uploadSize,
     });
 
     return NextResponse.json({
-      fileId: file.id,
+      fileId: pendingUpload.file.fileId,
       uploadUrl,
       contentType: 'application/octet-stream',
     });
