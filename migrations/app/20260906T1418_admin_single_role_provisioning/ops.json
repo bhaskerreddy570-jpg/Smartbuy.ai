@@ -1,0 +1,201 @@
+[
+  {
+    "id": "dropCheckConstraint.adminAuditLog.adminAuditLog_action_check_f1852307",
+    "label": "Drop check constraint \"adminAuditLog_action_check_f1852307\" on \"adminAuditLog\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "adminAuditLog_action_check_f1852307",
+        "table": "adminAuditLog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"adminAuditLog_action_check_f1852307\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_f1852307",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop check constraint \"adminAuditLog_action_check_f1852307\"",
+        "sql": "ALTER TABLE \"public\".\"adminAuditLog\" DROP CONSTRAINT \"adminAuditLog_action_check_f1852307\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"adminAuditLog_action_check_f1852307\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_f1852307",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dropCheckConstraint.adminUser.adminUser_role_check_f0aaa5a4",
+    "label": "Drop check constraint \"adminUser_role_check_f0aaa5a4\" on \"adminUser\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "adminUser_role_check_f0aaa5a4",
+        "table": "adminUser"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"adminUser_role_check_f0aaa5a4\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminUser_role_check_f0aaa5a4",
+          "public",
+          "\"public\".\"adminUser\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop check constraint \"adminUser_role_check_f0aaa5a4\"",
+        "sql": "ALTER TABLE \"public\".\"adminUser\" DROP CONSTRAINT \"adminUser_role_check_f0aaa5a4\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"adminUser_role_check_f0aaa5a4\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminUser_role_check_f0aaa5a4",
+          "public",
+          "\"public\".\"adminUser\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "data.adminUser.normalizeSuperAdminRole",
+    "label": "Normalize legacy SUPER_ADMIN rows to ADMIN",
+    "operationClass": "data",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "adminUser"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure legacy SUPER_ADMIN rows exist",
+        "sql": "SELECT EXISTS (SELECT 1 AS one FROM \"public\".\"adminUser\" WHERE \"role\" = 'SUPER_ADMIN') AS result"
+      }
+    ],
+    "execute": [
+      {
+        "description": "normalize legacy super admin role values",
+        "sql": "UPDATE \"public\".\"adminUser\" SET \"role\" = 'ADMIN' WHERE \"role\" = 'SUPER_ADMIN'"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify no SUPER_ADMIN rows remain",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS one FROM \"public\".\"adminUser\" WHERE \"role\" = 'SUPER_ADMIN') AS result"
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.adminAuditLog.adminAuditLog_action_check_2c184a7c",
+    "label": "Add check constraint \"adminAuditLog_action_check_2c184a7c\" on \"adminAuditLog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "adminAuditLog_action_check_2c184a7c",
+        "table": "adminAuditLog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"adminAuditLog_action_check_2c184a7c\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_2c184a7c",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"adminAuditLog_action_check_2c184a7c\"",
+        "sql": "ALTER TABLE \"public\".\"adminAuditLog\" ADD CONSTRAINT \"adminAuditLog_action_check_2c184a7c\" CHECK (\"action\" IN ('ADMIN_LOGIN_SUCCESS', 'ADMIN_LOGIN_FAILED', 'ADMIN_LOGOUT', 'ADMIN_SESSION_REVOKED', 'ADMIN_PASSWORD_CHANGED', 'CUSTOMER_ACCOUNT_LOCKED', 'CUSTOMER_ACCOUNT_UNLOCKED', 'RECOVERY_TOKEN_ISSUED', 'RECOVERY_TOKEN_USED', 'RECOVERY_REQUEST_DENIED', 'BACKUP_REQUESTED', 'DATA_RECOVERY_REQUESTED'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"adminAuditLog_action_check_2c184a7c\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_2c184a7c",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.adminUser.adminUser_role_check_d64e1afa",
+    "label": "Add check constraint \"adminUser_role_check_d64e1afa\" on \"adminUser\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "adminUser_role_check_d64e1afa",
+        "table": "adminUser"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"adminUser_role_check_d64e1afa\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminUser_role_check_d64e1afa",
+          "public",
+          "\"public\".\"adminUser\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"adminUser_role_check_d64e1afa\"",
+        "sql": "ALTER TABLE \"public\".\"adminUser\" ADD CONSTRAINT \"adminUser_role_check_d64e1afa\" CHECK (\"role\" IN ('ADMIN'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"adminUser_role_check_d64e1afa\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminUser_role_check_d64e1afa",
+          "public",
+          "\"public\".\"adminUser\""
+        ]
+      }
+    ]
+  }
+]

@@ -61,6 +61,10 @@
                 "value": "ADMIN_SESSION_REVOKED"
               },
               {
+                "name": "ADMIN_PASSWORD_CHANGED",
+                "value": "ADMIN_PASSWORD_CHANGED"
+              },
+              {
                 "name": "CUSTOMER_ACCOUNT_LOCKED",
                 "value": "CUSTOMER_ACCOUNT_LOCKED"
               },
@@ -96,10 +100,6 @@
               {
                 "name": "ADMIN",
                 "value": "ADMIN"
-              },
-              {
-                "name": "SUPER_ADMIN",
-                "value": "SUPER_ADMIN"
               }
             ]
           },
@@ -1296,8 +1296,8 @@
             "adminAuditLog": {
               "checks": [
                 {
-                  "expression": "\"action\" IN ('ADMIN_LOGIN_SUCCESS', 'ADMIN_LOGIN_FAILED', 'ADMIN_LOGOUT', 'ADMIN_SESSION_REVOKED', 'CUSTOMER_ACCOUNT_LOCKED', 'CUSTOMER_ACCOUNT_UNLOCKED', 'RECOVERY_TOKEN_ISSUED', 'RECOVERY_TOKEN_USED', 'RECOVERY_REQUEST_DENIED', 'BACKUP_REQUESTED', 'DATA_RECOVERY_REQUESTED')",
-                  "name": "adminAuditLog_action_check_f1852307",
+                  "expression": "\"action\" IN ('ADMIN_LOGIN_SUCCESS', 'ADMIN_LOGIN_FAILED', 'ADMIN_LOGOUT', 'ADMIN_SESSION_REVOKED', 'ADMIN_PASSWORD_CHANGED', 'CUSTOMER_ACCOUNT_LOCKED', 'CUSTOMER_ACCOUNT_UNLOCKED', 'RECOVERY_TOKEN_ISSUED', 'RECOVERY_TOKEN_USED', 'RECOVERY_REQUEST_DENIED', 'BACKUP_REQUESTED', 'DATA_RECOVERY_REQUESTED')",
+                  "name": "adminAuditLog_action_check_2c184a7c",
                   "prefix": "adminAuditLog_action_check"
                 }
               ],
@@ -1574,8 +1574,8 @@
             "adminUser": {
               "checks": [
                 {
-                  "expression": "\"role\" IN ('ADMIN', 'SUPER_ADMIN')",
-                  "name": "adminUser_role_check_f0aaa5a4",
+                  "expression": "\"role\" IN ('ADMIN')",
+                  "name": "adminUser_role_check_d64e1afa",
                   "prefix": "adminUser_role_check"
                 }
               ],
@@ -2181,6 +2181,7 @@
                 "ADMIN_LOGIN_FAILED",
                 "ADMIN_LOGOUT",
                 "ADMIN_SESSION_REVOKED",
+                "ADMIN_PASSWORD_CHANGED",
                 "CUSTOMER_ACCOUNT_LOCKED",
                 "CUSTOMER_ACCOUNT_UNLOCKED",
                 "RECOVERY_TOKEN_ISSUED",
@@ -2193,8 +2194,7 @@
             "AdminRole": {
               "kind": "valueSet",
               "values": [
-                "ADMIN",
-                "SUPER_ADMIN"
+                "ADMIN"
               ]
             },
             "BillingPeriod": {
@@ -2235,7 +2235,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "14deadf22b4c9de216575140a62057f447894e32901f42af806487c11e449b10"
+    "storageHash": "c867c19b707482746d43885b3edc5e9ac98d6aeb2181107b422294860795b9f7"
   },
   "execution": {
     "executionHash": "167538b45ed1d29d3463459c5037545f2eaa34cd7c9a33a97c2f266226caf717",

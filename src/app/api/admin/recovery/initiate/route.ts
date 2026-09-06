@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAdminRole } from '@/lib/admin/authorization';
+import { requireAdminSession } from '@/lib/admin/authorization';
 import { orm } from '@/lib/db';
 import { issueAdminRecoveryToken } from '@/lib/admin/recovery';
 import { buildRecoveryHandoffCookie } from '@/lib/admin/recovery-handoff';
@@ -11,7 +11,7 @@ const initiateSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const { error, admin } = await requireAdminRole(request, ['SUPER_ADMIN']);
+  const { error, admin } = await requireAdminSession(request);
   if (error) {
     return error;
   }

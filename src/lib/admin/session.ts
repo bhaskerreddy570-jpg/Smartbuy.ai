@@ -78,7 +78,7 @@ export type AdminSessionUser = {
   id: string;
   email: string;
   displayName: string | null;
-  role: 'ADMIN' | 'SUPER_ADMIN';
+  role: 'ADMIN';
   mfaEnabled: boolean;
 };
 

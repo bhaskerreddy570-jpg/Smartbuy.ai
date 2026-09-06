@@ -19,7 +19,7 @@ export type AdminLoginResult =
       ok: true;
       sessionToken: string;
       cookie: string;
-      admin: { id: string; email: string; role: 'ADMIN' | 'SUPER_ADMIN' };
+      admin: { id: string; email: string; role: 'ADMIN' };
     }
   | {
       ok: false;
@@ -169,14 +169,18 @@ export async function authenticateAdminLogin(params: {
 export async function createBootstrapAdminUser(params: {
   email: string;
   passwordHash: string;
-  displayName?: string;
-  role?: 'ADMIN' | 'SUPER_ADMIN';
+  displayName?: string | null;
 }): Promise<{ id: string; email: string }> {
-  const existing = await orm.AdminUser.where({
+  const existingAdmins = await orm.AdminUser.select('id').all();
+  if (existingAdmins.length > 0) {
+    throw new Error('An admin account already exists');
+  }
+
+  const existingEmail = await orm.AdminUser.where({
     email: params.email.toLowerCase(),
   }).first();
 
-  if (existing) {
+  if (existingEmail) {
     throw new Error('Admin user already exists for this email');
   }
 
@@ -185,7 +189,7 @@ export async function createBootstrapAdminUser(params: {
     email: params.email.toLowerCase(),
     passwordHash: params.passwordHash,
     displayName: params.displayName ?? null,
-    role: params.role ?? 'SUPER_ADMIN',
+    role: 'ADMIN',
     mfaEnabled: false,
   });
 

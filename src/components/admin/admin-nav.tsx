@@ -31,6 +31,9 @@ export function AdminNav({ email, role }: AdminNavProps) {
           <a href="/admin/audit" className="text-sm font-medium text-zinc-700 hover:underline dark:text-zinc-300">
             Audit log
           </a>
+          <a href="/admin/change-password" className="text-sm font-medium text-zinc-700 hover:underline dark:text-zinc-300">
+            Change password
+          </a>
           <button
             type="button"
             onClick={handleLogout}
