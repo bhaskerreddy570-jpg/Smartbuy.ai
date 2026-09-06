@@ -24,6 +24,25 @@ enum BillingPeriod {
   ANNUAL
 }
 
+enum AdminRole {
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum AdminAuditAction {
+  ADMIN_LOGIN_SUCCESS
+  ADMIN_LOGIN_FAILED
+  ADMIN_LOGOUT
+  ADMIN_SESSION_REVOKED
+  CUSTOMER_ACCOUNT_LOCKED
+  CUSTOMER_ACCOUNT_UNLOCKED
+  RECOVERY_TOKEN_ISSUED
+  RECOVERY_TOKEN_USED
+  RECOVERY_REQUEST_DENIED
+  BACKUP_REQUESTED
+  DATA_RECOVERY_REQUESTED
+}
+
 model User {
   id           Uuid     @id @default(uuid())
   name         String?
@@ -31,6 +50,8 @@ model User {
   passwordHash String
   storageQuota BigInt
   storageUsed  BigInt   @default(0)
+  lockedAt     TimestamptzString?
+  lockReason   String?
   createdAt    TimestamptzString @default(now())
   updatedAt    temporal.updatedAtString()
 
@@ -94,4 +115,73 @@ model Subscription {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model AdminUser {
+  id                     Uuid              @id @default(uuid())
+  email                  String            @unique
+  passwordHash           String
+  displayName            String?
+  role                   AdminRole         @default(ADMIN)
+  lockedAt               TimestamptzString?
+  lockReason             String?
+  failedLoginAttempts    Int               @default(0)
+  lastFailedLoginAt      TimestamptzString?
+  mfaEnabled             Boolean           @default(false)
+  mfaSecretEnc           String?
+  recoveryTokenHash      String?
+  recoveryTokenExpiresAt TimestamptzString?
+  lastLoginAt            TimestamptzString?
+  createdAt              TimestamptzString @default(now())
+  updatedAt              temporal.updatedAtString()
+
+  sessions    AdminSession[]
+  auditLogs   AdminAuditLog[]
+
+  @@index([role])
+}
+
+model AdminSession {
+  id          Uuid              @id @default(uuid())
+  adminUserId Uuid
+  tokenHash   String            @unique
+  expiresAt   TimestamptzString
+  ipAddress   String?
+  userAgent   String?
+  createdAt   TimestamptzString @default(now())
+  revokedAt   TimestamptzString?
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([expiresAt])
+}
+
+model AdminAuditLog {
+  id          Uuid             @id @default(uuid())
+  adminUserId Uuid?
+  action      AdminAuditAction
+  targetType  String?
+  targetId    String?
+  metadata    String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   TimestamptzString @default(now())
+
+  adminUser AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+
+  @@index([adminUserId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model AdminLoginAttempt {
+  id          Uuid              @id @default(uuid())
+  email       String
+  ipAddress   String
+  attemptedAt TimestamptzString @default(now())
+  success     Boolean           @default(false)
+
+  @@index([email, attemptedAt])
+  @@index([ipAddress, attemptedAt])
 }

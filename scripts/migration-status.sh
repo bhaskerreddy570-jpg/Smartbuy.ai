@@ -20,4 +20,4 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
 fi
 
 echo "Checking migration status..."
-npx prisma db migrate status --db "$DATABASE_URL"
+npx prisma migration status --db "$DATABASE_URL"

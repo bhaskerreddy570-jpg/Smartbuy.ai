@@ -12,6 +12,7 @@
     "db:migrate": "bash scripts/apply-migration.sh",
     "db:status": "bash scripts/migration-status.sh",
     "test:e2e-smoke": "node scripts/e2e-smoke.mjs",
+    "admin:bootstrap": "node --import tsx scripts/bootstrap-admin.mjs",
     "postinstall": "prisma skills sync || exit 0",
     "contract:emit": "prisma contract emit"
   },

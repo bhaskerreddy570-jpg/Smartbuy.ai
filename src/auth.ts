@@ -47,6 +47,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
+        if (user.lockedAt) {
+          return null;
+        }
+
         const valid = await bcrypt.compare(
           parsed.data.password,
           user.passwordHash,
