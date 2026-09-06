@@ -55,17 +55,63 @@ Optional: `ANTIVIRUS_SCAN_ENABLED=false` (default off).
 
 ## Step 4 — Apply migrations (safe, non-destructive)
 
+Migrations are **additive only** and must be applied before customer registration works.
+
+### Option A — Automatic on Vercel deploy (recommended)
+
+`vercel.json` runs `scripts/vercel-build.sh`, which applies pending migrations when a database URL is available at build time, then builds the app.
+
+Requirements in Vercel → **Environment Variables** → **Production**:
+
+| Variable | Scope | Purpose |
+|----------|-------|---------|
+| `DATABASE_URL` | Production (runtime) | Pooled Neon URL for serverless functions |
+| `DATABASE_URL_UNPOOLED` | Production (build + runtime) | Direct Neon URL for migrations during deploy |
+
+If `DATABASE_URL_UNPOOLED` is unset, the build script falls back to `DATABASE_URL`.
+
+Redeploy production after setting these variables. The build log should show `Applying safe Prisma migrations before build`.
+
+### Option B — Manual from a trusted machine
+
 From a trusted machine with the **direct/unpooled** production `DATABASE_URL` in local `.env` only:
 
 ```bash
-npm run db:migrate    # runs: npx prisma db migrate --db $DATABASE_URL
+npm run db:migrate    # runs: npx prisma db migrate --db $DATABASE_URL_UNPOOLED (or DATABASE_URL)
 npm run db:status     # must report up to date
 ```
 
-**Allowed:** additive migration `20260906T0903_init` only.  
+**Allowed migrations (all additive):**
+
+1. `20260906T0903_init` — core customer tables (`user`, `subscription`, `file`, `folder`)
+2. `20260906T1321_admin_foundation` — admin tables + `user.lockedAt` / `user.lockReason`
+3. `20260906T1418_admin_single_role_provisioning` — single `ADMIN` role constraint
+
 **Forbidden:** `prisma migrate reset`, `DROP DATABASE`, or any destructive command.
 
 Use **`DATABASE_URL_UNPOOLED`** (or Neon direct connection) for migrations if the pooled URL fails.
+
+### Verify runtime database readiness
+
+After deploy, call:
+
+```bash
+curl -sS https://YOUR-PROJECT.vercel.app/api/health/db
+```
+
+Expected when healthy:
+
+```json
+{
+  "ok": true,
+  "databaseUrlConfigured": true,
+  "connected": true,
+  "userTableExists": true,
+  "userSchemaReady": true
+}
+```
+
+If `userTableExists` or `userSchemaReady` is `false`, pending migrations were not applied.
 
 ## Step 5 — AWS S3 + IAM
 
@@ -139,3 +185,4 @@ Manual browser checklist:
 | Upload PUT 403 | IAM resource path must be `users/*/files/*` |
 | 401 on all APIs | `AUTH_SECRET` mismatch or `AUTH_URL` wrong |
 | DB connection errors on Vercel | Use pooled `DATABASE_URL`; run migrations on direct URL |
+| Registration returns "Unable to create account" | Check `/api/health/db`; apply pending migrations (`userSchemaReady: false` means admin migrations missing) |

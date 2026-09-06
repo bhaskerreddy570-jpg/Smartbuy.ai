@@ -19,5 +19,7 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
   exit 1
 fi
 
+MIGRATE_URL="${DATABASE_URL_UNPOOLED:-$DATABASE_URL}"
+
 echo "Checking migration status..."
-npx prisma migration status --db "$DATABASE_URL"
+npx prisma migration status --db "$MIGRATE_URL"

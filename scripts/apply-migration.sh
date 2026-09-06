@@ -19,7 +19,9 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
   exit 1
 fi
 
+MIGRATE_URL="${DATABASE_URL_UNPOOLED:-$DATABASE_URL}"
+
 echo "Applying migrations safely (no reset, no destructive commands)..."
-npx prisma db migrate --db "$DATABASE_URL"
+npx prisma db migrate --db "$MIGRATE_URL"
 
 echo "Migration apply command completed."
