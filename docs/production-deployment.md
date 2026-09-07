@@ -69,9 +69,9 @@ Requirements in Vercel → **Environment Variables** → **Production**:
 | `DATABASE_URL` | Production (runtime) | Pooled Neon URL for serverless functions |
 | `DATABASE_URL_UNPOOLED` | Production (build + runtime) | Direct Neon URL for migrations during deploy |
 
-If `DATABASE_URL_UNPOOLED` is unset, the build script falls back to `DATABASE_URL`, `POSTGRES_URL`, or other supported Neon/Vercel names.
+If `DATABASE_URL_UNPOOLED` is unset, the build script falls back to `DATABASE_URL`, `POSTGRES_URL`, or other supported Neon/Vercel names. If no database URL is available at build time, migrations are skipped and runtime health is checked via `/api/health/db`.
 
-Production builds on Vercel now **fail fast** when `AUTH_SECRET` (or `NEXTAUTH_SECRET`) or a database URL is missing, instead of deploying a broken login flow.
+`AUTH_SECRET` is validated at runtime only (Auth.js and `/api/health/db`). It is not required during the Vercel build step, which allows secrets scoped to Runtime in the Vercel dashboard.
 
 ### Option B — Manual from a trusted machine
 

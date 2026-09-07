@@ -29,26 +29,12 @@ resolve_database_url() {
 
 MIGRATE_URL="${DATABASE_URL_UNPOOLED:-${POSTGRES_URL_NON_POOLING:-$(resolve_database_url)}}"
 
-if [[ "${VERCEL:-}" == "1" ]]; then
-  missing=()
-  if [[ -z "${AUTH_SECRET:-}" && -z "${NEXTAUTH_SECRET:-}" ]]; then
-    missing+=("AUTH_SECRET")
-  fi
-  if [[ -z "$MIGRATE_URL" ]]; then
-    missing+=("DATABASE_URL or POSTGRES_URL")
-  fi
-  if (( ${#missing[@]} > 0 )); then
-    echo "Production build blocked: missing required environment variables: ${missing[*]}"
-    echo "Configure them in Vercel Project Settings -> Environment Variables -> Production."
-    exit 1
-  fi
-fi
-
 if [[ -n "$MIGRATE_URL" ]]; then
   echo "Applying safe Prisma migrations before build (no reset)..."
   npx prisma db migrate --db "$MIGRATE_URL"
 else
-  echo "Skipping migrations: no database URL is set at build time."
+  echo "Skipping migrations: no database URL is available at build time."
+  echo "Runtime database configuration is validated by /api/health/db."
 fi
 
 npm run build

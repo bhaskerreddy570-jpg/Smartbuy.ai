@@ -38,4 +38,10 @@ describe('server env resolution', () => {
     assert.equal(presence.DATABASE_URL, true);
     assert.equal(presence.POSTGRES_URL, false);
   });
+
+  it('does not throw when AUTH_SECRET is absent during resolution', () => {
+    delete process.env.AUTH_SECRET;
+    delete process.env.NEXTAUTH_SECRET;
+    assert.equal(resolveAuthSecret(), undefined);
+  });
 });

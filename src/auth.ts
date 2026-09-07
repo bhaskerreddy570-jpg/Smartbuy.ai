@@ -5,7 +5,7 @@ import { z } from 'zod';
 import type { Session } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 import { orm } from '@/lib/db';
-import { requireAuthSecret } from '@/lib/server-env';
+import { resolveAuthSecret } from '@/lib/server-env';
 
 const NextAuth = NextAuthImport as (config: Record<string, unknown>) => {
   handlers: { GET: (req: Request) => Promise<Response>; POST: (req: Request) => Promise<Response> };
@@ -20,7 +20,7 @@ const credentialsSchema = z.object({
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  secret: requireAuthSecret(),
+  secret: resolveAuthSecret(),
   trustHost: true,
   pages: {
     signIn: '/login',
