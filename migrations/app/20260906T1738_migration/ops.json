@@ -1,0 +1,374 @@
+[
+  {
+    "id": "dropCheckConstraint.adminAuditLog.adminAuditLog_action_check_2242d3de",
+    "label": "Drop check constraint \"adminAuditLog_action_check_2242d3de\" on \"adminAuditLog\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "adminAuditLog_action_check_2242d3de",
+        "table": "adminAuditLog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"adminAuditLog_action_check_2242d3de\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_2242d3de",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop check constraint \"adminAuditLog_action_check_2242d3de\"",
+        "sql": "ALTER TABLE \"public\".\"adminAuditLog\" DROP CONSTRAINT \"adminAuditLog_action_check_2242d3de\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"adminAuditLog_action_check_2242d3de\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_2242d3de",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.customerBandwidthUsage",
+    "label": "Create table \"customerBandwidthUsage\"",
+    "summary": "Creates table \"customerBandwidthUsage\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "customerBandwidthUsage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"customerBandwidthUsage\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerBandwidthUsage\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"customerBandwidthUsage\"",
+        "sql": "CREATE TABLE \"public\".\"customerBandwidthUsage\" (\n  \"bytesDownloaded\" int8 DEFAULT '0'::int8 NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" uuid NOT NULL,\n  \"periodMonth\" int4 NOT NULL,\n  \"periodYear\" int4 NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"userId\" uuid NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"customerBandwidthUsage\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerBandwidthUsage\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.storageLimitBytes",
+    "label": "Add column \"storageLimitBytes\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "storageLimitBytes",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"storageLimitBytes\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "storageLimitBytes"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"storageLimitBytes\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"storageLimitBytes\" int8"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"storageLimitBytes\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "storageLimitBytes"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.maxFileSizeBytes",
+    "label": "Add column \"maxFileSizeBytes\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "maxFileSizeBytes",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"maxFileSizeBytes\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "maxFileSizeBytes"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"maxFileSizeBytes\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"maxFileSizeBytes\" int8 DEFAULT '104857600'::int8 NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"maxFileSizeBytes\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "maxFileSizeBytes"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.monthlyBandwidthLimitBytes",
+    "label": "Add column \"monthlyBandwidthLimitBytes\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "monthlyBandwidthLimitBytes",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"monthlyBandwidthLimitBytes\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "monthlyBandwidthLimitBytes"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"monthlyBandwidthLimitBytes\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"monthlyBandwidthLimitBytes\" int8 DEFAULT '107374182400'::int8 NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"monthlyBandwidthLimitBytes\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "monthlyBandwidthLimitBytes"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.adminAuditLog.adminAuditLog_action_check_b75dd9a3",
+    "label": "Add check constraint \"adminAuditLog_action_check_b75dd9a3\" on \"adminAuditLog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "adminAuditLog_action_check_b75dd9a3",
+        "table": "adminAuditLog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"adminAuditLog_action_check_b75dd9a3\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_b75dd9a3",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"adminAuditLog_action_check_b75dd9a3\"",
+        "sql": "ALTER TABLE \"public\".\"adminAuditLog\" ADD CONSTRAINT \"adminAuditLog_action_check_b75dd9a3\" CHECK (\"action\" IN ('ADMIN_LOGIN_SUCCESS', 'ADMIN_LOGIN_FAILED', 'ADMIN_LOGOUT', 'ADMIN_SESSION_REVOKED', 'ADMIN_PASSWORD_CHANGED', 'CUSTOMER_ACCOUNT_LOCKED', 'CUSTOMER_ACCOUNT_UNLOCKED', 'CUSTOMER_QUOTA_CHANGED', 'CUSTOMER_LIMITS_CHANGED', 'RECOVERY_TOKEN_ISSUED', 'RECOVERY_TOKEN_USED', 'RECOVERY_REQUEST_DENIED', 'BACKUP_REQUESTED', 'DATA_RECOVERY_REQUESTED'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"adminAuditLog_action_check_b75dd9a3\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_b75dd9a3",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.customerBandwidthUsage.customerBandwidthUsage_userId_periodYear_periodMonth_key",
+    "label": "Add unique constraint on \"customerBandwidthUsage\" (userId, periodYear, periodMonth)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "customerBandwidthUsage_userId_periodYear_periodMonth_key",
+        "table": "customerBandwidthUsage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"customerBandwidthUsage_userId_periodYear_periodMonth_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerBandwidthUsage_userId_periodYear_periodMonth_key",
+          "public",
+          "\"public\".\"customerBandwidthUsage\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"customerBandwidthUsage_userId_periodYear_periodMonth_key\"",
+        "sql": "ALTER TABLE \"public\".\"customerBandwidthUsage\" ADD CONSTRAINT \"customerBandwidthUsage_userId_periodYear_periodMonth_key\" UNIQUE (\"userId\", \"periodYear\", \"periodMonth\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"customerBandwidthUsage_userId_periodYear_periodMonth_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerBandwidthUsage_userId_periodYear_periodMonth_key",
+          "public",
+          "\"public\".\"customerBandwidthUsage\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.customerBandwidthUsage.customerBandwidthUsage_userId_idx_a489d58a",
+    "label": "Create index \"customerBandwidthUsage_userId_idx_a489d58a\" on \"customerBandwidthUsage\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "customerBandwidthUsage_userId_idx_a489d58a",
+        "table": "customerBandwidthUsage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"customerBandwidthUsage_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerBandwidthUsage_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"customerBandwidthUsage_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"customerBandwidthUsage_userId_idx_a489d58a\" ON \"public\".\"customerBandwidthUsage\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"customerBandwidthUsage_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerBandwidthUsage_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.customerBandwidthUsage.customerBandwidthUsage_userId_fkey",
+    "label": "Add foreign key \"customerBandwidthUsage_userId_fkey\" on \"customerBandwidthUsage\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "customerBandwidthUsage_userId_fkey",
+        "table": "customerBandwidthUsage"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"customerBandwidthUsage_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerBandwidthUsage_userId_fkey",
+          "public",
+          "\"public\".\"customerBandwidthUsage\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"customerBandwidthUsage_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"customerBandwidthUsage\"\nADD CONSTRAINT \"customerBandwidthUsage_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"customerBandwidthUsage_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerBandwidthUsage_userId_fkey",
+          "public",
+          "\"public\".\"customerBandwidthUsage\""
+        ]
+      }
+    ]
+  }
+]

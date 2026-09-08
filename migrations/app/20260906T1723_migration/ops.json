@@ -1,0 +1,170 @@
+[
+  {
+    "id": "dropCheckConstraint.adminAuditLog.adminAuditLog_action_check_2c184a7c",
+    "label": "Drop check constraint \"adminAuditLog_action_check_2c184a7c\" on \"adminAuditLog\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "adminAuditLog_action_check_2c184a7c",
+        "table": "adminAuditLog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"adminAuditLog_action_check_2c184a7c\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_2c184a7c",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop check constraint \"adminAuditLog_action_check_2c184a7c\"",
+        "sql": "ALTER TABLE \"public\".\"adminAuditLog\" DROP CONSTRAINT \"adminAuditLog_action_check_2c184a7c\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"adminAuditLog_action_check_2c184a7c\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_2c184a7c",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.recoveryTokenExpiresAt",
+    "label": "Add column \"recoveryTokenExpiresAt\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "recoveryTokenExpiresAt",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"recoveryTokenExpiresAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "recoveryTokenExpiresAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"recoveryTokenExpiresAt\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"recoveryTokenExpiresAt\" timestamptz"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"recoveryTokenExpiresAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "recoveryTokenExpiresAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.recoveryTokenHash",
+    "label": "Add column \"recoveryTokenHash\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "recoveryTokenHash",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"recoveryTokenHash\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "recoveryTokenHash"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"recoveryTokenHash\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"recoveryTokenHash\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"recoveryTokenHash\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "recoveryTokenHash"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.adminAuditLog.adminAuditLog_action_check_2242d3de",
+    "label": "Add check constraint \"adminAuditLog_action_check_2242d3de\" on \"adminAuditLog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "adminAuditLog_action_check_2242d3de",
+        "table": "adminAuditLog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"adminAuditLog_action_check_2242d3de\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_2242d3de",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"adminAuditLog_action_check_2242d3de\"",
+        "sql": "ALTER TABLE \"public\".\"adminAuditLog\" ADD CONSTRAINT \"adminAuditLog_action_check_2242d3de\" CHECK (\"action\" IN ('ADMIN_LOGIN_SUCCESS', 'ADMIN_LOGIN_FAILED', 'ADMIN_LOGOUT', 'ADMIN_SESSION_REVOKED', 'ADMIN_PASSWORD_CHANGED', 'CUSTOMER_ACCOUNT_LOCKED', 'CUSTOMER_ACCOUNT_UNLOCKED', 'CUSTOMER_QUOTA_CHANGED', 'RECOVERY_TOKEN_ISSUED', 'RECOVERY_TOKEN_USED', 'RECOVERY_REQUEST_DENIED', 'BACKUP_REQUESTED', 'DATA_RECOVERY_REQUESTED'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"adminAuditLog_action_check_2242d3de\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_2242d3de",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ]
+  }
+]

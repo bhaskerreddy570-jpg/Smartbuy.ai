@@ -34,8 +34,17 @@ run_migrations() {
 }
 
 recover_schema_and_sign() {
-  echo "Migration graph mismatch detected; applying additive schema recovery..."
-  node --import tsx scripts/apply-additive-schema-recovery.mjs "$MIGRATE_URL"
+  echo "Migration graph mismatch detected; inspecting schema recovery plan..."
+  node scripts/apply-additive-schema-recovery.mjs --dry-run "$MIGRATE_URL"
+
+  echo "Verifying production data counts before recovery..."
+  node scripts/verify-production-data.mjs "$MIGRATE_URL"
+
+  echo "Applying additive schema recovery..."
+  node scripts/apply-additive-schema-recovery.mjs "$MIGRATE_URL"
+
+  echo "Verifying production data counts after recovery..."
+  node scripts/verify-production-data.mjs "$MIGRATE_URL"
 
   echo "Signing database with emitted contract..."
   if ! npx prisma db sign --db "$MIGRATE_URL"; then
