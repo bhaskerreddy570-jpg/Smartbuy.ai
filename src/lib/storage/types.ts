@@ -43,9 +43,16 @@ export type CreateDownloadParams = {
   fileName: string;
 };
 
+export type PutObjectParams = {
+  objectRef: StorageObjectRef;
+  body: Buffer | Uint8Array | ReadableStream<Uint8Array>;
+  size: bigint;
+};
+
 export type ObjectStoreProvider = {
   readonly providerId: StorageProviderId;
   prepareUpload(params: PrepareUploadParams): Promise<PrepareUploadResult>;
+  putObject(params: PutObjectParams): Promise<void>;
   createDownloadUrl(params: CreateDownloadParams): Promise<string>;
   headObject(objectRef: StorageObjectRef): Promise<StoredObjectMetadata>;
   deleteObject(objectRef: StorageObjectRef): Promise<void>;

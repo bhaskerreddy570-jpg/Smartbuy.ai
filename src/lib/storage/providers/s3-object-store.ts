@@ -4,18 +4,28 @@ import {
   createUploadUrl,
   deleteObject,
   getObjectMetadata,
+  putObject,
 } from '@/lib/storage/s3';
 import type {
   CreateDownloadParams,
   ObjectStoreProvider,
   PrepareUploadParams,
   PrepareUploadResult,
+  PutObjectParams,
   StorageObjectRef,
   StorageProviderId,
 } from '@/lib/storage/types';
 
 export class S3ObjectStoreProvider implements ObjectStoreProvider {
   readonly providerId: StorageProviderId = 'S3';
+
+  async putObject(params: PutObjectParams): Promise<void> {
+    await putObject({
+      storageKey: params.objectRef.key,
+      body: params.body,
+      size: params.size,
+    });
+  }
 
   async prepareUpload(params: PrepareUploadParams): Promise<PrepareUploadResult> {
     const key = buildStorageKey({

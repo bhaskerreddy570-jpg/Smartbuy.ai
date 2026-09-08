@@ -8,7 +8,7 @@ import {
   resolveAuthUrl,
   resolveDatabaseUrl,
 } from '@/lib/server-env';
-import { resolveAwsCredentials, resolveAwsRegion, resolveS3Bucket } from '@/lib/config';
+import { resolveAwsCredentials, resolveS3Bucket } from '@/lib/config';
 
 function awsEnvPresence() {
   const read = (name: string) => Boolean(process.env[name]?.trim());
@@ -119,6 +119,7 @@ export async function GET() {
       fileSchemaReady;
     const storageConfigured =
       Boolean(resolveS3Bucket()) && Boolean(resolveAwsCredentials());
+    const awsEnv = awsEnvPresence();
 
     const authRelatedEnvKeys = Object.keys(process.env)
       .filter((key) => /AUTH|SECRET|NEXTAUTH/i.test(key))
@@ -140,6 +141,7 @@ export async function GET() {
         userSchemaReady,
         fileSchemaReady,
         storageConfigured,
+        awsEnv,
         authRelatedEnvKeys,
         envPresence,
       },

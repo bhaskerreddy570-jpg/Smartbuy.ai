@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { ChangeEvent, useState } from "react";
 import { UsageMeter } from "@/components/usage-meter";
 import type { DashboardData } from "@/lib/dashboard";
+import { mapFilesLoadClientError, mapUploadTransferClientError } from "@/lib/api/fetch-errors";
+import { mapUploadClientError } from "@/lib/storage/upload-api-errors";
 import type { FileCategory } from "@/lib/storage/types";
 
 type DashboardClientProps = {
@@ -27,21 +29,25 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
             ? `?category=${encodeURIComponent(data.activeCategory)}`
             : "";
 
-    const response = await fetch(`/api/files${query}`);
+    try {
+      const response = await fetch(`/api/files${query}`);
 
-    if (response.status === 401) {
-      router.push("/login");
-      return;
+      if (response.status === 401) {
+        router.push("/login");
+        return;
+      }
+
+      if (!response.ok) {
+        setError("Unable to load your files");
+        return;
+      }
+
+      const payload = (await response.json()) as DashboardData;
+      setData(payload);
+      setError(null);
+    } catch (loadError) {
+      setError(mapFilesLoadClientError(loadError));
     }
-
-    if (!response.ok) {
-      setError("Unable to load your files");
-      return;
-    }
-
-    const payload = (await response.json()) as DashboardData;
-    setData(payload);
-    setError(null);
   }
 
   async function handleCategoryChange(category: FileCategory | null) {
@@ -49,20 +55,25 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
     setError(null);
 
     const query = category ? `?category=${encodeURIComponent(category)}` : "";
-    const response = await fetch(`/api/files${query}`);
 
-    if (response.status === 401) {
-      router.push("/login");
-      return;
+    try {
+      const response = await fetch(`/api/files${query}`);
+
+      if (response.status === 401) {
+        router.push("/login");
+        return;
+      }
+
+      if (!response.ok) {
+        setError("Unable to load your files");
+        return;
+      }
+
+      const payload = (await response.json()) as DashboardData;
+      setData(payload);
+    } catch (loadError) {
+      setError(mapFilesLoadClientError(loadError));
     }
-
-    if (!response.ok) {
-      setError("Unable to load your files");
-      return;
-    }
-
-    const payload = (await response.json()) as DashboardData;
-    setData(payload);
   }
 
   async function handleUpload(event: ChangeEvent<HTMLInputElement>) {
@@ -92,31 +103,27 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         const payload = (await requestResponse.json().catch(() => null)) as {
           error?: string;
         } | null;
-        throw new Error(
-          payload?.error === "STORAGE_QUOTA_EXCEEDED"
-            ? "Storage limit reached"
-            : payload?.error === "FILE_SIZE_LIMIT_EXCEEDED"
-              ? "File exceeds your maximum upload size"
-              : payload?.error ?? "Upload request failed",
-        );
+        throw new Error(mapUploadClientError(payload?.error));
       }
 
-      const { fileId, uploadUrl, contentType } = (await requestResponse.json()) as {
+      const { fileId } = (await requestResponse.json()) as {
         fileId: string;
-        uploadUrl: string;
-        contentType: string;
       };
 
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": contentType || "application/octet-stream",
-        },
-        body: file,
+      const transferForm = new FormData();
+      transferForm.append("fileId", fileId);
+      transferForm.append("file", file, file.name);
+
+      const transferResponse = await fetch("/api/files/upload/transfer", {
+        method: "POST",
+        body: transferForm,
       });
 
-      if (!uploadResponse.ok) {
-        throw new Error("Upload to storage failed");
+      if (!transferResponse.ok) {
+        const payload = (await transferResponse.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(mapUploadClientError(payload?.error));
       }
 
       const completeResponse = await fetch("/api/files/upload/complete", {
@@ -135,9 +142,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
       setActionMessage(`${file.name} uploaded successfully`);
       await refreshFiles(data.activeCategory);
     } catch (uploadError) {
-      setError(
-        uploadError instanceof Error ? uploadError.message : "Upload failed",
-      );
+      setError(mapUploadTransferClientError(uploadError));
     } finally {
       setUploading(false);
     }

@@ -4,6 +4,7 @@ import type {
   ObjectStoreProvider,
   PrepareUploadParams,
   PrepareUploadResult,
+  PutObjectParams,
   StorageObjectRef,
   StorageProviderId,
 } from '@/lib/storage/types';
@@ -25,6 +26,10 @@ export function getObjectStoreProvider(
 export class StorageService {
   prepareUpload(params: PrepareUploadParams): Promise<PrepareUploadResult> {
     return getObjectStoreProvider().prepareUpload(params);
+  }
+
+  putObject(params: PutObjectParams): Promise<void> {
+    return getObjectStoreProvider(params.objectRef.provider).putObject(params);
   }
 
   createDownloadUrl(params: CreateDownloadParams): Promise<string> {

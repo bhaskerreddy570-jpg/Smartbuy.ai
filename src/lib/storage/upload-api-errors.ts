@@ -28,6 +28,8 @@ export function mapUploadClientError(errorCode: string | undefined): string {
     case 'DATABASE_UNAVAILABLE':
     case 'UPLOAD_UNAVAILABLE':
       return 'Unable to prepare upload. Please try again.';
+    case 'UPLOAD_SIZE_MISMATCH':
+      return 'Upload size did not match the prepared file. Please try again.';
     case 'Storage quota exceeded':
       return 'Storage limit reached';
     case 'FILE_NOT_FOUND':

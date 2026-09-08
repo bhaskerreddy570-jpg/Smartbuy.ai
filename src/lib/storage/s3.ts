@@ -22,6 +22,25 @@ function createS3Client(): S3Client {
   });
 }
 
+export async function putObject(params: {
+  storageKey: string;
+  body: Buffer | Uint8Array | ReadableStream<Uint8Array>;
+  size: bigint;
+}): Promise<void> {
+  const { bucket } = requireS3Config();
+  const client = createS3Client();
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: params.storageKey,
+      Body: params.body,
+      ContentType: STORAGE_OBJECT_CONTENT_TYPE,
+      ContentLength: Number(params.size),
+    }),
+  );
+}
+
 export async function createUploadUrl(params: {
   storageKey: string;
   size: bigint;

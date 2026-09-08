@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ChangeEvent, useMemo, useState } from "react";
 import type { DashboardData } from "@/lib/dashboard";
+import { mapFilesLoadClientError, mapUploadTransferClientError } from "@/lib/api/fetch-errors";
 import { mapUploadClientError } from "@/lib/storage/upload-api-errors";
 import type { FileCategory } from "@/lib/storage/types";
 import { FileTypeIcon } from "@/components/portal/file-type-icon";
@@ -58,32 +59,36 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
       queryParts.push(`category=${encodeURIComponent(activeCategory)}`);
     }
 
-    const response = await fetch(
-      `/api/files${queryParts.length ? `?${queryParts.join("&")}` : ""}`,
-    );
-
-    if (response.status === 401) {
-      router.push("/login");
-      return;
-    }
-
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      setError(
-        payload?.error === "FILES_LOAD_FAILED"
-          ? "Unable to load files. Please try again."
-          : payload?.error === "USER_NOT_FOUND"
-            ? "Account not found. Please sign in again."
-            : "Unable to load files. Please try again.",
+    try {
+      const response = await fetch(
+        `/api/files${queryParts.length ? `?${queryParts.join("&")}` : ""}`,
       );
-      return;
-    }
 
-    const payload = (await response.json()) as DashboardData;
-    setData(payload);
-    setError(null);
+      if (response.status === 401) {
+        router.push("/login");
+        return;
+      }
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setError(
+          payload?.error === "FILES_LOAD_FAILED"
+            ? "Unable to load files. Please try again."
+            : payload?.error === "USER_NOT_FOUND"
+              ? "Account not found. Please sign in again."
+              : "Unable to load files. Please try again.",
+        );
+        return;
+      }
+
+      const payload = (await response.json()) as DashboardData;
+      setData(payload);
+      setError(null);
+    } catch (loadError) {
+      setError(mapFilesLoadClientError(loadError));
+    }
   }
 
   async function handleCategoryChange(category: FileCategory | null) {
@@ -91,29 +96,34 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
     setError(null);
 
     const query = category ? `?category=${encodeURIComponent(category)}` : "";
-    const response = await fetch(`/api/files${query}`);
 
-    if (response.status === 401) {
-      router.push("/login");
-      return;
+    try {
+      const response = await fetch(`/api/files${query}`);
+
+      if (response.status === 401) {
+        router.push("/login");
+        return;
+      }
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setError(
+          payload?.error === "FILES_LOAD_FAILED"
+            ? "Unable to load files. Please try again."
+            : payload?.error === "USER_NOT_FOUND"
+              ? "Account not found. Please sign in again."
+              : "Unable to load files. Please try again.",
+        );
+        return;
+      }
+
+      const payload = (await response.json()) as DashboardData;
+      setData(payload);
+    } catch (loadError) {
+      setError(mapFilesLoadClientError(loadError));
     }
-
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      setError(
-        payload?.error === "FILES_LOAD_FAILED"
-          ? "Unable to load files. Please try again."
-          : payload?.error === "USER_NOT_FOUND"
-            ? "Account not found. Please sign in again."
-            : "Unable to load files. Please try again.",
-      );
-      return;
-    }
-
-    const payload = (await response.json()) as DashboardData;
-    setData(payload);
   }
 
   async function uploadFile(file: File) {
@@ -139,22 +149,26 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
         throw new Error(mapUploadClientError(payload?.error));
       }
 
-      const { fileId, uploadUrl, contentType } = (await requestResponse.json()) as {
+      const { fileId } = (await requestResponse.json()) as {
         fileId: string;
-        uploadUrl: string;
-        contentType: string;
+        uploadUrl?: string;
+        contentType?: string;
       };
 
-      const uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": contentType || "application/octet-stream",
-        },
-        body: file,
+      const transferForm = new FormData();
+      transferForm.append("fileId", fileId);
+      transferForm.append("file", file, file.name);
+
+      const transferResponse = await fetch("/api/files/upload/transfer", {
+        method: "POST",
+        body: transferForm,
       });
 
-      if (!uploadResponse.ok) {
-        throw new Error("Upload to storage failed");
+      if (!transferResponse.ok) {
+        const payload = (await transferResponse.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(mapUploadClientError(payload?.error));
       }
 
       const completeResponse = await fetch("/api/files/upload/complete", {
@@ -173,9 +187,7 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
       setActionMessage(`${file.name} uploaded successfully`);
       await refreshFiles(data.activeCategory);
     } catch (uploadError) {
-      setError(
-        uploadError instanceof Error ? uploadError.message : "Upload failed",
-      );
+      setError(mapUploadTransferClientError(uploadError));
     } finally {
       setUploading(false);
     }

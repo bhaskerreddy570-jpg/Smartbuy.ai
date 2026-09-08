@@ -80,6 +80,75 @@ describe('customer upload flow', () => {
     }
   });
 
+  it('uploads through server-side transfer and finalizes metadata', async () => {
+    const email = `transfer-${randomUUID()}@example.com`;
+    const defaults = createDefaultCustomerLimits();
+    const passwordHash = await bcrypt.hash('UploadTest123!', 12);
+
+    const user = await orm.User.create({
+      email,
+      name: 'Transfer Test',
+      passwordHash,
+      storageQuota: defaults.storageQuota,
+      storageUsed: BigInt(0),
+      maxFileSizeBytes: defaults.maxFileSizeBytes,
+      monthlyBandwidthLimitBytes: defaults.monthlyBandwidthLimitBytes,
+      monthlyBandwidthUsedBytes: defaults.monthlyBandwidthUsedBytes,
+      bandwidthPeriodStart: defaults.bandwidthPeriodStart,
+    });
+
+    let pendingFileId: string | null = null;
+
+    try {
+      const pending = await createPendingUpload({
+        userId: user.id,
+        fileName: 'transfer.txt',
+        originalName: 'transfer.txt',
+        mimeType: 'text/plain',
+        uploadSize: 128n,
+        category: 'DOCUMENTS',
+      });
+
+      assert.equal(pending.ok, true);
+      if (!pending.ok) {
+        return;
+      }
+
+      pendingFileId = pending.file.fileId;
+      const stored = await orm.File.where({ id: pending.file.fileId }).first();
+      assert.ok(stored);
+
+      await getStorageService().putObject({
+        objectRef: toStorageObjectRef(stored),
+        body: Buffer.alloc(128),
+        size: 128n,
+      });
+
+      const finalize = await finalizePendingUpload({
+        userId: user.id,
+        fileId: pending.file.fileId,
+        actualSize: 128n,
+      });
+
+      assert.equal(finalize.ok, true);
+
+      const ready = await orm.File.where({ id: pending.file.fileId }).first();
+      assert.equal(ready?.status, 'READY');
+    } finally {
+      if (pendingFileId) {
+        const stored = await orm.File.where({ id: pendingFileId }).first();
+        if (stored) {
+          await getStorageService()
+            .deleteObject(toStorageObjectRef(stored))
+            .catch(() => undefined);
+        }
+      }
+
+      await orm.File.where({ userId: user.id }).delete();
+      await orm.User.where({ id: user.id }).delete();
+    }
+  });
+
   it('maps upload API errors to customer-safe messages', () => {
     assert.equal(mapUploadClientError('STORAGE_QUOTA_EXCEEDED'), 'Storage limit reached');
     assert.equal(
