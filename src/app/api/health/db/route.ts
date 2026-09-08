@@ -8,7 +8,17 @@ import {
   resolveAuthUrl,
   resolveDatabaseUrl,
 } from '@/lib/server-env';
-import { resolveAwsCredentials, resolveS3Bucket } from '@/lib/config';
+import { resolveAwsCredentials, resolveAwsRegion, resolveS3Bucket } from '@/lib/config';
+
+function awsEnvPresence() {
+  const read = (name: string) => Boolean(process.env[name]?.trim());
+  return {
+    AWS_REGION: read('AWS_REGION'),
+    AWS_S3_BUCKET: read('AWS_S3_BUCKET'),
+    AWS_ACCESS_KEY_ID: read('AWS_ACCESS_KEY_ID'),
+    AWS_SECRET_ACCESS_KEY: read('AWS_SECRET_ACCESS_KEY'),
+  };
+}
 
 const REQUIRED_USER_COLUMNS = [
   'email',
