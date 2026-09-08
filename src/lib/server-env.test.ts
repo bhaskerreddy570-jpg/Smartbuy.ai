@@ -49,4 +49,21 @@ describe('server env resolution', () => {
     assert.equal(resolved.source, 'derived');
     assert.ok(resolved.secret && resolved.secret.length >= 32);
   });
+
+  it('treats an empty AUTH_SECRET value as missing and falls back to derived secret', () => {
+    process.env.AUTH_SECRET = '   ';
+    delete process.env.NEXTAUTH_SECRET;
+    process.env.DATABASE_URL_UNPOOLED = 'postgresql://example/postgres';
+
+    const resolved = resolveAuthSecretWithSource();
+    assert.equal(resolved.source, 'derived');
+    assert.ok(resolved.secret && resolved.secret.length >= 32);
+  });
+
+  it('resolves DATABASE_URL_UNPOOLED when DATABASE_URL is unset', () => {
+    delete process.env.DATABASE_URL;
+    process.env.DATABASE_URL_UNPOOLED = 'postgresql://example/postgres-direct';
+
+    assert.equal(resolveDatabaseUrl(), 'postgresql://example/postgres-direct');
+  });
 });

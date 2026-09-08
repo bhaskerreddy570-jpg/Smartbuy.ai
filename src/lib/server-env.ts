@@ -16,13 +16,25 @@ export type AuthSecretSource =
   | 'derived'
   | 'none';
 
+type RuntimeEnvName =
+  | 'AUTH_SECRET'
+  | 'NEXTAUTH_SECRET'
+  | 'AUTH_URL'
+  | 'VERCEL_URL'
+  | 'DATABASE_URL'
+  | 'DATABASE_URL_UNPOOLED'
+  | 'POSTGRES_URL'
+  | 'POSTGRES_URL_NON_POOLING'
+  | 'POSTGRES_PRISMA_URL';
+
 function trimEnv(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
 }
 
-function readRuntimeEnv(name: 'AUTH_SECRET' | 'NEXTAUTH_SECRET'): string | undefined {
+function readRuntimeEnv(name: RuntimeEnvName): string | undefined {
   // Bracket access avoids build-time inlining of runtime-only Production secrets.
+  // Middleware runs on the Edge runtime and must read Neon/Vercel secrets at request time.
   return trimEnv(process.env[name]);
 }
 
@@ -51,13 +63,13 @@ export function getEnvPresence(): EnvPresence {
   return {
     AUTH_SECRET: Boolean(readRuntimeEnv('AUTH_SECRET')),
     NEXTAUTH_SECRET: Boolean(readRuntimeEnv('NEXTAUTH_SECRET')),
-    AUTH_URL: Boolean(trimEnv(process.env.AUTH_URL)),
-    VERCEL_URL: Boolean(trimEnv(process.env.VERCEL_URL)),
-    DATABASE_URL: Boolean(trimEnv(process.env.DATABASE_URL)),
-    DATABASE_URL_UNPOOLED: Boolean(trimEnv(process.env.DATABASE_URL_UNPOOLED)),
-    POSTGRES_URL: Boolean(trimEnv(process.env.POSTGRES_URL)),
-    POSTGRES_URL_NON_POOLING: Boolean(trimEnv(process.env.POSTGRES_URL_NON_POOLING)),
-    POSTGRES_PRISMA_URL: Boolean(trimEnv(process.env.POSTGRES_PRISMA_URL)),
+    AUTH_URL: Boolean(readRuntimeEnv('AUTH_URL')),
+    VERCEL_URL: Boolean(readRuntimeEnv('VERCEL_URL')),
+    DATABASE_URL: Boolean(readRuntimeEnv('DATABASE_URL')),
+    DATABASE_URL_UNPOOLED: Boolean(readRuntimeEnv('DATABASE_URL_UNPOOLED')),
+    POSTGRES_URL: Boolean(readRuntimeEnv('POSTGRES_URL')),
+    POSTGRES_URL_NON_POOLING: Boolean(readRuntimeEnv('POSTGRES_URL_NON_POOLING')),
+    POSTGRES_PRISMA_URL: Boolean(readRuntimeEnv('POSTGRES_PRISMA_URL')),
   };
 }
 
@@ -88,12 +100,12 @@ export function resolveAuthSecret(): string | undefined {
 }
 
 export function resolveAuthUrl(): string | undefined {
-  const explicit = trimEnv(process.env.AUTH_URL);
+  const explicit = readRuntimeEnv('AUTH_URL');
   if (explicit) {
     return explicit.replace(/\/$/, '');
   }
 
-  const vercelUrl = trimEnv(process.env.VERCEL_URL);
+  const vercelUrl = readRuntimeEnv('VERCEL_URL');
   if (vercelUrl) {
     return `https://${vercelUrl.replace(/\/$/, '')}`;
   }
@@ -106,20 +118,20 @@ export function resolveDatabaseUrl(options?: {
 }): string | undefined {
   if (options?.preferDirect) {
     return (
-      trimEnv(process.env.DATABASE_URL_UNPOOLED) ??
-      trimEnv(process.env.POSTGRES_URL_NON_POOLING) ??
-      trimEnv(process.env.DATABASE_URL) ??
-      trimEnv(process.env.POSTGRES_URL) ??
-      trimEnv(process.env.POSTGRES_PRISMA_URL)
+      readRuntimeEnv('DATABASE_URL_UNPOOLED') ??
+      readRuntimeEnv('POSTGRES_URL_NON_POOLING') ??
+      readRuntimeEnv('DATABASE_URL') ??
+      readRuntimeEnv('POSTGRES_URL') ??
+      readRuntimeEnv('POSTGRES_PRISMA_URL')
     );
   }
 
   return (
-    trimEnv(process.env.DATABASE_URL) ??
-    trimEnv(process.env.POSTGRES_URL) ??
-    trimEnv(process.env.POSTGRES_PRISMA_URL) ??
-    trimEnv(process.env.DATABASE_URL_UNPOOLED) ??
-    trimEnv(process.env.POSTGRES_URL_NON_POOLING)
+    readRuntimeEnv('DATABASE_URL') ??
+    readRuntimeEnv('POSTGRES_URL') ??
+    readRuntimeEnv('POSTGRES_PRISMA_URL') ??
+    readRuntimeEnv('DATABASE_URL_UNPOOLED') ??
+    readRuntimeEnv('POSTGRES_URL_NON_POOLING')
   );
 }
 
@@ -137,4 +149,12 @@ export function requireDatabaseUrl(options?: { preferDirect?: boolean }): string
     throw new Error('DATABASE_URL is not configured');
   }
   return url;
+}
+
+export function isAuthSecretKeyPresent(): boolean {
+  return 'AUTH_SECRET' in process.env;
+}
+
+export function isAuthSecretValuePresent(): boolean {
+  return Boolean(readRuntimeEnv('AUTH_SECRET'));
 }

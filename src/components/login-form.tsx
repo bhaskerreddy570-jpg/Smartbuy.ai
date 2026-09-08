@@ -19,26 +19,41 @@ export function LoginForm() {
     setLoading(true);
     setError(null);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    if (result?.error) {
-      if (result.error === "Configuration") {
-        setError(
-          "Sign-in is temporarily unavailable. Please try again later or contact support.",
-        );
-      } else {
-        setError("Invalid email or password");
+      if (!result) {
+        setError("Unable to sign in right now. Please try again.");
+        return;
       }
-      setLoading(false);
-      return;
-    }
 
-    router.push("/dashboard");
-    router.refresh();
+      if (result.error) {
+        if (result.error === "Configuration") {
+          setError(
+            "Sign-in is temporarily unavailable. Please try again later or contact support.",
+          );
+        } else {
+          setError("Invalid email or password");
+        }
+        return;
+      }
+
+      if (!result.ok) {
+        setError("Unable to sign in right now. Please try again.");
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setError("Unable to sign in right now. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

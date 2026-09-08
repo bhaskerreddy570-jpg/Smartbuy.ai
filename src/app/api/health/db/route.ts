@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import {
   getEnvPresence,
+  isAuthSecretKeyPresent,
+  isAuthSecretValuePresent,
   resolveAuthSecretWithSource,
   resolveAuthUrl,
   resolveDatabaseUrl,
@@ -104,8 +106,8 @@ export async function GET() {
     const authRelatedEnvKeys = Object.keys(process.env)
       .filter((key) => /AUTH|SECRET|NEXTAUTH/i.test(key))
       .sort();
-    const authSecretKeyPresent = 'AUTH_SECRET' in process.env;
-    const authSecretValuePresent = Boolean(process.env.AUTH_SECRET?.trim());
+    const authSecretKeyPresent = isAuthSecretKeyPresent();
+    const authSecretValuePresent = isAuthSecretValuePresent();
 
     return NextResponse.json(
       {
