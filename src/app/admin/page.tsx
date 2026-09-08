@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminNav } from "@/components/admin/admin-nav";
@@ -27,6 +28,15 @@ export default async function AdminDashboardPage() {
         </p>
 
         <AdminCustomerStoragePanel />
+
+        <p className="mt-6">
+          <Link
+            href="/admin/customers"
+            className="text-sm font-medium text-blue-700 hover:underline dark:text-blue-300"
+          >
+            Open full customer management
+          </Link>
+        </p>
 
         <section className="mt-8 grid gap-4 md:grid-cols-2">
           <article className="rounded-2xl border border-zinc-200 p-6 dark:border-zinc-800">

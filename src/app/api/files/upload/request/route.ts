@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
-import { appConfig } from '@/lib/config';
+import { normalizeMaxFileSizeBytes } from '@/lib/customer-limits';
+import { orm } from '@/lib/db';
 import { resolveFileCategory } from '@/lib/storage/categories';
 import { FILE_CATEGORIES } from '@/lib/storage/types';
 import { createPendingUpload } from '@/lib/storage/upload-lifecycle';
@@ -35,9 +36,21 @@ export async function POST(request: Request) {
     }
 
     const uploadSize = BigInt(parsed.data.size);
+    const userLimits = await orm.User.where({ id: user.id })
+      .select('maxFileSizeBytes')
+      .first();
 
-    if (uploadSize > appConfig.maxUploadBytes) {
-      return NextResponse.json({ error: 'File exceeds maximum upload size' }, { status: 413 });
+    if (!userLimits) {
+      return notFoundResponse();
+    }
+
+    const maxFileSizeBytes = normalizeMaxFileSizeBytes(userLimits.maxFileSizeBytes);
+
+    if (uploadSize > maxFileSizeBytes) {
+      return NextResponse.json(
+        { error: 'FILE_SIZE_LIMIT_EXCEEDED' },
+        { status: 413 },
+      );
     }
 
     const filenameValidation = validateUploadRequest({

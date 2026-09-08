@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { appConfig } from '@/lib/config';
+import { createDefaultCustomerLimits } from '@/lib/customer-limits';
 import { db, orm } from '@/lib/db';
 
 const registerSchema = z.object({
@@ -38,22 +38,26 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-    const storageQuota = appConfig.defaultStorageQuotaBytes;
+    const defaults = createDefaultCustomerLimits();
 
     const user = await db.transaction(async (tx) => {
       const createdUser = await tx.orm.public.User.create({
         email,
         name: parsed.data.name ?? null,
         passwordHash,
-        storageQuota,
+        storageQuota: defaults.storageQuota,
         storageUsed: BigInt(0),
+        maxFileSizeBytes: defaults.maxFileSizeBytes,
+        monthlyBandwidthLimitBytes: defaults.monthlyBandwidthLimitBytes,
+        monthlyBandwidthUsedBytes: defaults.monthlyBandwidthUsedBytes,
+        bandwidthPeriodStart: defaults.bandwidthPeriodStart,
       });
 
       await tx.orm.public.Subscription.create({
         userId: createdUser.id,
         plan: 'FREE',
         status: 'ACTIVE',
-        storageQuota,
+        storageQuota: defaults.storageQuota,
       });
 
       return createdUser;

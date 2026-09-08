@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 type AdminNavProps = {
@@ -28,6 +29,12 @@ export function AdminNav({ email, role }: AdminNavProps) {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href="/admin/customers"
+            className="text-sm font-medium text-zinc-700 hover:underline dark:text-zinc-300"
+          >
+            Customers
+          </Link>
           <a href="/admin/audit" className="text-sm font-medium text-zinc-700 hover:underline dark:text-zinc-300">
             Audit log
           </a>

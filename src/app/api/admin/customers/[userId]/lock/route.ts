@@ -49,7 +49,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     await writeAdminAuditLog({
       adminUserId: admin!.id,
-      action: 'CUSTOMER_ACCOUNT_LOCKED',
+      action: 'CUSTOMER_LOCKED',
       targetType: 'user',
       targetId: userId,
       metadata: { reason: parsed.data.reason },
@@ -83,7 +83,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
     await writeAdminAuditLog({
       adminUserId: admin!.id,
-      action: 'CUSTOMER_ACCOUNT_UNLOCKED',
+      action: 'CUSTOMER_UNLOCKED',
       targetType: 'user',
       targetId: userId,
       ipAddress: getClientIp(request),

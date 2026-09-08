@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminRole } from '@/lib/admin/authorization';
+import { writeAdminAuditLog } from '@/lib/admin/audit';
 import { requestBackupRecovery } from '@/lib/admin/recovery';
 import { getClientIp, getUserAgent } from '@/lib/admin/request-context';
 
@@ -31,6 +32,18 @@ export async function POST(request: Request) {
       ipAddress: getClientIp(request),
       userAgent: getUserAgent(request),
     });
+
+    if (parsed.success && parsed.data.targetUserId) {
+      await writeAdminAuditLog({
+        adminUserId: admin!.id,
+        action: 'CUSTOMER_RECOVERY',
+        targetType: 'user',
+        targetId: parsed.data.targetUserId,
+        metadata: parsed.data.note ? { note: parsed.data.note } : undefined,
+        ipAddress: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+    }
 
     return NextResponse.json({
       success: true,

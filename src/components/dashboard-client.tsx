@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ChangeEvent, useState } from "react";
-import { StorageMeter } from "@/components/storage-meter";
+import { UsageMeter } from "@/components/usage-meter";
 import type { DashboardData } from "@/lib/dashboard";
 import type { FileCategory } from "@/lib/storage/types";
 
@@ -92,7 +92,13 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
         const payload = (await requestResponse.json().catch(() => null)) as {
           error?: string;
         } | null;
-        throw new Error(payload?.error ?? "Upload request failed");
+        throw new Error(
+          payload?.error === "STORAGE_QUOTA_EXCEEDED"
+            ? "Storage limit reached"
+            : payload?.error === "FILE_SIZE_LIMIT_EXCEEDED"
+              ? "File exceeds your maximum upload size"
+              : payload?.error ?? "Upload request failed",
+        );
       }
 
       const { fileId, uploadUrl, contentType } = (await requestResponse.json()) as {
@@ -144,7 +150,14 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
     const response = await fetch(`/api/files/${fileId}`);
 
     if (!response.ok) {
-      setError("Unable to download file");
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      setError(
+        payload?.error === "BANDWIDTH_LIMIT_EXCEEDED"
+          ? "Monthly download limit reached"
+          : "Unable to download file",
+      );
       return;
     }
 
@@ -181,12 +194,24 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
   return (
     <div className="space-y-6">
-      <StorageMeter
-        used={BigInt(data.storage.used)}
-        quota={BigInt(data.storage.quota)}
-        usedLabel={data.storage.usedLabel}
-        quotaLabel={data.storage.quotaLabel}
-      />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <UsageMeter
+          title="Storage usage"
+          used={BigInt(data.storage.used)}
+          quota={BigInt(data.storage.quota)}
+          usedLabel={data.storage.usedLabel}
+          quotaLabel={data.storage.quotaLabel}
+          remainingLabel={data.storage.availableLabel}
+        />
+        <UsageMeter
+          title="Monthly downloads"
+          used={BigInt(data.bandwidth.used)}
+          quota={BigInt(data.bandwidth.limit)}
+          usedLabel={data.bandwidth.usedLabel}
+          quotaLabel={data.bandwidth.limitLabel}
+          remainingLabel={data.bandwidth.remainingLabel}
+        />
+      </div>
 
       <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

@@ -178,7 +178,7 @@ describe('storage isolation', () => {
   });
 
   it('11. upload size limits still enforce transfer boundaries', () => {
-    assert.ok(appConfig.maxUploadBytes > BigInt(0));
+    assert.ok(appConfig.defaultMaxFileSizeBytes > BigInt(0));
     assert.ok(appConfig.presignedDownloadExpirySeconds > 0);
     assert.ok(appConfig.presignedUploadExpirySeconds > 0);
   });

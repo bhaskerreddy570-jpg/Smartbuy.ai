@@ -1,15 +1,19 @@
 import { Pool, type PoolClient } from 'pg';
+import { resolveDatabaseUrl } from '@/lib/server-env';
+import {
+  currentBandwidthPeriodStart,
+  resolveCustomerLimits,
+  shouldResetBandwidthPeriod,
+  type CustomerLimitFields,
+} from '@/lib/customer-limits';
 import { exceedsStorageQuota } from '@/lib/storage/quota';
 
-type LockedUserRow = {
-  storageUsed: bigint;
-  storageQuota: bigint;
-};
+export type LockedCustomerRow = CustomerLimitFields;
 
 let pool: Pool | null = null;
 
 function getPool(): Pool {
-  const connectionString = process.env.DATABASE_URL?.trim();
+  const connectionString = resolveDatabaseUrl();
   if (!connectionString) {
     throw new Error('DATABASE_URL is not configured');
   }
@@ -21,9 +25,53 @@ function getPool(): Pool {
   return pool;
 }
 
-export async function withLockedUser<T>(
+function mapLockedCustomerRow(row: {
+  storageUsed: string;
+  storageQuota: string;
+  maxFileSizeBytes: string;
+  monthlyBandwidthLimitBytes: string;
+  monthlyBandwidthUsedBytes: string;
+  bandwidthPeriodStart: string | null;
+}): LockedCustomerRow {
+  return {
+    storageUsed: BigInt(row.storageUsed),
+    storageQuota: BigInt(row.storageQuota),
+    maxFileSizeBytes: BigInt(row.maxFileSizeBytes),
+    monthlyBandwidthLimitBytes: BigInt(row.monthlyBandwidthLimitBytes),
+    monthlyBandwidthUsedBytes: BigInt(row.monthlyBandwidthUsedBytes),
+    bandwidthPeriodStart: row.bandwidthPeriodStart,
+  };
+}
+
+async function normalizeLockedCustomerRow(
   userId: string,
-  handler: (user: LockedUserRow, client: PoolClient) => Promise<T>,
+  user: LockedCustomerRow,
+  client: PoolClient,
+): Promise<LockedCustomerRow> {
+  let next = user;
+
+  if (shouldResetBandwidthPeriod(user.bandwidthPeriodStart)) {
+    const periodStart = currentBandwidthPeriodStart();
+    await client.query(
+      `UPDATE "user"
+       SET "monthlyBandwidthUsedBytes" = 0,
+           "bandwidthPeriodStart" = $1
+       WHERE id = $2`,
+      [periodStart, userId],
+    );
+    next = {
+      ...next,
+      monthlyBandwidthUsedBytes: 0n,
+      bandwidthPeriodStart: periodStart,
+    };
+  }
+
+  return next;
+}
+
+export async function withLockedCustomer<T>(
+  userId: string,
+  handler: (user: LockedCustomerRow, client: PoolClient) => Promise<T>,
 ): Promise<T> {
   const client = await getPool().connect();
 
@@ -33,8 +81,17 @@ export async function withLockedUser<T>(
     const locked = await client.query<{
       storageUsed: string;
       storageQuota: string;
+      maxFileSizeBytes: string;
+      monthlyBandwidthLimitBytes: string;
+      monthlyBandwidthUsedBytes: string;
+      bandwidthPeriodStart: string | null;
     }>(
-      'SELECT "storageUsed", "storageQuota" FROM "user" WHERE id = $1 FOR UPDATE',
+      `SELECT "storageUsed", "storageQuota", "maxFileSizeBytes",
+              "monthlyBandwidthLimitBytes", "monthlyBandwidthUsedBytes",
+              "bandwidthPeriodStart"
+       FROM "user"
+       WHERE id = $1
+       FOR UPDATE`,
       [userId],
     );
 
@@ -42,10 +99,8 @@ export async function withLockedUser<T>(
       throw new Error('User not found');
     }
 
-    const user: LockedUserRow = {
-      storageUsed: BigInt(locked.rows[0].storageUsed),
-      storageQuota: BigInt(locked.rows[0].storageQuota),
-    };
+    let user = mapLockedCustomerRow(locked.rows[0]);
+    user = await normalizeLockedCustomerRow(userId, user, client);
 
     const result = await handler(user, client);
     await client.query('COMMIT');
@@ -59,17 +114,32 @@ export async function withLockedUser<T>(
 }
 
 export function reserveStorageBytes(
-  user: LockedUserRow,
+  user: LockedCustomerRow,
   bytes: bigint,
 ): { ok: true; nextStorageUsed: bigint } | { ok: false } {
-  if (exceedsStorageQuota(user.storageUsed, bytes, user.storageQuota)) {
+  const limits = resolveCustomerLimits(user);
+  if (exceedsStorageQuota(limits.storageUsed, bytes, limits.storageQuota)) {
     return { ok: false };
   }
 
   return {
     ok: true,
-    nextStorageUsed: user.storageUsed + bytes,
+    nextStorageUsed: limits.storageUsed + bytes,
   };
+}
+
+export function reserveBandwidthBytes(
+  user: LockedCustomerRow,
+  bytes: bigint,
+): { ok: true; nextBandwidthUsed: bigint } | { ok: false } {
+  const limits = resolveCustomerLimits(user);
+  const nextUsed = limits.monthlyBandwidthUsedBytes + bytes;
+
+  if (nextUsed > limits.monthlyBandwidthLimitBytes) {
+    return { ok: false };
+  }
+
+  return { ok: true, nextBandwidthUsed: nextUsed };
 }
 
 export async function setUserStorageUsed(
@@ -82,3 +152,17 @@ export async function setUserStorageUsed(
     userId,
   ]);
 }
+
+export async function setUserBandwidthUsed(
+  client: PoolClient,
+  userId: string,
+  monthlyBandwidthUsedBytes: bigint,
+): Promise<void> {
+  await client.query(
+    'UPDATE "user" SET "monthlyBandwidthUsedBytes" = $1 WHERE id = $2',
+    [monthlyBandwidthUsedBytes.toString(), userId],
+  );
+}
+
+// Backward-compatible alias used by upload lifecycle imports.
+export const withLockedUser = withLockedCustomer;

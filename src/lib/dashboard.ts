@@ -1,27 +1,38 @@
 import { orm } from '@/lib/db';
+import { resolveCustomerLimits, shouldResetBandwidthPeriod } from '@/lib/customer-limits';
 import { getCategoryLabel } from '@/lib/storage/categories';
 import { listReadyFiles } from '@/lib/storage/files';
 import { FILE_CATEGORIES, type FileCategory } from '@/lib/storage/types';
 import { formatBytes } from '@/lib/storage/validation';
-
-function toBigInt(value: bigint | number | string): bigint {
-  return typeof value === 'bigint' ? value : BigInt(value);
-}
 
 export async function getDashboardData(
   userId: string,
   category?: FileCategory,
 ) {
   const user = await orm.User.where({ id: userId })
-    .select('storageQuota', 'storageUsed')
+    .select(
+      'storageQuota',
+      'storageUsed',
+      'maxFileSizeBytes',
+      'monthlyBandwidthLimitBytes',
+      'monthlyBandwidthUsedBytes',
+      'bandwidthPeriodStart',
+    )
     .first();
 
   if (!user) {
     return null;
   }
 
-  const storageQuota = toBigInt(user.storageQuota);
-  const storageUsed = toBigInt(user.storageUsed);
+  const limits = resolveCustomerLimits(user);
+  const bandwidthUsed = shouldResetBandwidthPeriod(user.bandwidthPeriodStart)
+    ? 0n
+    : limits.monthlyBandwidthUsedBytes;
+  const bandwidthRemaining =
+    limits.monthlyBandwidthLimitBytes >= bandwidthUsed
+      ? limits.monthlyBandwidthLimitBytes - bandwidthUsed
+      : 0n;
+
   const allFiles = await listReadyFiles(userId);
   const files = category
     ? allFiles.filter((file) => file.category === category)
@@ -40,12 +51,24 @@ export async function getDashboardData(
 
   return {
     storage: {
-      quota: storageQuota.toString(),
-      used: storageUsed.toString(),
-      available: (storageQuota - storageUsed).toString(),
-      quotaLabel: formatBytes(storageQuota),
-      usedLabel: formatBytes(storageUsed),
-      availableLabel: formatBytes(storageQuota - storageUsed),
+      quota: limits.storageQuota.toString(),
+      used: limits.storageUsed.toString(),
+      available: limits.storageRemaining.toString(),
+      quotaLabel: formatBytes(limits.storageQuota),
+      usedLabel: formatBytes(limits.storageUsed),
+      availableLabel: formatBytes(limits.storageRemaining),
+    },
+    bandwidth: {
+      limit: limits.monthlyBandwidthLimitBytes.toString(),
+      used: bandwidthUsed.toString(),
+      remaining: bandwidthRemaining.toString(),
+      limitLabel: formatBytes(limits.monthlyBandwidthLimitBytes),
+      usedLabel: formatBytes(bandwidthUsed),
+      remainingLabel: formatBytes(bandwidthRemaining),
+    },
+    maxFileSize: {
+      bytes: limits.maxFileSizeBytes.toString(),
+      label: formatBytes(limits.maxFileSizeBytes),
     },
     activeCategory: category ?? null,
     categories: FILE_CATEGORIES.map((fileCategory) => ({
@@ -57,8 +80,8 @@ export async function getDashboardData(
       id: file.id,
       name: file.name,
       originalName: file.originalName,
-      size: toBigInt(file.size).toString(),
-      sizeLabel: formatBytes(toBigInt(file.size)),
+      size: BigInt(file.size).toString(),
+      sizeLabel: formatBytes(BigInt(file.size)),
       mimeType: file.mimeType,
       category: file.category,
       categoryLabel: getCategoryLabel(file.category),

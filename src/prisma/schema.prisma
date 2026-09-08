@@ -48,6 +48,12 @@ enum AdminAuditAction {
   ADMIN_PASSWORD_CHANGED
   CUSTOMER_ACCOUNT_LOCKED
   CUSTOMER_ACCOUNT_UNLOCKED
+  STORAGE_LIMIT_CHANGED
+  MAX_FILE_SIZE_CHANGED
+  BANDWIDTH_LIMIT_CHANGED
+  CUSTOMER_LOCKED
+  CUSTOMER_UNLOCKED
+  CUSTOMER_RECOVERY
   RECOVERY_TOKEN_ISSUED
   RECOVERY_TOKEN_USED
   RECOVERY_REQUEST_DENIED
@@ -62,6 +68,10 @@ model User {
   passwordHash String
   storageQuota BigInt
   storageUsed  BigInt   @default(0)
+  maxFileSizeBytes BigInt
+  monthlyBandwidthLimitBytes BigInt
+  monthlyBandwidthUsedBytes BigInt @default(0)
+  bandwidthPeriodStart TimestamptzString?
   lockedAt     TimestamptzString?
   lockReason   String?
   createdAt    TimestamptzString @default(now())

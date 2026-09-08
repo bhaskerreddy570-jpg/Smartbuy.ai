@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
 import { db } from '@/lib/db';
+import { reserveDownloadBandwidth } from '@/lib/storage/bandwidth-reservation';
 import { assertStorageKeyOwnership } from '@/lib/storage/keys';
 import { getOwnedFile } from '@/lib/storage/files';
 import {
@@ -42,6 +43,22 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const file = await getOwnedFile(user.id, fileId);
 
   if (!file || !verifyOwnedStorageObject(file, user.id)) {
+    return notFoundResponse();
+  }
+
+  const bandwidthReservation = await reserveDownloadBandwidth({
+    userId: user.id,
+    bytes: BigInt(file.size),
+  });
+
+  if (!bandwidthReservation.ok) {
+    if (bandwidthReservation.reason === 'bandwidth_exceeded') {
+      return NextResponse.json(
+        { error: 'BANDWIDTH_LIMIT_EXCEEDED' },
+        { status: 429 },
+      );
+    }
+
     return notFoundResponse();
   }
 

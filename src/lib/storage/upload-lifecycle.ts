@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg';
 import { randomUUID } from 'node:crypto';
+import { resolveCustomerLimits } from '@/lib/customer-limits';
 import { getStorageService } from '@/lib/storage/storage-service';
 import type { FileCategory } from '@/lib/storage/types';
 import { DEFAULT_STORAGE_NAMESPACE } from '@/lib/storage/types';
@@ -151,14 +152,18 @@ export async function finalizePendingUpload(params: {
     }
 
     const reservedSize = BigInt(file.size);
+    const limits = resolveCustomerLimits(user);
     const sizeDelta = params.actualSize - reservedSize;
     const nextStorageUsed = adjustStorageUsedForActualSize(
-      user.storageUsed,
+      limits.storageUsed,
       reservedSize,
       params.actualSize,
     );
 
-    if (sizeDelta > BigInt(0) && exceedsStorageQuota(user.storageUsed, sizeDelta, user.storageQuota)) {
+    if (
+      sizeDelta > BigInt(0) &&
+      exceedsStorageQuota(limits.storageUsed, sizeDelta, limits.storageQuota)
+    ) {
       return { ok: false, reason: 'quota_exceeded' };
     }
 

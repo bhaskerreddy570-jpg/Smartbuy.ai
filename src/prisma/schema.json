@@ -73,6 +73,30 @@
                 "value": "CUSTOMER_ACCOUNT_UNLOCKED"
               },
               {
+                "name": "STORAGE_LIMIT_CHANGED",
+                "value": "STORAGE_LIMIT_CHANGED"
+              },
+              {
+                "name": "MAX_FILE_SIZE_CHANGED",
+                "value": "MAX_FILE_SIZE_CHANGED"
+              },
+              {
+                "name": "BANDWIDTH_LIMIT_CHANGED",
+                "value": "BANDWIDTH_LIMIT_CHANGED"
+              },
+              {
+                "name": "CUSTOMER_LOCKED",
+                "value": "CUSTOMER_LOCKED"
+              },
+              {
+                "name": "CUSTOMER_UNLOCKED",
+                "value": "CUSTOMER_UNLOCKED"
+              },
+              {
+                "name": "CUSTOMER_RECOVERY",
+                "value": "CUSTOMER_RECOVERY"
+              },
+              {
                 "name": "RECOVERY_TOKEN_ISSUED",
                 "value": "RECOVERY_TOKEN_ISSUED"
               },
@@ -1205,6 +1229,13 @@
           },
           "User": {
             "fields": {
+              "bandwidthPeriodStart": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
               "createdAt": {
                 "nullable": false,
                 "type": {
@@ -1237,6 +1268,27 @@
                 "nullable": true,
                 "type": {
                   "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "maxFileSizeBytes": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "monthlyBandwidthLimitBytes": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "monthlyBandwidthUsedBytes": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
                   "kind": "scalar"
                 }
               },
@@ -1325,6 +1377,9 @@
             },
             "storage": {
               "fields": {
+                "bandwidthPeriodStart": {
+                  "column": "bandwidthPeriodStart"
+                },
                 "createdAt": {
                   "column": "createdAt"
                 },
@@ -1339,6 +1394,15 @@
                 },
                 "lockedAt": {
                   "column": "lockedAt"
+                },
+                "maxFileSizeBytes": {
+                  "column": "maxFileSizeBytes"
+                },
+                "monthlyBandwidthLimitBytes": {
+                  "column": "monthlyBandwidthLimitBytes"
+                },
+                "monthlyBandwidthUsedBytes": {
+                  "column": "monthlyBandwidthUsedBytes"
                 },
                 "name": {
                   "column": "name"
@@ -1372,8 +1436,8 @@
             "adminAuditLog": {
               "checks": [
                 {
-                  "expression": "\"action\" IN ('ADMIN_LOGIN_SUCCESS', 'ADMIN_LOGIN_FAILED', 'ADMIN_LOGOUT', 'ADMIN_SESSION_REVOKED', 'ADMIN_PASSWORD_CHANGED', 'CUSTOMER_ACCOUNT_LOCKED', 'CUSTOMER_ACCOUNT_UNLOCKED', 'RECOVERY_TOKEN_ISSUED', 'RECOVERY_TOKEN_USED', 'RECOVERY_REQUEST_DENIED', 'BACKUP_REQUESTED', 'DATA_RECOVERY_REQUESTED')",
-                  "name": "adminAuditLog_action_check_2c184a7c",
+                  "expression": "\"action\" IN ('ADMIN_LOGIN_SUCCESS', 'ADMIN_LOGIN_FAILED', 'ADMIN_LOGOUT', 'ADMIN_SESSION_REVOKED', 'ADMIN_PASSWORD_CHANGED', 'CUSTOMER_ACCOUNT_LOCKED', 'CUSTOMER_ACCOUNT_UNLOCKED', 'STORAGE_LIMIT_CHANGED', 'MAX_FILE_SIZE_CHANGED', 'BANDWIDTH_LIMIT_CHANGED', 'CUSTOMER_LOCKED', 'CUSTOMER_UNLOCKED', 'CUSTOMER_RECOVERY', 'RECOVERY_TOKEN_ISSUED', 'RECOVERY_TOKEN_USED', 'RECOVERY_REQUEST_DENIED', 'BACKUP_REQUESTED', 'DATA_RECOVERY_REQUESTED')",
+                  "name": "adminAuditLog_action_check_0f9926f8",
                   "prefix": "adminAuditLog_action_check"
                 }
               ],
@@ -2242,6 +2306,11 @@
             },
             "user": {
               "columns": {
+                "bandwidthPeriodStart": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
                 "createdAt": {
                   "codecId": "pg/timestamptz-string@1",
                   "default": {
@@ -2270,6 +2339,25 @@
                   "codecId": "pg/timestamptz-string@1",
                   "nativeType": "timestamptz",
                   "nullable": true
+                },
+                "maxFileSizeBytes": {
+                  "codecId": "pg/int8@1",
+                  "nativeType": "int8",
+                  "nullable": false
+                },
+                "monthlyBandwidthLimitBytes": {
+                  "codecId": "pg/int8@1",
+                  "nativeType": "int8",
+                  "nullable": false
+                },
+                "monthlyBandwidthUsedBytes": {
+                  "codecId": "pg/int8@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "0"
+                  },
+                  "nativeType": "int8",
+                  "nullable": false
                 },
                 "name": {
                   "codecId": "pg/text@1",
@@ -2328,6 +2416,12 @@
                 "ADMIN_PASSWORD_CHANGED",
                 "CUSTOMER_ACCOUNT_LOCKED",
                 "CUSTOMER_ACCOUNT_UNLOCKED",
+                "STORAGE_LIMIT_CHANGED",
+                "MAX_FILE_SIZE_CHANGED",
+                "BANDWIDTH_LIMIT_CHANGED",
+                "CUSTOMER_LOCKED",
+                "CUSTOMER_UNLOCKED",
+                "CUSTOMER_RECOVERY",
                 "RECOVERY_TOKEN_ISSUED",
                 "RECOVERY_TOKEN_USED",
                 "RECOVERY_REQUEST_DENIED",
@@ -2395,7 +2489,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "ddd72e69619b76a48ba676f09f315805ab0a18363438a67c3be680c6996bd7df"
+    "storageHash": "c981e8ad0bad900bf4c3f162dfcb770ec981bb93a2f434949ac658f92ce6241c"
   },
   "execution": {
     "executionHash": "167538b45ed1d29d3463459c5037545f2eaa34cd7c9a33a97c2f266226caf717",
