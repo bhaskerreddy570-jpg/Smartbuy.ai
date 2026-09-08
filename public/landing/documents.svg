@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none" role="img" aria-label="Documents preview">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e4e4e7"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" rx="24" fill="#f4f4f5"/>
+  <rect x="88" y="40" width="180" height="220" rx="12" fill="url(#paper)" stroke="#d4d4d8"/>
+  <rect x="132" y="28" width="180" height="220" rx="12" fill="url(#paper)" stroke="#d4d4d8"/>
+  <rect x="112" y="56" width="180" height="220" rx="12" fill="white" stroke="#a1a1aa"/>
+  <rect x="136" y="92" width="96" height="8" rx="4" fill="#d4d4d8"/>
+  <rect x="136" y="112" width="128" height="8" rx="4" fill="#e4e4e7"/>
+  <rect x="136" y="132" width="112" height="8" rx="4" fill="#e4e4e7"/>
+  <rect x="136" y="152" width="120" height="8" rx="4" fill="#e4e4e7"/>
+  <rect x="136" y="188" width="72" height="24" rx="8" fill="#dbeafe"/>
+</svg>
