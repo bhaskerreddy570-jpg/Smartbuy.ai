@@ -2,6 +2,10 @@ import type { PoolClient } from 'pg';
 import { randomUUID } from 'node:crypto';
 import { resolveCustomerLimits } from '@/lib/customer-limits';
 import { getStorageService } from '@/lib/storage/storage-service';
+import {
+  normalizeSecureEncryptionMetadata,
+  type SecureEncryptionMetadata,
+} from '@/lib/storage/secure-upload-metadata';
 import type { FileCategory } from '@/lib/storage/types';
 import { DEFAULT_STORAGE_NAMESPACE } from '@/lib/storage/types';
 import {
@@ -69,6 +73,8 @@ export async function createPendingUpload(params: {
   mimeType: string;
   uploadSize: bigint;
   category: FileCategory;
+  secure?: boolean;
+  encryption?: SecureEncryptionMetadata;
 }): Promise<
   | { ok: true; file: CreatedPendingUpload }
   | { ok: false; reason: UploadFailureReason }
@@ -90,11 +96,18 @@ export async function createPendingUpload(params: {
         namespace: DEFAULT_STORAGE_NAMESPACE,
       });
 
+      const secure = params.secure === true;
+      const encryptionFields = secure && params.encryption
+        ? normalizeSecureEncryptionMetadata(params.encryption)
+        : null;
+
       await client.query(
         `INSERT INTO file (
           id, "userId", name, "originalName", "storageKey", size, "mimeType", status,
-          category, "storageProvider", "storageNamespace", "updatedAt"
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8, 'S3', $9, NOW())`,
+          category, "storageProvider", "storageNamespace", "securityMode",
+          "encryptionFormatVersion", "encryptionAlgorithm", "encryptionKdf",
+          "encryptionSalt", "encryptionIv", "plaintextSize", "updatedAt"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8, 'S3', $9, $10, $11, $12, $13, $14, $15, $16, NOW())`,
         [
           fileId,
           params.userId,
@@ -105,6 +118,13 @@ export async function createPendingUpload(params: {
           params.mimeType,
           params.category,
           prepared.objectRef.namespace,
+          secure ? 'SECURE' : 'NORMAL',
+          encryptionFields?.encryptionFormatVersion ?? null,
+          encryptionFields?.encryptionAlgorithm ?? null,
+          encryptionFields?.encryptionKdf ?? null,
+          encryptionFields?.encryptionSalt ?? null,
+          encryptionFields?.encryptionIv ?? null,
+          encryptionFields?.plaintextSize?.toString() ?? null,
         ],
       );
 

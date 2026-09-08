@@ -5,6 +5,11 @@ enum FileStatus {
   READY
 }
 
+enum FileSecurityMode {
+  NORMAL
+  SECURE
+}
+
 enum FileCategory {
   CONTACTS
   IMAGES
@@ -111,6 +116,13 @@ model File {
   storageProvider StorageProviderKind @default(S3)
   storageNamespace String          @default("default")
   starred      Boolean           @default(false)
+  securityMode FileSecurityMode  @default(NORMAL)
+  encryptionFormatVersion String?
+  encryptionAlgorithm String?
+  encryptionKdf String?
+  encryptionSalt String?
+  encryptionIv String?
+  plaintextSize BigInt?
   folderId     Uuid?
   createdAt    TimestamptzString @default(now())
   updatedAt    temporal.updatedAtString()

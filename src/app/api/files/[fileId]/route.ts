@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
+import { buildDownloadEncryptionPayload } from '@/lib/crypto/secure-file-crypto';
 import { db } from '@/lib/db';
+import { isSecureFileRecord } from '@/lib/storage/secure-upload-metadata';
 import { reserveDownloadBandwidth } from '@/lib/storage/bandwidth-reservation';
 import {
   restoreOwnedFile,
@@ -56,10 +58,22 @@ export async function GET(_request: Request, { params }: RouteParams) {
       objectRef: owned.objectRef,
       fileName: owned.file.name,
     });
+
+    if (isSecureFileRecord(owned.file)) {
+      return NextResponse.json({
+        downloadUrl,
+        fileName: owned.file.name,
+        category: owned.file.category,
+        securityMode: 'SECURE',
+        encryption: buildDownloadEncryptionPayload(owned.file),
+      });
+    }
+
     return NextResponse.json({
       downloadUrl,
       fileName: owned.file.name,
       category: owned.file.category,
+      securityMode: 'NORMAL',
     });
   } catch (downloadError) {
     console.error('Download URL generation failed', downloadError);

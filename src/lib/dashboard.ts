@@ -90,19 +90,40 @@ export async function getDashboardData(
       label: getCategoryLabel(fileCategory),
       count: countsByCategory.get(fileCategory) ?? 0,
     })),
-    files: files.map((file) => ({
-      id: file.id,
-      name: file.name,
-      originalName: file.originalName,
-      size: BigInt(file.size).toString(),
-      sizeLabel: formatBytes(BigInt(file.size)),
-      mimeType: file.mimeType,
-      category: file.category,
-      categoryLabel: getCategoryLabel(file.category),
-      starred: Boolean(file.starred),
-      createdAt: file.createdAt,
-      deletedAt: file.deletedAt,
-    })),
+    files: files.map((file) => {
+      const storedSize = BigInt(file.size);
+      const displaySize =
+        file.securityMode === 'SECURE' && file.plaintextSize !== null
+          ? BigInt(file.plaintextSize)
+          : storedSize;
+
+      return {
+        id: file.id,
+        name: file.name,
+        originalName: file.originalName,
+        size: storedSize.toString(),
+        sizeLabel: formatBytes(displaySize),
+        storedSizeLabel:
+          file.securityMode === 'SECURE' ? formatBytes(storedSize) : undefined,
+        mimeType: file.mimeType,
+        category: file.category,
+        categoryLabel: getCategoryLabel(file.category),
+        starred: Boolean(file.starred),
+        securityMode: file.securityMode ?? 'NORMAL',
+        isSecure: file.securityMode === 'SECURE',
+        encryption:
+          file.securityMode === 'SECURE'
+            ? {
+                formatVersion: file.encryptionFormatVersion,
+                algorithm: file.encryptionAlgorithm,
+                kdf: file.encryptionKdf,
+                hasPassphraseSalt: Boolean(file.encryptionSalt),
+              }
+            : null,
+        createdAt: file.createdAt,
+        deletedAt: file.deletedAt,
+      };
+    }),
   };
 }
 

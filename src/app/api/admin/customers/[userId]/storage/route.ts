@@ -31,6 +31,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       userId: usage.userId,
       storageUsed: usage.totalBytesUsed.toString(),
       storageUsedLabel: usage.totalLabel,
+      secureFileCount: usage.secureFileCount,
       categories: usage.categories.map((category) => ({
         category: category.category,
         label: category.label,

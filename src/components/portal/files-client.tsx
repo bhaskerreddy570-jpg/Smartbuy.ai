@@ -4,9 +4,19 @@ import { useRouter } from "next/navigation";
 import { ChangeEvent, useMemo, useState } from "react";
 import type { DashboardData } from "@/lib/dashboard";
 import { mapFilesLoadClientError, mapUploadTransferClientError } from "@/lib/api/fetch-errors";
-import { mapUploadClientError } from "@/lib/storage/upload-api-errors";
 import type { FileCategory } from "@/lib/storage/types";
 import { FileTypeIcon } from "@/components/portal/file-type-icon";
+import { SecureUploadDialog } from "@/components/portal/secure-upload-dialog";
+import { SecureUnlockDialog } from "@/components/portal/secure-unlock-dialog";
+import {
+  uploadNormalFile,
+  uploadPreparedFile,
+} from "@/lib/client/file-upload-flow";
+import {
+  handleNormalFileDownload,
+  handleSecureFileDownload,
+  type SecureDownloadPayload,
+} from "@/lib/client/secure-file-access";
 
 type FilesClientProps = {
   initialData: DashboardData;
@@ -41,6 +51,14 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
   const [sortBy, setSortBy] = useState<"name" | "size" | "date">("date");
   const [search, setSearch] = useState(initialQuery);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [secureUploadEnabled, setSecureUploadEnabled] = useState(false);
+  const [pendingSecureFile, setPendingSecureFile] = useState<File | null>(null);
+  const [unlockTarget, setUnlockTarget] = useState<{
+    fileId: string;
+    fileName: string;
+    usesPassphrase: boolean;
+    payload: SecureDownloadPayload;
+  } | null>(null);
 
   const filteredFiles = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -126,63 +144,49 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
     }
   }
 
-  async function uploadFile(file: File) {
+  async function uploadFile(file: File, secure = secureUploadEnabled) {
+    if (secure) {
+      setPendingSecureFile(file);
+      return;
+    }
+
     setUploading(true);
     setActionMessage(null);
     setError(null);
 
     try {
-      const requestResponse = await fetch("/api/files/upload/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileName: file.name,
-          mimeType: file.type || "application/octet-stream",
-          size: file.size,
-        }),
-      });
-
-      if (!requestResponse.ok) {
-        const payload = (await requestResponse.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw new Error(mapUploadClientError(payload?.error));
-      }
-
-      const { fileId } = (await requestResponse.json()) as {
-        fileId: string;
-      };
-
-      const transferForm = new FormData();
-      transferForm.append("fileId", fileId);
-      transferForm.append("file", file, file.name);
-
-      const transferResponse = await fetch("/api/files/upload/transfer", {
-        method: "POST",
-        body: transferForm,
-      });
-
-      if (!transferResponse.ok) {
-        const payload = (await transferResponse.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw new Error(mapUploadClientError(payload?.error));
-      }
-
-      const completeResponse = await fetch("/api/files/upload/complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileId }),
-      });
-
-      if (!completeResponse.ok) {
-        const payload = (await completeResponse.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw new Error(mapUploadClientError(payload?.error));
-      }
-
+      await uploadNormalFile(file);
       setActionMessage(`${file.name} uploaded successfully`);
+      await refreshFiles(data.activeCategory);
+    } catch (uploadError) {
+      setError(mapUploadTransferClientError(uploadError));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function completeSecureUpload(result: {
+    encryptedFile: File;
+    metadata: Parameters<typeof uploadPreparedFile>[0]["encryption"];
+  }) {
+    if (!pendingSecureFile) {
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+    setActionMessage(null);
+
+    try {
+      await uploadPreparedFile({
+        originalFile: pendingSecureFile,
+        payloadFile: result.encryptedFile,
+        secure: true,
+        encryption: result.metadata,
+      });
+      setActionMessage(`${pendingSecureFile.name} uploaded securely`);
+      setPendingSecureFile(null);
+      setSecureUploadEnabled(false);
       await refreshFiles(data.activeCategory);
     } catch (uploadError) {
       setError(mapUploadTransferClientError(uploadError));
@@ -217,16 +221,19 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
       return;
     }
 
-    const payload = (await response.json()) as {
-      downloadUrl: string;
-      fileName: string;
-    };
+    const payload = (await response.json()) as SecureDownloadPayload;
 
-    const link = document.createElement("a");
-    link.href = payload.downloadUrl;
-    link.download = payload.fileName;
-    link.rel = "noopener noreferrer";
-    link.click();
+    if (payload.securityMode === "SECURE" && payload.encryption) {
+      setUnlockTarget({
+        fileId,
+        fileName: payload.fileName,
+        usesPassphrase: payload.encryption.kdf === "PBKDF2-SHA256",
+        payload,
+      });
+      return;
+    }
+
+    await handleNormalFileDownload(payload);
   }
 
   async function handleDelete(fileId: string, fileName: string) {
@@ -276,10 +283,20 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
             Upload, organize, and manage your private cloud storage.
           </p>
         </div>
-        <label className="portal-primary-button cursor-pointer">
-          {uploading ? "Uploading..." : "Upload file"}
-          <input type="file" className="hidden" disabled={uploading} onChange={handleUpload} />
-        </label>
+        <div className="flex flex-col items-stretch gap-3 sm:items-end">
+          <label className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950">
+            <input
+              type="checkbox"
+              checked={secureUploadEnabled}
+              onChange={(event) => setSecureUploadEnabled(event.target.checked)}
+            />
+            Secure this file 🔐
+          </label>
+          <label className="portal-primary-button cursor-pointer">
+            {uploading ? "Uploading..." : secureUploadEnabled ? "Upload securely" : "Upload file"}
+            <input type="file" className="hidden" disabled={uploading} onChange={handleUpload} />
+          </label>
+        </div>
       </div>
 
       <div
@@ -397,9 +414,13 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
                 <div className="flex items-start gap-3">
                   <FileTypeIcon category={file.category} mimeType={file.mimeType} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{file.name}</p>
+                    <p className="truncate font-medium">
+                      {file.isSecure ? "🔐 " : ""}
+                      {file.name}
+                    </p>
                     <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                       {file.categoryLabel} · {file.sizeLabel}
+                      {file.isSecure ? " · Secure / Zero-Knowledge" : ""}
                     </p>
                     <p className="mt-1 text-xs text-zinc-400">
                       {new Date(file.createdAt).toLocaleDateString()}
@@ -446,7 +467,10 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
                     <td>
                       <div className="flex items-center gap-3">
                         <FileTypeIcon category={file.category} mimeType={file.mimeType} compact />
-                        <span className="font-medium">{file.name}</span>
+                        <span className="font-medium">
+                          {file.isSecure ? "🔐 " : ""}
+                          {file.name}
+                        </span>
                       </div>
                     </td>
                     <td>{file.categoryLabel}</td>
@@ -506,6 +530,31 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
           </div>
         )}
       </section>
+
+      <SecureUploadDialog
+        file={pendingSecureFile ?? new File([], "placeholder")}
+        open={pendingSecureFile !== null}
+        onCancel={() => setPendingSecureFile(null)}
+        onConfirm={(result) => void completeSecureUpload(result)}
+      />
+
+      <SecureUnlockDialog
+        open={unlockTarget !== null}
+        fileName={unlockTarget?.fileName ?? ""}
+        usesPassphrase={unlockTarget?.usesPassphrase ?? false}
+        onCancel={() => setUnlockTarget(null)}
+        onUnlock={async (secret) => {
+          if (!unlockTarget) {
+            return;
+          }
+          await handleSecureFileDownload({
+            payload: unlockTarget.payload,
+            keyInput: secret,
+          });
+          setUnlockTarget(null);
+          setActionMessage(`${unlockTarget.fileName} unlocked locally`);
+        }}
+      />
     </div>
   );
 }

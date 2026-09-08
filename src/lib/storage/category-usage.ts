@@ -28,6 +28,7 @@ export type CustomerStorageUsageSummary = {
   userId: string;
   totalBytesUsed: bigint;
   totalLabel: string;
+  secureFileCount: number;
   categories: CategoryUsageSummary[];
 };
 
@@ -94,10 +95,21 @@ export async function getCustomerStorageUsageByCategory(
     };
   });
 
+  const secureCountResult = await getPool().query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count
+     FROM file
+     WHERE "userId" = $1
+       AND "deletedAt" IS NULL
+       AND status = 'READY'
+       AND "securityMode" = 'SECURE'`,
+    [userId],
+  );
+
   return {
     userId,
     totalBytesUsed,
     totalLabel: formatBytes(totalBytesUsed),
+    secureFileCount: Number(secureCountResult.rows[0]?.count ?? 0),
     categories,
   };
 }

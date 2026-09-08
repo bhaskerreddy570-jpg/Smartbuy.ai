@@ -14,6 +14,7 @@ type StorageUsageResponse = {
   userId: string;
   storageUsed: string;
   storageUsedLabel: string;
+  secureFileCount?: number;
   categories: CategoryUsage[];
 };
 
@@ -97,6 +98,16 @@ export function AdminCustomerStoragePanel() {
           <p className="text-sm">
             <span className="font-medium">Storage Used:</span>{" "}
             {usage.storageUsedLabel}
+          </p>
+          {typeof usage.secureFileCount === "number" ? (
+            <p className="text-sm">
+              <span className="font-medium">Secure / Zero-Knowledge files:</span>{" "}
+              {usage.secureFileCount} 🔐
+            </p>
+          ) : null}
+          <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:bg-amber-950/20 dark:text-amber-100">
+            Secure files are encrypted client-side. Admins cannot decrypt secure file
+            contents or recover customer encryption keys.
           </p>
           <ul className="space-y-2 text-sm">
             {usage.categories.map((category) => (

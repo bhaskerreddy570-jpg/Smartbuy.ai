@@ -35,7 +35,7 @@ describe('security scenarios (logic-level)', () => {
     );
 
     assert.match(filesSource, /userId,/);
-    assert.match(deleteSource, /getOwnedFile\(user\.id/);
+    assert.match(deleteSource, /resolveOwnedFileStorage\(/);
     assert.match(deleteSource, /userId: user\.id/);
   });
 

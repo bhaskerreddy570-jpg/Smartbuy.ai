@@ -12,6 +12,13 @@ const fileSelect = [
   'storageProvider',
   'storageNamespace',
   'starred',
+  'securityMode',
+  'encryptionFormatVersion',
+  'encryptionAlgorithm',
+  'encryptionKdf',
+  'encryptionSalt',
+  'encryptionIv',
+  'plaintextSize',
   'createdAt',
   'deletedAt',
 ] as const;

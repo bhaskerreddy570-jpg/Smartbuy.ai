@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { DashboardData } from "@/lib/dashboard";
 import { FileTypeIcon } from "@/components/portal/file-type-icon";
+import { useOwnedFileDownload } from "@/components/portal/use-owned-file-download";
 
 type PortalFileLibraryProps = {
   initialData: DashboardData;
@@ -16,6 +17,12 @@ export function PortalFileLibrary({ initialData, mode }: PortalFileLibraryProps)
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const {
+    downloadFile,
+    unlockDialog,
+    downloadError,
+    setDownloadError,
+  } = useOwnedFileDownload();
 
   const filteredFiles = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -44,17 +51,8 @@ export function PortalFileLibrary({ initialData, mode }: PortalFileLibraryProps)
   }
 
   async function handleDownload(fileId: string) {
-    const response = await fetch(`/api/files/${fileId}`);
-    if (!response.ok) {
-      setError("Unable to download file");
-      return;
-    }
-    const payload = (await response.json()) as { downloadUrl: string; fileName: string };
-    const link = document.createElement("a");
-    link.href = payload.downloadUrl;
-    link.download = payload.fileName;
-    link.rel = "noopener noreferrer";
-    link.click();
+    setDownloadError(null);
+    await downloadFile(fileId);
   }
 
   async function handleRestore(fileId: string, fileName: string) {
@@ -126,6 +124,7 @@ export function PortalFileLibrary({ initialData, mode }: PortalFileLibraryProps)
 
       {message ? <p className="portal-alert-success">{message}</p> : null}
       {error ? <p className="portal-alert-error">{error}</p> : null}
+      {downloadError ? <p className="portal-alert-error">{downloadError}</p> : null}
 
       {filteredFiles.length === 0 ? (
         <div className="portal-empty-state portal-card">
@@ -145,7 +144,10 @@ export function PortalFileLibrary({ initialData, mode }: PortalFileLibraryProps)
               <div className="flex items-start gap-3">
                 <FileTypeIcon category={file.category} mimeType={file.mimeType} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{file.name}</p>
+                  <p className="truncate font-medium">
+                    {file.isSecure ? "🔐 " : ""}
+                    {file.name}
+                  </p>
                   <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                     {file.categoryLabel} · {file.sizeLabel}
                   </p>
@@ -195,6 +197,7 @@ export function PortalFileLibrary({ initialData, mode }: PortalFileLibraryProps)
           ))}
         </div>
       )}
+      {unlockDialog}
     </div>
   );
 }

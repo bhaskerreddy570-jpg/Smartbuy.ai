@@ -7,6 +7,7 @@ import type { DashboardData } from "@/lib/dashboard";
 import { mapFilesLoadClientError, mapUploadTransferClientError } from "@/lib/api/fetch-errors";
 import { mapUploadClientError } from "@/lib/storage/upload-api-errors";
 import type { FileCategory } from "@/lib/storage/types";
+import { useOwnedFileDownload } from "@/components/portal/use-owned-file-download";
 
 type DashboardClientProps = {
   initialData: DashboardData;
@@ -18,6 +19,12 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const {
+    downloadFile,
+    unlockDialog,
+    downloadError,
+    setDownloadError,
+  } = useOwnedFileDownload();
 
   async function refreshFiles(category?: FileCategory | null) {
     const query =
@@ -150,32 +157,8 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
 
   async function handleDownload(fileId: string) {
     setActionMessage(null);
-    setError(null);
-
-    const response = await fetch(`/api/files/${fileId}`);
-
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-      setError(
-        payload?.error === "BANDWIDTH_LIMIT_EXCEEDED"
-          ? "Monthly download limit reached"
-          : "Unable to download file",
-      );
-      return;
-    }
-
-    const payload = (await response.json()) as {
-      downloadUrl: string;
-      fileName: string;
-    };
-
-    const link = document.createElement("a");
-    link.href = payload.downloadUrl;
-    link.download = payload.fileName;
-    link.rel = "noopener noreferrer";
-    link.click();
+    setDownloadError(null);
+    await downloadFile(fileId);
   }
 
   async function handleDelete(fileId: string, fileName: string) {
@@ -278,6 +261,12 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
           </p>
         ) : null}
 
+        {downloadError ? (
+          <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
+            {downloadError}
+          </p>
+        ) : null}
+
         <div className="mt-6 overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
@@ -305,7 +294,10 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                     key={file.id}
                     className="border-b border-zinc-100 last:border-none dark:border-zinc-900"
                   >
-                    <td className="px-3 py-4 font-medium">{file.name}</td>
+                    <td className="px-3 py-4 font-medium">
+                      {file.isSecure ? "🔐 " : ""}
+                      {file.name}
+                    </td>
                     <td className="px-3 py-4">{file.categoryLabel}</td>
                     <td className="px-3 py-4">{file.sizeLabel}</td>
                     <td className="px-3 py-4">
@@ -336,6 +328,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
           </table>
         </div>
       </section>
+      {unlockDialog}
     </div>
   );
 }

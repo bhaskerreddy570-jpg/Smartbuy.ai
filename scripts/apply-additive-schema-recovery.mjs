@@ -166,6 +166,9 @@ async function buildPlan() {
   if (!(await constraintExists('user_assignedPlan_check_e6eced99'))) {
     plan('Add user.assignedPlan check constraint');
   }
+  if (!(await columnExists('file', 'securityMode'))) {
+    plan('Add secure upload metadata columns to file');
+  }
 }
 
 const statements = [
@@ -272,6 +275,19 @@ const statements = [
      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'planConfiguration_plan_check_16596298') THEN
        ALTER TABLE "planConfiguration" ADD CONSTRAINT "planConfiguration_plan_check_16596298"
        CHECK ("plan" IN ('FREE', 'BASIC', 'PRO', 'BUSINESS'));
+     END IF;
+   END $$`,
+  `ALTER TABLE "file" ADD COLUMN IF NOT EXISTS "securityMode" text DEFAULT 'NORMAL' NOT NULL`,
+  `ALTER TABLE "file" ADD COLUMN IF NOT EXISTS "encryptionFormatVersion" text`,
+  `ALTER TABLE "file" ADD COLUMN IF NOT EXISTS "encryptionAlgorithm" text`,
+  `ALTER TABLE "file" ADD COLUMN IF NOT EXISTS "encryptionKdf" text`,
+  `ALTER TABLE "file" ADD COLUMN IF NOT EXISTS "encryptionSalt" text`,
+  `ALTER TABLE "file" ADD COLUMN IF NOT EXISTS "encryptionIv" text`,
+  `ALTER TABLE "file" ADD COLUMN IF NOT EXISTS "plaintextSize" int8`,
+  `DO $$ BEGIN
+     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'file_securityMode_check_78f49108') THEN
+       ALTER TABLE "file" ADD CONSTRAINT "file_securityMode_check_78f49108"
+       CHECK ("securityMode" IN ('NORMAL', 'SECURE'));
      END IF;
    END $$`,
   `DO $$ BEGIN

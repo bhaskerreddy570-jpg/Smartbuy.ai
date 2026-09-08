@@ -5,6 +5,11 @@ import { normalizeMaxFileSizeBytes } from '@/lib/customer-limits';
 import { orm } from '@/lib/db';
 import { resolveFileCategory } from '@/lib/storage/categories';
 import { FILE_CATEGORIES } from '@/lib/storage/types';
+import {
+  computeSecureUploadSize,
+  rejectForbiddenSecureUploadSecrets,
+  secureEncryptionMetadataSchema,
+} from '@/lib/storage/secure-upload-metadata';
 import { uploadFailureResponse } from '@/lib/storage/upload-api-errors';
 import { createPendingUpload } from '@/lib/storage/upload-lifecycle';
 import {
@@ -18,8 +23,38 @@ const uploadRequestSchema = z
     mimeType: z.string().max(255).optional().default('application/octet-stream'),
     size: z.number().int().positive(),
     category: z.enum(FILE_CATEGORIES).optional(),
+    secure: z.boolean().optional().default(false),
+    encryption: secureEncryptionMetadataSchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.secure && !value.encryption) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Secure uploads require encryption metadata',
+        path: ['encryption'],
+      });
+    }
+
+    if (!value.secure && value.encryption) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Encryption metadata is only allowed for secure uploads',
+        path: ['encryption'],
+      });
+    }
+
+    if (value.secure && value.encryption) {
+      const encryptedSize = computeSecureUploadSize(value.encryption);
+      if (encryptedSize !== BigInt(value.size)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Secure upload size must match encrypted payload size',
+          path: ['size'],
+        });
+      }
+    }
+  });
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -35,6 +70,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
+    rejectForbiddenSecureUploadSecrets(body);
     const parsed = uploadRequestSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -53,6 +89,17 @@ export async function POST(request: Request) {
     const maxFileSizeBytes = normalizeMaxFileSizeBytes(userLimits.maxFileSizeBytes);
 
     if (uploadSize > maxFileSizeBytes) {
+      return NextResponse.json(
+        { error: 'FILE_SIZE_LIMIT_EXCEEDED' },
+        { status: 413 },
+      );
+    }
+
+    if (
+      parsed.data.secure &&
+      parsed.data.encryption &&
+      BigInt(parsed.data.encryption.plaintextSize) > maxFileSizeBytes
+    ) {
       return NextResponse.json(
         { error: 'FILE_SIZE_LIMIT_EXCEEDED' },
         { status: 413 },
@@ -82,6 +129,8 @@ export async function POST(request: Request) {
       mimeType: storedMimeType,
       uploadSize,
       category,
+      secure: parsed.data.secure,
+      encryption: parsed.data.encryption,
     });
 
     if (!pendingUpload.ok) {
@@ -92,8 +141,16 @@ export async function POST(request: Request) {
       fileId: pendingUpload.file.fileId,
       category: pendingUpload.file.category,
       contentType: 'application/octet-stream',
+      securityMode: parsed.data.secure ? 'SECURE' : 'NORMAL',
     });
   } catch (uploadError) {
+    if (
+      uploadError instanceof Error &&
+      uploadError.message === 'SECURE_SECRET_REJECTED'
+    ) {
+      return NextResponse.json({ error: 'Invalid upload request' }, { status: 400 });
+    }
+
     console.error('Upload request failed', uploadError);
     return NextResponse.json({ error: 'Unable to prepare upload' }, { status: 500 });
   }
