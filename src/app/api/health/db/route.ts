@@ -99,6 +99,10 @@ export async function GET() {
     const ok =
       authSecretConfigured && userTableExists && userSchemaReady && fileSchemaReady;
 
+    const authRelatedEnvKeys = Object.keys(process.env)
+      .filter((key) => /AUTH|SECRET|NEXTAUTH/i.test(key))
+      .sort();
+
     return NextResponse.json(
       {
         ok,
@@ -109,6 +113,7 @@ export async function GET() {
         userTableExists,
         userSchemaReady,
         fileSchemaReady,
+        authRelatedEnvKeys,
         envPresence,
       },
       { status: ok ? 200 : 503 },
