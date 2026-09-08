@@ -79,6 +79,10 @@ export function ProfileClient({ initialData }: ProfileClientProps) {
               <dd className="mt-1 font-medium">{data.user.email}</dd>
             </div>
             <div>
+              <dt className="text-zinc-500 dark:text-zinc-400">Role</dt>
+              <dd className="mt-1 font-medium">{data.user.role}</dd>
+            </div>
+            <div>
               <dt className="text-zinc-500 dark:text-zinc-400">Member since</dt>
               <dd className="mt-1 font-medium">
                 {new Date(data.user.createdAt).toLocaleDateString()}

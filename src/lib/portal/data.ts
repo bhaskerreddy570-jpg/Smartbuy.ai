@@ -17,6 +17,7 @@ export type PortalUser = {
   email: string;
   createdAt: string;
   status: 'Active' | 'Locked';
+  role: 'USER';
 };
 
 export type PortalStorageSummary = {
@@ -96,6 +97,7 @@ export async function getPortalContext(userId: string): Promise<PortalContext | 
       email: user.email,
       createdAt: user.createdAt,
       status: 'Active',
+      role: 'USER',
     },
     storageSummary: {
       used: limits.storageUsed.toString(),
@@ -163,6 +165,7 @@ export async function getOverviewData(userId: string): Promise<OverviewData | nu
       email: user.email,
       createdAt: user.createdAt,
       status: 'Active',
+      role: 'USER',
     },
     greeting: buildGreeting(user.name),
     categoryUsage: categories,
@@ -238,6 +241,7 @@ export async function getProfileData(userId: string): Promise<ProfileData | null
       email: user.email,
       createdAt: user.createdAt,
       status: 'Active',
+      role: 'USER',
     },
     storage: {
       used: limits.storageUsed.toString(),
