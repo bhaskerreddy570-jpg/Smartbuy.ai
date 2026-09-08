@@ -3,6 +3,14 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
+type LimitLayerView = {
+  planLabel: string;
+  overrideBytes: string | null;
+  overrideLabel: string | null;
+  effectiveLabel: string;
+  effectiveSource: "override" | "plan" | "system_default";
+};
+
 type CategoryUsage = {
   category: string;
   label: string;
@@ -10,30 +18,37 @@ type CategoryUsage = {
   fileCount: number;
 };
 
+type PlanOption = {
+  plan: "FREE" | "BASIC" | "PRO" | "BUSINESS";
+  displayName: string;
+};
+
 type CustomerDetail = {
   id: string;
   name: string | null;
   email: string;
   status: "Active" | "Locked";
+  assignedPlan: PlanOption["plan"];
+  assignedPlanLabel: string;
   storageUsedLabel: string;
-  storageQuotaLabel: string;
-  storageQuota: string;
-  maxFileSizeBytes: string;
-  maxFileSizeLabel: string;
-  bandwidthUsedLabel: string;
-  bandwidthLimitLabel: string;
-  bandwidthLimit: string;
+  storageLimits: LimitLayerView;
+  maxFileSizeLimits: LimitLayerView;
+  bandwidthLimits: LimitLayerView;
   lockReason: string | null;
   categories: CategoryUsage[];
 };
 
 type AdminCustomerDetailPanelProps = {
   customer: CustomerDetail;
+  plans: PlanOption[];
 };
 
 const GIB = 1024 * 1024 * 1024;
 
-function bytesToGiBInput(bytes: string): string {
+function bytesToGiBInput(bytes: string | null | undefined): string {
+  if (!bytes) {
+    return "";
+  }
   const value = Number(BigInt(bytes)) / GIB;
   return Number.isFinite(value) ? value.toFixed(2) : "0";
 }
@@ -46,18 +61,62 @@ function giBInputToBytes(value: string): string {
   return BigInt(Math.round(parsed * GIB)).toString();
 }
 
+function LimitLayerTable({
+  title,
+  layers,
+}: {
+  title: string;
+  layers: LimitLayerView;
+}) {
+  return (
+    <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+      <h4 className="text-sm font-medium">{title}</h4>
+      <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+        <div>
+          <dt className="text-zinc-500">Plan limit</dt>
+          <dd className="font-medium">{layers.planLabel}</dd>
+        </div>
+        <div>
+          <dt className="text-zinc-500">Override</dt>
+          <dd className="font-medium">{layers.overrideLabel ?? "None"}</dd>
+        </div>
+        <div>
+          <dt className="text-zinc-500">Effective</dt>
+          <dd className="font-medium">
+            {layers.effectiveLabel}
+            <span className="ml-2 text-xs text-zinc-500">
+              ({layers.effectiveSource.replaceAll("_", " ")})
+            </span>
+          </dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
 export function AdminCustomerDetailPanel({
   customer,
+  plans,
 }: AdminCustomerDetailPanelProps) {
   const router = useRouter();
-  const [storageLimitGiB, setStorageLimitGiB] = useState(
-    bytesToGiBInput(customer.storageQuota),
+  const [assignedPlan, setAssignedPlan] = useState(customer.assignedPlan);
+  const [useStorageOverride, setUseStorageOverride] = useState(
+    customer.storageLimits.overrideBytes !== null,
   );
-  const [maxFileGiB, setMaxFileGiB] = useState(
-    bytesToGiBInput(customer.maxFileSizeBytes),
+  const [storageOverrideGiB, setStorageOverrideGiB] = useState(
+    bytesToGiBInput(customer.storageLimits.overrideBytes),
   );
-  const [bandwidthGiB, setBandwidthGiB] = useState(
-    bytesToGiBInput(customer.bandwidthLimit),
+  const [useMaxFileOverride, setUseMaxFileOverride] = useState(
+    customer.maxFileSizeLimits.overrideBytes !== null,
+  );
+  const [maxFileOverrideGiB, setMaxFileOverrideGiB] = useState(
+    bytesToGiBInput(customer.maxFileSizeLimits.overrideBytes),
+  );
+  const [useBandwidthOverride, setUseBandwidthOverride] = useState(
+    customer.bandwidthLimits.overrideBytes !== null,
+  );
+  const [bandwidthOverrideGiB, setBandwidthOverrideGiB] = useState(
+    bytesToGiBInput(customer.bandwidthLimits.overrideBytes),
   );
   const [lockReason, setLockReason] = useState("");
   const [loading, setLoading] = useState(false);
@@ -71,27 +130,39 @@ export function AdminCustomerDetailPanel({
     setMessage(null);
 
     try {
+      const payload: Record<string, string | null> = {
+        assignedPlan,
+        storageQuotaOverrideBytes: useStorageOverride
+          ? giBInputToBytes(storageOverrideGiB)
+          : null,
+        maxFileSizeOverrideBytes: useMaxFileOverride
+          ? giBInputToBytes(maxFileOverrideGiB)
+          : null,
+        monthlyBandwidthLimitOverrideBytes: useBandwidthOverride
+          ? giBInputToBytes(bandwidthOverrideGiB)
+          : null,
+      };
+
       const response = await fetch(`/api/admin/customers/${customer.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          storageQuotaBytes: giBInputToBytes(storageLimitGiB),
-          maxFileSizeBytes: giBInputToBytes(maxFileGiB),
-          monthlyBandwidthLimitBytes: giBInputToBytes(bandwidthGiB),
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        throw new Error("Unable to save customer limits");
+        const body = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(body?.error ?? "Unable to save customer allocation");
       }
 
-      setMessage("Customer limits updated");
+      setMessage("Customer allocation updated");
       router.refresh();
     } catch (saveError) {
       setError(
         saveError instanceof Error
           ? saveError.message
-          : "Unable to save customer limits",
+          : "Unable to save customer allocation",
       );
     } finally {
       setLoading(false);
@@ -160,12 +231,9 @@ export function AdminCustomerDetailPanel({
         <h2 className="text-lg font-semibold">{customer.name || "Customer"}</h2>
         <p className="mt-1 text-sm text-zinc-500">{customer.email}</p>
         <p className="mt-4 text-sm">
-          Storage: {customer.storageUsedLabel} / {customer.storageQuotaLabel}
+          Plan: {customer.assignedPlanLabel} ({customer.assignedPlan})
         </p>
-        <p className="mt-1 text-sm">
-          Monthly downloads: {customer.bandwidthUsedLabel} /{" "}
-          {customer.bandwidthLimitLabel}
-        </p>
+        <p className="mt-1 text-sm">Storage used: {customer.storageUsedLabel}</p>
         <p className="mt-1 text-sm">Status: {customer.status}</p>
         {customer.lockReason ? (
           <p className="mt-1 text-sm text-red-600 dark:text-red-300">
@@ -174,50 +242,103 @@ export function AdminCustomerDetailPanel({
         ) : null}
       </section>
 
+      <section className="grid gap-4">
+        <LimitLayerTable title="Storage allocation" layers={customer.storageLimits} />
+        <LimitLayerTable
+          title="Maximum file size"
+          layers={customer.maxFileSizeLimits}
+        />
+        <LimitLayerTable
+          title="Monthly bandwidth"
+          layers={customer.bandwidthLimits}
+        />
+      </section>
+
       <form
         onSubmit={handleSave}
         className="grid gap-4 rounded-2xl border border-zinc-200 p-6 dark:border-zinc-800"
       >
-        <h3 className="font-medium">Customer limits</h3>
+        <h3 className="font-medium">Assign plan and overrides</h3>
         <label className="block text-sm">
-          <span className="mb-1 block font-medium">Storage limit (GB)</span>
+          <span className="mb-1 block font-medium">Subscription plan</span>
+          <select
+            value={assignedPlan}
+            onChange={(event) =>
+              setAssignedPlan(event.target.value as PlanOption["plan"])
+            }
+            className="w-full rounded-xl border border-zinc-300 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-950"
+          >
+            {plans.map((plan) => (
+              <option key={plan.plan} value={plan.plan}>
+                {plan.displayName}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={useStorageOverride}
+            onChange={(event) => setUseStorageOverride(event.target.checked)}
+          />
+          <span>Custom storage override (GB)</span>
+        </label>
+        {useStorageOverride ? (
           <input
             type="number"
             min="0"
             step="0.01"
-            value={storageLimitGiB}
-            onChange={(event) => setStorageLimitGiB(event.target.value)}
+            value={storageOverrideGiB}
+            onChange={(event) => setStorageOverrideGiB(event.target.value)}
             className="w-full rounded-xl border border-zinc-300 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-950"
           />
+        ) : null}
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={useMaxFileOverride}
+            onChange={(event) => setUseMaxFileOverride(event.target.checked)}
+          />
+          <span>Custom max file override (GB)</span>
         </label>
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">Maximum file (GB)</span>
+        {useMaxFileOverride ? (
           <input
             type="number"
             min="0"
             step="0.01"
-            value={maxFileGiB}
-            onChange={(event) => setMaxFileGiB(event.target.value)}
+            value={maxFileOverrideGiB}
+            onChange={(event) => setMaxFileOverrideGiB(event.target.value)}
             className="w-full rounded-xl border border-zinc-300 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-950"
           />
+        ) : null}
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={useBandwidthOverride}
+            onChange={(event) => setUseBandwidthOverride(event.target.checked)}
+          />
+          <span>Custom monthly bandwidth override (GB)</span>
         </label>
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">Monthly bandwidth (GB)</span>
+        {useBandwidthOverride ? (
           <input
             type="number"
             min="0"
             step="0.01"
-            value={bandwidthGiB}
-            onChange={(event) => setBandwidthGiB(event.target.value)}
+            value={bandwidthOverrideGiB}
+            onChange={(event) => setBandwidthOverrideGiB(event.target.value)}
             className="w-full rounded-xl border border-zinc-300 px-4 py-2 dark:border-zinc-700 dark:bg-zinc-950"
           />
-        </label>
+        ) : null}
+
         <button
           type="submit"
           disabled={loading}
           className="rounded-xl bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900"
         >
-          Save changes
+          Save allocation
         </button>
       </form>
 

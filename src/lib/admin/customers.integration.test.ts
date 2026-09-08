@@ -10,7 +10,7 @@ import { hashAdminPassword } from '@/lib/admin/password';
 import { ADMIN_SESSION_COOKIE } from '@/lib/admin/session-cookie';
 import { createAdminSession } from '@/lib/admin/session';
 import { appConfig } from '@/lib/config';
-import { createDefaultCustomerLimits } from '@/lib/customer-limits';
+import { createPlanBasedCustomerLimits } from '@/lib/customer-limits';
 import { getDashboardData } from '@/lib/dashboard';
 import { orm } from '@/lib/db';
 import { exceedsStorageQuota } from '@/lib/storage/quota';
@@ -47,11 +47,16 @@ async function createAdminSessionHeader(): Promise<string> {
 }
 
 async function createCustomer(params?: {
+  assignedPlan?: 'FREE' | 'BASIC' | 'PRO' | 'BUSINESS';
   storageQuota?: bigint;
+  storageQuotaOverride?: bigint | null;
   maxFileSizeBytes?: bigint;
+  maxFileSizeOverride?: bigint | null;
   monthlyBandwidthLimitBytes?: bigint;
+  monthlyBandwidthLimitOverride?: bigint | null;
 }) {
-  const defaults = createDefaultCustomerLimits();
+  const plan = params?.assignedPlan ?? 'FREE';
+  const defaults = await createPlanBasedCustomerLimits(plan);
   const id = randomUUID();
   const email = `customer-controls-${id}@example.com`;
 
@@ -60,6 +65,10 @@ async function createCustomer(params?: {
     email,
     name: 'Controls Test',
     passwordHash: 'not-used',
+    assignedPlan: plan,
+    storageQuotaOverride: params?.storageQuotaOverride ?? null,
+    maxFileSizeOverride: params?.maxFileSizeOverride ?? null,
+    monthlyBandwidthLimitOverride: params?.monthlyBandwidthLimitOverride ?? null,
     storageQuota: params?.storageQuota ?? defaults.storageQuota,
     storageUsed: BigInt(0),
     maxFileSizeBytes: params?.maxFileSizeBytes ?? defaults.maxFileSizeBytes,
@@ -115,7 +124,7 @@ describeIntegration('admin customer controls integration', () => {
 
   it('allows admin to list customers and update limits with audit logging', async () => {
     const cookie = await createAdminSessionHeader();
-    const customer = await createCustomer({ storageQuota: BigInt(0) });
+    const customer = await createCustomer();
 
     const listResponse = await listCustomersRoute(
       new Request('http://localhost/api/admin/customers', {
@@ -147,10 +156,19 @@ describeIntegration('admin customer controls integration', () => {
 
     assert.equal(patchResponse.status, 200);
     const updated = await orm.User.where({ id: customer.id })
-      .select('storageQuota', 'maxFileSizeBytes', 'monthlyBandwidthLimitBytes')
+      .select(
+        'storageQuota',
+        'storageQuotaOverride',
+        'maxFileSizeBytes',
+        'maxFileSizeOverride',
+        'monthlyBandwidthLimitBytes',
+        'monthlyBandwidthLimitOverride',
+      )
       .first();
     assert.equal(updated?.storageQuota?.toString(), nextQuota);
+    assert.equal(updated?.storageQuotaOverride?.toString(), nextQuota);
     assert.equal(updated?.maxFileSizeBytes?.toString(), (1n * 1024n * 1024n).toString());
+    assert.equal(updated?.maxFileSizeOverride?.toString(), (1n * 1024n * 1024n).toString());
 
     const auditRows = await pool.query<{ action: string }>(
       'SELECT action FROM "adminAuditLog" WHERE "targetId" = $1 ORDER BY "createdAt" DESC',
@@ -160,6 +178,61 @@ describeIntegration('admin customer controls integration', () => {
     assert.ok(actions.includes('STORAGE_LIMIT_CHANGED'));
     assert.ok(actions.includes('MAX_FILE_SIZE_CHANGED'));
     assert.ok(actions.includes('BANDWIDTH_LIMIT_CHANGED'));
+  });
+
+  it('allows admin to assign plans and set custom free-tier storage without payment', async () => {
+    const cookie = await createAdminSessionHeader();
+    const customer = await createCustomer({ assignedPlan: 'FREE' });
+    const customStorage = (30n * 1024n * 1024n * 1024n).toString();
+
+    const storagePatch = await patchCustomer(
+      new Request(`http://localhost/api/admin/customers/${customer.id}`, {
+        method: 'PATCH',
+        headers: {
+          cookie,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ storageQuotaOverrideBytes: customStorage }),
+      }),
+      { params: Promise.resolve({ userId: customer.id }) },
+    );
+    assert.equal(storagePatch.status, 200);
+
+    const planPatch = await patchCustomer(
+      new Request(`http://localhost/api/admin/customers/${customer.id}`, {
+        method: 'PATCH',
+        headers: {
+          cookie,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ assignedPlan: 'PRO' }),
+      }),
+      { params: Promise.resolve({ userId: customer.id }) },
+    );
+    assert.equal(planPatch.status, 200);
+
+    const updated = await orm.User.where({ id: customer.id })
+      .select('assignedPlan', 'storageQuotaOverride', 'storageQuota')
+      .first();
+    assert.equal(updated?.assignedPlan, 'PRO');
+    assert.equal(updated?.storageQuotaOverride?.toString(), customStorage);
+    assert.equal(updated?.storageQuota?.toString(), customStorage);
+
+    const subscription = await orm.Subscription.where({
+      userId: customer.id,
+      status: 'ACTIVE',
+    })
+      .select('plan')
+      .first();
+    assert.equal(subscription?.plan, 'PRO');
+
+    const auditRows = await pool.query<{ action: string }>(
+      'SELECT action FROM "adminAuditLog" WHERE "targetId" = $1 ORDER BY "createdAt" DESC',
+      [customer.id],
+    );
+    const actions = auditRows.rows.map((row) => row.action);
+    assert.ok(actions.includes('CUSTOMER_PLAN_CHANGED'));
+    assert.ok(actions.includes('STORAGE_LIMIT_CHANGED'));
   });
 
   it('enforces storage, file-size, and bandwidth limits server-side', async () => {

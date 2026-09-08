@@ -49,6 +49,17 @@ async function indexExists(name) {
   return result.rows[0]?.exists === true;
 }
 
+async function tableExists(table) {
+  const result = await pool.query(
+    `SELECT EXISTS (
+       SELECT 1 FROM information_schema.tables
+       WHERE table_schema = 'public' AND table_name = $1
+     ) AS exists`,
+    [table],
+  );
+  return result.rows[0]?.exists === true;
+}
+
 const plannedChanges = [];
 
 function plan(change) {
@@ -56,6 +67,17 @@ function plan(change) {
 }
 
 const DEFAULT_STORAGE_QUOTA_BYTES = 32212254720; // 30 GiB
+const FREE_MAX_FILE_BYTES = 5368709120; // 5 GiB
+const FREE_BANDWIDTH_BYTES = 107374182400; // 100 GiB
+const BASIC_STORAGE_BYTES = 107374182400;
+const BASIC_MAX_FILE_BYTES = 10737418240;
+const BASIC_BANDWIDTH_BYTES = 536870912000;
+const PRO_STORAGE_BYTES = 536870912000;
+const PRO_MAX_FILE_BYTES = 26843545600;
+const PRO_BANDWIDTH_BYTES = 2199023255552;
+const BUSINESS_STORAGE_BYTES = 2199023255552;
+const BUSINESS_MAX_FILE_BYTES = 107374182400;
+const BUSINESS_BANDWIDTH_BYTES = 10995116277760;
 
 async function buildPlan() {
   if (!(await columnExists('file', 'category'))) {
@@ -118,8 +140,31 @@ async function buildPlan() {
     plan(`Backfill zero subscription.storageQuota to default (${DEFAULT_STORAGE_QUOTA_BYTES})`);
   }
 
-  if (!(await constraintExists('adminAuditLog_action_check_0f9926f8'))) {
-    plan('Replace legacy adminAuditLog action check with adminAuditLog_action_check_0f9926f8');
+  if (!(await tableExists('planConfiguration'))) {
+    plan('Create table planConfiguration and seed subscription plan limits');
+  } else {
+    const planCount = await pool.query('SELECT COUNT(*)::text AS count FROM "planConfiguration"');
+    if (Number(planCount.rows[0]?.count ?? 0) < 4) {
+      plan('Seed missing planConfiguration rows');
+    }
+  }
+  if (!(await columnExists('user', 'assignedPlan'))) {
+    plan('Add column user.assignedPlan');
+  }
+  if (!(await columnExists('user', 'storageQuotaOverride'))) {
+    plan('Add column user.storageQuotaOverride');
+  }
+  if (!(await columnExists('user', 'maxFileSizeOverride'))) {
+    plan('Add column user.maxFileSizeOverride');
+  }
+  if (!(await columnExists('user', 'monthlyBandwidthLimitOverride'))) {
+    plan('Add column user.monthlyBandwidthLimitOverride');
+  }
+  if (!(await constraintExists('adminAuditLog_action_check_50774247'))) {
+    plan('Replace legacy adminAuditLog action check with plan allocation actions');
+  }
+  if (!(await constraintExists('user_assignedPlan_check_e6eced99'))) {
+    plan('Add user.assignedPlan check constraint');
   }
 }
 
@@ -159,14 +204,91 @@ const statements = [
        ALTER TABLE "adminAuditLog" DROP CONSTRAINT "adminAuditLog_action_check_2c184a7c";
      END IF;
    END $$`,
+  `CREATE TABLE IF NOT EXISTS "planConfiguration" (
+     "plan" text PRIMARY KEY,
+     "displayName" text NOT NULL,
+     "storageQuotaBytes" int8 NOT NULL,
+     "maxFileSizeBytes" int8 NOT NULL,
+     "monthlyBandwidthLimitBytes" int8 NOT NULL,
+     "active" bool DEFAULT true NOT NULL,
+     "createdAt" timestamptz DEFAULT NOW() NOT NULL,
+     "updatedAt" timestamptz DEFAULT NOW() NOT NULL
+   )`,
+  `INSERT INTO "planConfiguration"
+     ("plan", "displayName", "storageQuotaBytes", "maxFileSizeBytes", "monthlyBandwidthLimitBytes", "active", "createdAt", "updatedAt")
+   VALUES
+     ('FREE', 'Free', ${DEFAULT_STORAGE_QUOTA_BYTES}, ${FREE_MAX_FILE_BYTES}, ${FREE_BANDWIDTH_BYTES}, true, NOW(), NOW()),
+     ('BASIC', 'Basic', ${BASIC_STORAGE_BYTES}, ${BASIC_MAX_FILE_BYTES}, ${BASIC_BANDWIDTH_BYTES}, true, NOW(), NOW()),
+     ('PRO', 'Pro', ${PRO_STORAGE_BYTES}, ${PRO_MAX_FILE_BYTES}, ${PRO_BANDWIDTH_BYTES}, true, NOW(), NOW()),
+     ('BUSINESS', 'Business', ${BUSINESS_STORAGE_BYTES}, ${BUSINESS_MAX_FILE_BYTES}, ${BUSINESS_BANDWIDTH_BYTES}, true, NOW(), NOW())
+   ON CONFLICT ("plan") DO NOTHING`,
+  `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "assignedPlan" text DEFAULT 'FREE' NOT NULL`,
+  `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "storageQuotaOverride" int8`,
+  `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "maxFileSizeOverride" int8`,
+  `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "monthlyBandwidthLimitOverride" int8`,
+  `UPDATE "user" u
+     SET "assignedPlan" = COALESCE(
+       (
+         SELECT s.plan
+         FROM subscription s
+         WHERE s."userId" = u.id AND s.status = 'ACTIVE'
+         ORDER BY s."createdAt" DESC
+         LIMIT 1
+       ),
+       'FREE'
+     )
+   WHERE u."assignedPlan" IS NULL OR u."assignedPlan" = 'FREE'`,
+  `UPDATE "user" u
+     SET "storageQuotaOverride" = u."storageQuota"
+     FROM "planConfiguration" p
+     WHERE u."assignedPlan" = p.plan
+       AND u."storageQuotaOverride" IS NULL
+       AND u."storageQuota" IS DISTINCT FROM p."storageQuotaBytes"`,
+  `UPDATE "user" u
+     SET "maxFileSizeOverride" = u."maxFileSizeBytes"
+     FROM "planConfiguration" p
+     WHERE u."assignedPlan" = p.plan
+       AND u."maxFileSizeOverride" IS NULL
+       AND u."maxFileSizeBytes" IS DISTINCT FROM p."maxFileSizeBytes"`,
+  `UPDATE "user" u
+     SET "monthlyBandwidthLimitOverride" = u."monthlyBandwidthLimitBytes"
+     FROM "planConfiguration" p
+     WHERE u."assignedPlan" = p.plan
+       AND u."monthlyBandwidthLimitOverride" IS NULL
+       AND u."monthlyBandwidthLimitBytes" IS DISTINCT FROM p."monthlyBandwidthLimitBytes"`,
   `DO $$ BEGIN
-     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'adminAuditLog_action_check_0f9926f8') THEN
-       ALTER TABLE "adminAuditLog" ADD CONSTRAINT "adminAuditLog_action_check_0f9926f8"
+     IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'adminAuditLog_action_check_plan_allocation') THEN
+       ALTER TABLE "adminAuditLog" DROP CONSTRAINT "adminAuditLog_action_check_plan_allocation";
+     ELSIF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'adminAuditLog_action_check_0f9926f8') THEN
+       ALTER TABLE "adminAuditLog" DROP CONSTRAINT "adminAuditLog_action_check_0f9926f8";
+     END IF;
+   END $$`,
+  `DO $$ BEGIN
+     IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'planConfiguration_plan_check_7f2a9c11') THEN
+       ALTER TABLE "planConfiguration" DROP CONSTRAINT "planConfiguration_plan_check_7f2a9c11";
+     END IF;
+   END $$`,
+  `DO $$ BEGIN
+     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'planConfiguration_plan_check_16596298') THEN
+       ALTER TABLE "planConfiguration" ADD CONSTRAINT "planConfiguration_plan_check_16596298"
+       CHECK ("plan" IN ('FREE', 'BASIC', 'PRO', 'BUSINESS'));
+     END IF;
+   END $$`,
+  `DO $$ BEGIN
+     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'user_assignedPlan_check_e6eced99') THEN
+       ALTER TABLE "user" ADD CONSTRAINT "user_assignedPlan_check_e6eced99"
+       CHECK ("assignedPlan" IN ('FREE', 'BASIC', 'PRO', 'BUSINESS'));
+     END IF;
+   END $$`,
+  `DO $$ BEGIN
+     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'adminAuditLog_action_check_50774247') THEN
+       ALTER TABLE "adminAuditLog" ADD CONSTRAINT "adminAuditLog_action_check_50774247"
        CHECK ("action" IN (
          'ADMIN_LOGIN_SUCCESS', 'ADMIN_LOGIN_FAILED', 'ADMIN_LOGOUT',
          'ADMIN_SESSION_REVOKED', 'ADMIN_PASSWORD_CHANGED',
          'CUSTOMER_ACCOUNT_LOCKED', 'CUSTOMER_ACCOUNT_UNLOCKED',
          'STORAGE_LIMIT_CHANGED', 'MAX_FILE_SIZE_CHANGED', 'BANDWIDTH_LIMIT_CHANGED',
+         'CUSTOMER_PLAN_CHANGED',
          'CUSTOMER_LOCKED', 'CUSTOMER_UNLOCKED', 'CUSTOMER_RECOVERY',
          'RECOVERY_TOKEN_ISSUED', 'RECOVERY_TOKEN_USED', 'RECOVERY_REQUEST_DENIED',
          'BACKUP_REQUESTED', 'DATA_RECOVERY_REQUESTED'

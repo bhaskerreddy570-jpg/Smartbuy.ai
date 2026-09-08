@@ -1,4 +1,13 @@
 import { appConfig } from '@/lib/config';
+import {
+  getPlanConfiguration,
+  listPlanConfigurations,
+  type Plan,
+  type PlanLimitConfiguration,
+} from '@/lib/plan-configuration';
+import { orm } from '@/lib/db';
+
+export type { Plan };
 
 export type CustomerLimitFields = {
   storageQuota: bigint | number | string;
@@ -9,8 +18,50 @@ export type CustomerLimitFields = {
   bandwidthPeriodStart: string | null;
 };
 
+export type CustomerLimitAssignmentFields = {
+  assignedPlan: Plan;
+  storageQuotaOverride?: bigint | number | string | null;
+  maxFileSizeOverride?: bigint | number | string | null;
+  monthlyBandwidthLimitOverride?: bigint | number | string | null;
+};
+
+export type LimitLayer = {
+  bytes: bigint;
+  labelSource: 'override' | 'plan' | 'system_default';
+};
+
+export type ResolvedLimitLayers = {
+  storage: {
+    planBytes: bigint;
+    overrideBytes: bigint | null;
+    effectiveBytes: bigint;
+    effectiveSource: LimitLayer['labelSource'];
+  };
+  maxFileSize: {
+    planBytes: bigint;
+    overrideBytes: bigint | null;
+    effectiveBytes: bigint;
+    effectiveSource: LimitLayer['labelSource'];
+  };
+  bandwidth: {
+    planBytes: bigint;
+    overrideBytes: bigint | null;
+    effectiveBytes: bigint;
+    effectiveSource: LimitLayer['labelSource'];
+  };
+};
+
 function toBigInt(value: bigint | number | string): bigint {
   return typeof value === 'bigint' ? value : BigInt(value);
+}
+
+function toNullableBigInt(
+  value: bigint | number | string | null | undefined,
+): bigint | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  return toBigInt(value);
 }
 
 export function normalizeStorageQuota(value: bigint | number | string): bigint {
@@ -37,6 +88,162 @@ export function normalizeMonthlyBandwidthLimitBytes(
     return appConfig.defaultMonthlyBandwidthLimitBytes;
   }
   return limit;
+}
+
+export function resolveEffectiveLimit(params: {
+  override: bigint | null;
+  planLimit: bigint;
+  systemDefault: bigint;
+}): { effective: bigint; source: LimitLayer['labelSource'] } {
+  if (params.override !== null) {
+    return {
+      effective: normalizeStorageQuota(params.override),
+      source: 'override',
+    };
+  }
+
+  if (params.planLimit > 0n) {
+    return {
+      effective: params.planLimit,
+      source: 'plan',
+    };
+  }
+
+  return {
+    effective: params.systemDefault,
+    source: 'system_default',
+  };
+}
+
+export function resolveEffectiveMaxFileSize(params: {
+  override: bigint | null;
+  planLimit: bigint;
+  systemDefault: bigint;
+}): { effective: bigint; source: LimitLayer['labelSource'] } {
+  if (params.override !== null) {
+    return {
+      effective: normalizeMaxFileSizeBytes(params.override),
+      source: 'override',
+    };
+  }
+
+  if (params.planLimit > 0n) {
+    return {
+      effective: params.planLimit,
+      source: 'plan',
+    };
+  }
+
+  return {
+    effective: params.systemDefault,
+    source: 'system_default',
+  };
+}
+
+export function resolveEffectiveBandwidthLimit(params: {
+  override: bigint | null;
+  planLimit: bigint;
+  systemDefault: bigint;
+}): { effective: bigint; source: LimitLayer['labelSource'] } {
+  if (params.override !== null) {
+    return {
+      effective: normalizeMonthlyBandwidthLimitBytes(params.override),
+      source: 'override',
+    };
+  }
+
+  if (params.planLimit > 0n) {
+    return {
+      effective: params.planLimit,
+      source: 'plan',
+    };
+  }
+
+  return {
+    effective: params.systemDefault,
+    source: 'system_default',
+  };
+}
+
+export function resolveLimitLayers(
+  assignment: CustomerLimitAssignmentFields,
+  planConfig: PlanLimitConfiguration,
+): ResolvedLimitLayers {
+  const storage = resolveEffectiveLimit({
+    override: toNullableBigInt(assignment.storageQuotaOverride),
+    planLimit: planConfig.storageQuotaBytes,
+    systemDefault: appConfig.defaultStorageQuotaBytes,
+  });
+  const maxFileSize = resolveEffectiveMaxFileSize({
+    override: toNullableBigInt(assignment.maxFileSizeOverride),
+    planLimit: planConfig.maxFileSizeBytes,
+    systemDefault: appConfig.defaultMaxFileSizeBytes,
+  });
+  const bandwidth = resolveEffectiveBandwidthLimit({
+    override: toNullableBigInt(assignment.monthlyBandwidthLimitOverride),
+    planLimit: planConfig.monthlyBandwidthLimitBytes,
+    systemDefault: appConfig.defaultMonthlyBandwidthLimitBytes,
+  });
+
+  return {
+    storage: {
+      planBytes: planConfig.storageQuotaBytes,
+      overrideBytes: toNullableBigInt(assignment.storageQuotaOverride),
+      effectiveBytes: storage.effective,
+      effectiveSource: storage.source,
+    },
+    maxFileSize: {
+      planBytes: planConfig.maxFileSizeBytes,
+      overrideBytes: toNullableBigInt(assignment.maxFileSizeOverride),
+      effectiveBytes: maxFileSize.effective,
+      effectiveSource: maxFileSize.source,
+    },
+    bandwidth: {
+      planBytes: planConfig.monthlyBandwidthLimitBytes,
+      overrideBytes: toNullableBigInt(assignment.monthlyBandwidthLimitOverride),
+      effectiveBytes: bandwidth.effective,
+      effectiveSource: bandwidth.source,
+    },
+  };
+}
+
+export async function computeEffectiveLimitsForUser(
+  assignment: CustomerLimitAssignmentFields,
+): Promise<ResolvedLimitLayers> {
+  const planConfig = await getPlanConfiguration(assignment.assignedPlan);
+  return resolveLimitLayers(assignment, planConfig);
+}
+
+export async function recomputeAndPersistUserEffectiveLimits(
+  userId: string,
+): Promise<ResolvedLimitLayers | null> {
+  const user = await orm.User.where({ id: userId })
+    .select(
+      'assignedPlan',
+      'storageQuotaOverride',
+      'maxFileSizeOverride',
+      'monthlyBandwidthLimitOverride',
+    )
+    .first();
+
+  if (!user) {
+    return null;
+  }
+
+  const layers = await computeEffectiveLimitsForUser({
+    assignedPlan: user.assignedPlan,
+    storageQuotaOverride: user.storageQuotaOverride,
+    maxFileSizeOverride: user.maxFileSizeOverride,
+    monthlyBandwidthLimitOverride: user.monthlyBandwidthLimitOverride,
+  });
+
+  await orm.User.where({ id: userId }).update({
+    storageQuota: layers.storage.effectiveBytes,
+    maxFileSizeBytes: layers.maxFileSize.effectiveBytes,
+    monthlyBandwidthLimitBytes: layers.bandwidth.effectiveBytes,
+  });
+
+  return layers;
 }
 
 export function currentBandwidthPeriodStart(now = new Date()): string {
@@ -90,6 +297,24 @@ export function createDefaultCustomerLimits() {
     storageQuota: appConfig.defaultStorageQuotaBytes,
     maxFileSizeBytes: appConfig.defaultMaxFileSizeBytes,
     monthlyBandwidthLimitBytes: appConfig.defaultMonthlyBandwidthLimitBytes,
+    monthlyBandwidthUsedBytes: BigInt(0),
+    bandwidthPeriodStart: currentBandwidthPeriodStart(),
+  };
+}
+
+export async function createPlanBasedCustomerLimits(plan: Plan = 'FREE') {
+  const layers = await computeEffectiveLimitsForUser({
+    assignedPlan: plan,
+    storageQuotaOverride: null,
+    maxFileSizeOverride: null,
+    monthlyBandwidthLimitOverride: null,
+  });
+
+  return {
+    assignedPlan: plan,
+    storageQuota: layers.storage.effectiveBytes,
+    maxFileSizeBytes: layers.maxFileSize.effectiveBytes,
+    monthlyBandwidthLimitBytes: layers.bandwidth.effectiveBytes,
     monthlyBandwidthUsedBytes: BigInt(0),
     bandwidthPeriodStart: currentBandwidthPeriodStart(),
   };

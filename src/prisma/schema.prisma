@@ -51,6 +51,7 @@ enum AdminAuditAction {
   STORAGE_LIMIT_CHANGED
   MAX_FILE_SIZE_CHANGED
   BANDWIDTH_LIMIT_CHANGED
+  CUSTOMER_PLAN_CHANGED
   CUSTOMER_LOCKED
   CUSTOMER_UNLOCKED
   CUSTOMER_RECOVERY
@@ -61,11 +62,26 @@ enum AdminAuditAction {
   DATA_RECOVERY_REQUESTED
 }
 
+model PlanConfiguration {
+  plan Plan @id
+  displayName String
+  storageQuotaBytes BigInt
+  maxFileSizeBytes BigInt
+  monthlyBandwidthLimitBytes BigInt
+  active Boolean @default(true)
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
 model User {
   id           Uuid     @id @default(uuid())
   name         String?
   email        String   @unique
   passwordHash String
+  assignedPlan Plan @default(FREE)
+  storageQuotaOverride BigInt?
+  maxFileSizeOverride BigInt?
+  monthlyBandwidthLimitOverride BigInt?
   storageQuota BigInt
   storageUsed  BigInt   @default(0)
   maxFileSizeBytes BigInt

@@ -7,20 +7,32 @@ import {
 import { writeAdminAuditLog } from '@/lib/admin/audit';
 import {
   getAdminCustomerDetail,
-  updateAdminCustomerLimits,
+  getAdminCustomerLimitSnapshot,
+  updateAdminCustomerAllocation,
 } from '@/lib/admin/customers';
 import {
   lockCustomerAccount,
   unlockCustomerAccount,
 } from '@/lib/admin/customer-accounts';
 import { getClientIp, getUserAgent } from '@/lib/admin/request-context';
-import { orm } from '@/lib/db';
+import { formatBytes } from '@/lib/storage/validation';
 
-const limitsSchema = z.object({
-  storageQuotaBytes: z.string().regex(/^\d+$/).optional(),
-  maxFileSizeBytes: z.string().regex(/^\d+$/).optional(),
-  monthlyBandwidthLimitBytes: z.string().regex(/^\d+$/).optional(),
-});
+const planValues = ['FREE', 'BASIC', 'PRO', 'BUSINESS'] as const;
+
+const byteString = z.string().regex(/^\d+$/);
+const nullableByteString = z.union([byteString, z.null()]);
+
+const limitsSchema = z
+  .object({
+    assignedPlan: z.enum(planValues).optional(),
+    storageQuotaBytes: byteString.optional(),
+    maxFileSizeBytes: byteString.optional(),
+    monthlyBandwidthLimitBytes: byteString.optional(),
+    storageQuotaOverrideBytes: nullableByteString.optional(),
+    maxFileSizeOverrideBytes: nullableByteString.optional(),
+    monthlyBandwidthLimitOverrideBytes: nullableByteString.optional(),
+  })
+  .strict();
 
 const lockSchema = z.object({
   reason: z.string().trim().min(3).max(500),
@@ -29,6 +41,42 @@ const lockSchema = z.object({
 type RouteParams = {
   params: Promise<{ userId: string }>;
 };
+
+function layerAuditMetadata(
+  label: string,
+  before: {
+    planBytes: bigint;
+    overrideBytes: bigint | null;
+    effectiveBytes: bigint;
+  },
+  after: {
+    planBytes: bigint;
+    overrideBytes: bigint | null;
+    effectiveBytes: bigint;
+  },
+) {
+  return {
+    limit: label,
+    before: {
+      plan: before.planBytes.toString(),
+      planLabel: formatBytes(before.planBytes),
+      override: before.overrideBytes?.toString() ?? null,
+      overrideLabel:
+        before.overrideBytes !== null ? formatBytes(before.overrideBytes) : null,
+      effective: before.effectiveBytes.toString(),
+      effectiveLabel: formatBytes(before.effectiveBytes),
+    },
+    after: {
+      plan: after.planBytes.toString(),
+      planLabel: formatBytes(after.planBytes),
+      override: after.overrideBytes?.toString() ?? null,
+      overrideLabel:
+        after.overrideBytes !== null ? formatBytes(after.overrideBytes) : null,
+      effective: after.effectiveBytes.toString(),
+      effectiveLabel: formatBytes(after.effectiveBytes),
+    },
+  };
+}
 
 export async function GET(request: Request, { params }: RouteParams) {
   const { error } = await requireAdminRole(request);
@@ -71,93 +119,131 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid customer limits' }, { status: 400 });
     }
 
-    const beforeRaw = await orm.User.where({ id: userId })
-      .select('storageQuota', 'maxFileSizeBytes', 'monthlyBandwidthLimitBytes')
-      .first();
-    if (!beforeRaw) {
+    const beforeSnapshot = await getAdminCustomerLimitSnapshot(userId);
+    if (!beforeSnapshot) {
       return adminNotFoundResponse();
     }
 
-    const customer = await updateAdminCustomerLimits({
+    const customer = await updateAdminCustomerAllocation({
       userId,
-      storageQuotaBytes:
-        parsed.data.storageQuotaBytes !== undefined
-          ? BigInt(parsed.data.storageQuotaBytes)
-          : undefined,
-      maxFileSizeBytes:
-        parsed.data.maxFileSizeBytes !== undefined
-          ? BigInt(parsed.data.maxFileSizeBytes)
-          : undefined,
-      monthlyBandwidthLimitBytes:
-        parsed.data.monthlyBandwidthLimitBytes !== undefined
-          ? BigInt(parsed.data.monthlyBandwidthLimitBytes)
-          : undefined,
+      assignedPlan: parsed.data.assignedPlan,
+      storageQuotaOverrideBytes:
+        parsed.data.storageQuotaOverrideBytes !== undefined
+          ? parsed.data.storageQuotaOverrideBytes === null
+            ? null
+            : BigInt(parsed.data.storageQuotaOverrideBytes)
+          : parsed.data.storageQuotaBytes !== undefined
+            ? BigInt(parsed.data.storageQuotaBytes)
+            : undefined,
+      maxFileSizeOverrideBytes:
+        parsed.data.maxFileSizeOverrideBytes !== undefined
+          ? parsed.data.maxFileSizeOverrideBytes === null
+            ? null
+            : BigInt(parsed.data.maxFileSizeOverrideBytes)
+          : parsed.data.maxFileSizeBytes !== undefined
+            ? BigInt(parsed.data.maxFileSizeBytes)
+            : undefined,
+      monthlyBandwidthLimitOverrideBytes:
+        parsed.data.monthlyBandwidthLimitOverrideBytes !== undefined
+          ? parsed.data.monthlyBandwidthLimitOverrideBytes === null
+            ? null
+            : BigInt(parsed.data.monthlyBandwidthLimitOverrideBytes)
+          : parsed.data.monthlyBandwidthLimitBytes !== undefined
+            ? BigInt(parsed.data.monthlyBandwidthLimitBytes)
+            : undefined,
     });
 
     if (!customer) {
-      return adminNotFoundResponse();
+      return NextResponse.json(
+        { error: 'Storage allocation cannot be lower than current usage' },
+        { status: 400 },
+      );
     }
 
-    const afterRaw = await orm.User.where({ id: userId })
-      .select('storageQuota', 'maxFileSizeBytes', 'monthlyBandwidthLimitBytes')
-      .first();
+    const afterSnapshot = await getAdminCustomerLimitSnapshot(userId);
+    if (!afterSnapshot) {
+      return adminNotFoundResponse();
+    }
 
     const ipAddress = getClientIp(request);
     const userAgent = getUserAgent(request);
 
     if (
-      parsed.data.storageQuotaBytes !== undefined &&
-      afterRaw &&
-      BigInt(afterRaw.storageQuota) !== BigInt(beforeRaw.storageQuota)
+      parsed.data.assignedPlan !== undefined &&
+      beforeSnapshot.assignedPlan !== afterSnapshot.assignedPlan
+    ) {
+      await writeAdminAuditLog({
+        adminUserId: admin!.id,
+        action: 'CUSTOMER_PLAN_CHANGED',
+        targetType: 'user',
+        targetId: userId,
+        metadata: {
+          beforePlan: beforeSnapshot.assignedPlan,
+          afterPlan: afterSnapshot.assignedPlan,
+        },
+        ipAddress,
+        userAgent,
+      });
+    }
+
+    if (
+      (parsed.data.storageQuotaBytes !== undefined ||
+        parsed.data.storageQuotaOverrideBytes !== undefined) &&
+      (beforeSnapshot.layers.storage.overrideBytes?.toString() ?? null) !==
+        (afterSnapshot.layers.storage.overrideBytes?.toString() ?? null)
     ) {
       await writeAdminAuditLog({
         adminUserId: admin!.id,
         action: 'STORAGE_LIMIT_CHANGED',
         targetType: 'user',
         targetId: userId,
-        metadata: {
-          before: beforeRaw.storageQuota.toString(),
-          after: afterRaw.storageQuota.toString(),
-        },
+        metadata: layerAuditMetadata(
+          'storage',
+          beforeSnapshot.layers.storage,
+          afterSnapshot.layers.storage,
+        ),
         ipAddress,
         userAgent,
       });
     }
 
     if (
-      parsed.data.maxFileSizeBytes !== undefined &&
-      afterRaw &&
-      BigInt(afterRaw.maxFileSizeBytes) !== BigInt(beforeRaw.maxFileSizeBytes)
+      (parsed.data.maxFileSizeBytes !== undefined ||
+        parsed.data.maxFileSizeOverrideBytes !== undefined) &&
+      (beforeSnapshot.layers.maxFileSize.overrideBytes?.toString() ?? null) !==
+        (afterSnapshot.layers.maxFileSize.overrideBytes?.toString() ?? null)
     ) {
       await writeAdminAuditLog({
         adminUserId: admin!.id,
         action: 'MAX_FILE_SIZE_CHANGED',
         targetType: 'user',
         targetId: userId,
-        metadata: {
-          before: beforeRaw.maxFileSizeBytes.toString(),
-          after: afterRaw.maxFileSizeBytes.toString(),
-        },
+        metadata: layerAuditMetadata(
+          'max_file_size',
+          beforeSnapshot.layers.maxFileSize,
+          afterSnapshot.layers.maxFileSize,
+        ),
         ipAddress,
         userAgent,
       });
     }
 
     if (
-      parsed.data.monthlyBandwidthLimitBytes !== undefined &&
-      afterRaw &&
-      BigInt(afterRaw.monthlyBandwidthLimitBytes) !==
-        BigInt(beforeRaw.monthlyBandwidthLimitBytes)
+      (parsed.data.monthlyBandwidthLimitBytes !== undefined ||
+        parsed.data.monthlyBandwidthLimitOverrideBytes !== undefined) &&
+      (beforeSnapshot.layers.bandwidth.overrideBytes?.toString() ?? null) !==
+        (afterSnapshot.layers.bandwidth.overrideBytes?.toString() ?? null)
     ) {
       await writeAdminAuditLog({
         adminUserId: admin!.id,
         action: 'BANDWIDTH_LIMIT_CHANGED',
         targetType: 'user',
         targetId: userId,
-        metadata: {
-          before: beforeRaw.monthlyBandwidthLimitBytes.toString(),
-          after: afterRaw.monthlyBandwidthLimitBytes.toString(),
-        },
+        metadata: layerAuditMetadata(
+          'monthly_bandwidth',
+          beforeSnapshot.layers.bandwidth,
+          afterSnapshot.layers.bandwidth,
+        ),
         ipAddress,
         userAgent,
       });
@@ -165,7 +251,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ customer });
   } catch {
-    return NextResponse.json({ error: 'Unable to update customer limits' }, { status: 500 });
+    return NextResponse.json({ error: 'Unable to update customer limits' }, { status: 400 });
   }
 }
 

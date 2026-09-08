@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminCustomerDetailPanel } from "@/components/admin/admin-customer-detail-panel";
-import { getAdminCustomerDetail } from "@/lib/admin/customers";
+import {
+  getAdminCustomerDetail,
+  listAdminPlanOptions,
+} from "@/lib/admin/customers";
 
 type PageProps = {
   params: Promise<{ userId: string }>;
@@ -9,7 +12,10 @@ type PageProps = {
 
 export default async function AdminCustomerDetailPage({ params }: PageProps) {
   const { userId } = await params;
-  const customer = await getAdminCustomerDetail(userId);
+  const [customer, plans] = await Promise.all([
+    getAdminCustomerDetail(userId),
+    listAdminPlanOptions(),
+  ]);
 
   if (!customer) {
     notFound();
@@ -29,7 +35,7 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
           Manage account status and storage limits.
         </p>
       </div>
-      <AdminCustomerDetailPanel customer={customer} />
+      <AdminCustomerDetailPanel customer={customer} plans={plans} />
     </div>
   );
 }
