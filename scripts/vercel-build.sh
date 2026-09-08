@@ -34,7 +34,9 @@ run_migrations() {
 }
 
 recover_schema_and_sign() {
-  echo "Migration graph mismatch detected; inspecting schema recovery plan..."
+  local reason="${1:-migration state could not be applied cleanly}"
+
+  echo "Attempting additive schema recovery ($reason)..."
   node scripts/apply-additive-schema-recovery.mjs --dry-run "$MIGRATE_URL"
 
   echo "Verifying production data counts before recovery..."
@@ -53,6 +55,28 @@ recover_schema_and_sign() {
   fi
 }
 
+should_recover_from_migrate_output() {
+  local output="$1"
+
+  if printf '%s' "$output" | grep -Eq 'MIGRATION\.MARKER_MISMATCH|MIGRATION\.PATH_UNREACHABLE|MIGRATION\.MARKER_NOT_IN_HISTORY'; then
+    return 0
+  fi
+
+  if printf '%s' "$output" | grep -Eq 'CLI\.UNEXPECTED|null or undefined query'; then
+    return 0
+  fi
+
+  if printf '%s' "$output" | grep -Eq 'PRECHECK\.FAILED|precheck failed|operationClass'; then
+    return 0
+  fi
+
+  if node scripts/migrate-failure-recoverable.mjs "$MIGRATE_URL" >/dev/null; then
+    return 0
+  fi
+
+  return 1
+}
+
 if [[ -n "$MIGRATE_URL" ]]; then
   echo "Applying safe Prisma migrations before build (no reset)..."
   set +e
@@ -62,8 +86,8 @@ if [[ -n "$MIGRATE_URL" ]]; then
 
   if [[ $migrate_status -ne 0 ]]; then
     printf '%s\n' "$migrate_output" >&2
-    if printf '%s' "$migrate_output" | grep -Eq 'MIGRATION\.MARKER_MISMATCH|MIGRATION\.PATH_UNREACHABLE|MIGRATION\.MARKER_NOT_IN_HISTORY'; then
-      recover_schema_and_sign
+    if should_recover_from_migrate_output "$migrate_output"; then
+      recover_schema_and_sign "migrate exited with status $migrate_status"
     else
       echo "Prisma migration failed; aborting build." >&2
       exit "$migrate_status"
