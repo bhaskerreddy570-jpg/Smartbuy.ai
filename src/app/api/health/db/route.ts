@@ -8,6 +8,7 @@ import {
   resolveAuthUrl,
   resolveDatabaseUrl,
 } from '@/lib/server-env';
+import { resolveAwsCredentials, resolveS3Bucket } from '@/lib/config';
 
 const REQUIRED_USER_COLUMNS = [
   'email',
@@ -41,6 +42,7 @@ export async function GET() {
         userTableExists: false,
         userSchemaReady: false,
         fileSchemaReady: false,
+        storageConfigured: Boolean(resolveS3Bucket()) && Boolean(resolveAwsCredentials()),
         envPresence,
       },
       { status: 503 },
@@ -101,7 +103,12 @@ export async function GET() {
     }
 
     const ok =
-      authSecretConfigured && userTableExists && userSchemaReady && fileSchemaReady;
+      authSecretConfigured &&
+      userTableExists &&
+      userSchemaReady &&
+      fileSchemaReady;
+    const storageConfigured =
+      Boolean(resolveS3Bucket()) && Boolean(resolveAwsCredentials());
 
     const authRelatedEnvKeys = Object.keys(process.env)
       .filter((key) => /AUTH|SECRET|NEXTAUTH/i.test(key))
@@ -122,6 +129,7 @@ export async function GET() {
         userTableExists,
         userSchemaReady,
         fileSchemaReady,
+        storageConfigured,
         authRelatedEnvKeys,
         envPresence,
       },
@@ -140,6 +148,7 @@ export async function GET() {
         userTableExists: false,
         userSchemaReady: false,
         fileSchemaReady: false,
+        storageConfigured: Boolean(resolveS3Bucket()) && Boolean(resolveAwsCredentials()),
         envPresence,
       },
       { status: 503 },

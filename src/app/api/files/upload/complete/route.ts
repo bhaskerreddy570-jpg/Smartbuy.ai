@@ -19,6 +19,9 @@ const completeSchema = z.object({
   fileId: z.string().uuid(),
 });
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 async function cleanupPendingUpload(params: {
   userId: string;
   fileId: string;

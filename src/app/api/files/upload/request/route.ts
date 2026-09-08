@@ -19,6 +19,9 @@ const uploadRequestSchema = z.object({
   category: z.enum(FILE_CATEGORIES).optional(),
 });
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function POST(request: Request) {
   const { error, user } = await requireAuthUser();
   if (error) {

@@ -6,7 +6,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { appConfig, requireS3Config } from '@/lib/config';
+import { appConfig, requireS3Config, resolveAwsCredentials } from '@/lib/config';
 import { buildSafeContentDisposition } from '@/lib/storage/file-policy';
 
 /** Stored objects use a neutral type; original type is kept in database metadata only. */
@@ -14,16 +14,11 @@ export const STORAGE_OBJECT_CONTENT_TYPE = 'application/octet-stream';
 
 function createS3Client(): S3Client {
   const { region } = requireS3Config();
+  const credentials = resolveAwsCredentials();
 
   return new S3Client({
     region,
-    credentials:
-      process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-        ? {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-          }
-        : undefined,
+    credentials,
   });
 }
 

@@ -19,9 +19,40 @@ function readBigIntEnv(name: string, fallback: bigint): bigint {
   }
 }
 
+function readEnv(name: string): string | undefined {
+  // Bracket access avoids build-time inlining of runtime-only production secrets.
+  const value = process.env[name]?.trim();
+  return value || undefined;
+}
+
+export function resolveAwsRegion(): string {
+  return readEnv('AWS_REGION') ?? 'ap-south-1';
+}
+
+export function resolveS3Bucket(): string {
+  return readEnv('AWS_S3_BUCKET') ?? '';
+}
+
+export function resolveAwsCredentials():
+  | { accessKeyId: string; secretAccessKey: string }
+  | undefined {
+  const accessKeyId = readEnv('AWS_ACCESS_KEY_ID');
+  const secretAccessKey = readEnv('AWS_SECRET_ACCESS_KEY');
+
+  if (!accessKeyId || !secretAccessKey) {
+    return undefined;
+  }
+
+  return { accessKeyId, secretAccessKey };
+}
+
 export const appConfig = {
-  awsRegion: process.env.AWS_REGION ?? 'ap-south-1',
-  s3Bucket: process.env.AWS_S3_BUCKET ?? '',
+  get awsRegion() {
+    return resolveAwsRegion();
+  },
+  get s3Bucket() {
+    return resolveS3Bucket();
+  },
   defaultStorageQuotaBytes: readBigIntEnv(
     'DEFAULT_STORAGE_QUOTA_BYTES',
     BigInt(DEFAULT_QUOTA),
@@ -43,13 +74,13 @@ export const appConfig = {
 };
 
 export function requireS3Config(): { bucket: string; region: string } {
-  const bucket = appConfig.s3Bucket.trim();
+  const bucket = resolveS3Bucket().trim();
   if (!bucket) {
     throw new Error('AWS_S3_BUCKET is not configured');
   }
 
   return {
     bucket,
-    region: appConfig.awsRegion,
+    region: resolveAwsRegion(),
   };
 }
