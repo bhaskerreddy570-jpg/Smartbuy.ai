@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import {
   getEnvPresence,
-  resolveAuthSecret,
+  resolveAuthSecretWithSource,
   resolveAuthUrl,
   resolveDatabaseUrl,
 } from '@/lib/server-env';
@@ -22,15 +22,17 @@ const OPTIONAL_FILE_COLUMNS = [
 
 export async function GET() {
   const envPresence = getEnvPresence();
-  const databaseUrl = resolveDatabaseUrl();
-  const authSecretConfigured = Boolean(resolveAuthSecret());
+  const authSecret = resolveAuthSecretWithSource();
+  const authSecretConfigured = Boolean(authSecret.secret);
   const authUrlConfigured = Boolean(resolveAuthUrl());
+  const databaseUrl = resolveDatabaseUrl();
 
   if (!databaseUrl) {
     return NextResponse.json(
       {
         ok: false,
         authSecretConfigured,
+        authSecretSource: authSecret.source,
         authUrlConfigured,
         databaseUrlConfigured: false,
         connected: false,
@@ -109,6 +111,7 @@ export async function GET() {
       {
         ok,
         authSecretConfigured,
+        authSecretSource: authSecret.source,
         authSecretKeyPresent,
         authSecretValuePresent,
         authUrlConfigured,
@@ -128,6 +131,7 @@ export async function GET() {
       {
         ok: false,
         authSecretConfigured,
+        authSecretSource: authSecret.source,
         authUrlConfigured,
         databaseUrlConfigured: true,
         connected: false,

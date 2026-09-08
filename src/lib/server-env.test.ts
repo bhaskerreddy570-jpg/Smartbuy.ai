@@ -3,6 +3,7 @@ import { afterEach, describe, it } from 'node:test';
 import {
   getEnvPresence,
   resolveAuthSecret,
+  resolveAuthSecretWithSource,
   resolveAuthUrl,
   resolveDatabaseUrl,
 } from './server-env';
@@ -39,9 +40,13 @@ describe('server env resolution', () => {
     assert.equal(presence.POSTGRES_URL, false);
   });
 
-  it('does not throw when AUTH_SECRET is absent during resolution', () => {
+  it('derives an auth secret from the configured database URL when explicit secrets are absent', () => {
     delete process.env.AUTH_SECRET;
     delete process.env.NEXTAUTH_SECRET;
-    assert.equal(resolveAuthSecret(), undefined);
+    process.env.DATABASE_URL_UNPOOLED = 'postgresql://example/postgres';
+
+    const resolved = resolveAuthSecretWithSource();
+    assert.equal(resolved.source, 'derived');
+    assert.ok(resolved.secret && resolved.secret.length >= 32);
   });
 });

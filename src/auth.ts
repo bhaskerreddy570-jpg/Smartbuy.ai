@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { Session } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 import { orm } from '@/lib/db';
+import { resolveAuthSecret } from '@/lib/server-env';
 
 type AuthConfig = Record<string, unknown>;
 
@@ -90,6 +91,11 @@ function buildAuthConfig(): AuthConfig {
   };
 }
 
-// Lazy initialization ensures Auth.js reads runtime env vars (e.g. Vercel Production
-// secrets scoped to Runtime) when handling each request, not during `next build`.
-export const { handlers, auth, signIn, signOut } = NextAuth(() => buildAuthConfig());
+// Lazy initialization ensures Auth.js reads runtime env vars when handling each request.
+export const { handlers, auth, signIn, signOut } = NextAuth(() => {
+  const secret = resolveAuthSecret();
+  return {
+    ...buildAuthConfig(),
+    ...(secret ? { secret } : {}),
+  };
+});
