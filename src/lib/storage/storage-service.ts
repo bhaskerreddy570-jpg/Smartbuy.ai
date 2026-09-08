@@ -38,6 +38,10 @@ export class StorageService {
     );
   }
 
+  getObjectBody(objectRef: StorageObjectRef) {
+    return getObjectStoreProvider(objectRef.provider).getObjectBody(objectRef);
+  }
+
   headObject(objectRef: StorageObjectRef) {
     return getObjectStoreProvider(objectRef.provider).headObject(objectRef);
   }

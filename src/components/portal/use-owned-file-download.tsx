@@ -10,6 +10,7 @@ import {
 
 export function useOwnedFileDownload() {
   const [unlockTarget, setUnlockTarget] = useState<{
+    fileId: string;
     fileName: string;
     usesPassphrase: boolean;
     payload: SecureDownloadPayload;
@@ -36,14 +37,15 @@ export function useOwnedFileDownload() {
 
     if (payload.securityMode === "SECURE" && payload.encryption) {
       setUnlockTarget({
+        fileId,
         fileName: payload.fileName,
         usesPassphrase: payload.encryption.kdf === "PBKDF2-SHA256",
-        payload,
+        payload: { ...payload, fileId },
       });
       return true;
     }
 
-    await handleNormalFileDownload(payload);
+    await handleNormalFileDownload({ ...payload, fileId });
     return true;
   }
 

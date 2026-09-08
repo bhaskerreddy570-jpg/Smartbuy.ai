@@ -3,6 +3,7 @@ import {
   createDownloadUrl,
   createUploadUrl,
   deleteObject,
+  getObjectBody,
   getObjectMetadata,
   putObject,
 } from '@/lib/storage/s3';
@@ -60,6 +61,10 @@ export class S3ObjectStoreProvider implements ObjectStoreProvider {
       storageKey: params.objectRef.key,
       fileName: params.fileName,
     });
+  }
+
+  async getObjectBody(objectRef: StorageObjectRef) {
+    return getObjectBody(objectRef.key);
   }
 
   async headObject(objectRef: StorageObjectRef) {

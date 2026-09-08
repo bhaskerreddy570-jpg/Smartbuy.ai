@@ -46,6 +46,48 @@ describe('secure file crypto', () => {
     assert.equal(new TextDecoder().decode(decrypted), 'passphrase protected');
   });
 
+  it('rejects wrong passphrases safely', async () => {
+    const plaintext = new TextEncoder().encode('wrong passphrase payload').buffer;
+    const salt = generatePassphraseSalt();
+    const encrypted = await encryptSecureFileWithPassphrase({
+      plaintext,
+      passphrase: 'correct passphrase value',
+      salt,
+    });
+
+    await assert.rejects(
+      () =>
+        decryptSecureFileWithPassphrase({
+          encryptedBlob: encrypted.encryptedBlob,
+          passphrase: 'incorrect passphrase value',
+          salt,
+        }),
+      /SECURE_DECRYPTION_FAILED/,
+    );
+  });
+
+  it('rejects modified salt metadata during decryption', async () => {
+    const plaintext = new TextEncoder().encode('salt mismatch').buffer;
+    const salt = generatePassphraseSalt();
+    const encrypted = await encryptSecureFileWithPassphrase({
+      plaintext,
+      passphrase: 'salt-check-passphrase',
+      salt,
+    });
+
+    const wrongSalt = generatePassphraseSalt();
+
+    await assert.rejects(
+      () =>
+        decryptSecureFileWithPassphrase({
+          encryptedBlob: encrypted.encryptedBlob,
+          passphrase: 'salt-check-passphrase',
+          salt: wrongSalt,
+        }),
+      /SECURE_DECRYPTION_FAILED/,
+    );
+  });
+
   it('rejects wrong keys and tampered ciphertext safely', async () => {
     const plaintext = new TextEncoder().encode('tamper test').buffer;
     const rawKey = generateSecureFileKey();

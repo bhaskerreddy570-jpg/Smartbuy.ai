@@ -8,9 +8,10 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { appConfig, requireS3Config, resolveAwsCredentials } from '@/lib/config';
 import { buildSafeContentDisposition } from '@/lib/storage/file-policy';
+import { STORAGE_OBJECT_CONTENT_TYPE } from '@/lib/storage/types';
 
-/** Stored objects use a neutral type; original type is kept in database metadata only. */
-export const STORAGE_OBJECT_CONTENT_TYPE = 'application/octet-stream';
+/** @deprecated import from `@/lib/storage/types` */
+export { STORAGE_OBJECT_CONTENT_TYPE };
 
 function createS3Client(): S3Client {
   const { region } = requireS3Config();
@@ -77,6 +78,33 @@ export async function createDownloadUrl(params: {
   return getSignedUrl(client, command, {
     expiresIn: appConfig.presignedDownloadExpirySeconds,
   });
+}
+
+export async function getObjectBody(storageKey: string): Promise<{
+  body: Uint8Array;
+  size: bigint;
+  contentType?: string;
+}> {
+  const { bucket } = requireS3Config();
+  const client = createS3Client();
+
+  const response = await client.send(
+    new GetObjectCommand({
+      Bucket: bucket,
+      Key: storageKey,
+    }),
+  );
+
+  if (!response.Body) {
+    throw new Error('Uploaded object body is missing');
+  }
+
+  const body = await response.Body.transformToByteArray();
+  return {
+    body,
+    size: BigInt(body.byteLength),
+    contentType: response.ContentType,
+  };
 }
 
 /** Server-side metadata read after upload. IAM: authorized by s3:GetObject (not a separate HeadObject action). */

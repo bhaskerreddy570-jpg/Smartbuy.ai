@@ -3,10 +3,16 @@ import {
   decryptSecureFileWithPassphrase,
   decryptSecureFileWithRawKey,
 } from '@/lib/crypto/secure-file-crypto';
+import {
+  SecureCiphertextFetchError,
+  SecureDecryptionError,
+  SecureKeyDecryptionError,
+} from '@/lib/crypto/secure-file-errors';
 import { SECURE_KDF_PBKDF2 } from '@/lib/crypto/secure-file-format';
 
 export type SecureDownloadPayload = {
-  downloadUrl: string;
+  fileId: string;
+  downloadUrl?: string;
   fileName: string;
   securityMode?: 'NORMAL' | 'SECURE';
   encryption?: {
@@ -20,12 +26,24 @@ export type SecureDownloadPayload = {
   };
 };
 
-export async function fetchSecureCiphertext(downloadUrl: string): Promise<ArrayBuffer> {
-  const response = await fetch(downloadUrl);
-  if (!response.ok) {
-    throw new Error('Unable to download secure file');
+export async function fetchSecureCiphertext(fileId: string): Promise<ArrayBuffer> {
+  try {
+    const response = await fetch(`/api/files/${fileId}/ciphertext`, {
+      cache: 'no-store',
+      credentials: 'same-origin',
+    });
+
+    if (!response.ok) {
+      throw new SecureCiphertextFetchError();
+    }
+
+    return response.arrayBuffer();
+  } catch (error) {
+    if (error instanceof SecureCiphertextFetchError) {
+      throw error;
+    }
+    throw new SecureCiphertextFetchError();
   }
-  return response.arrayBuffer();
 }
 
 export async function decryptSecureDownload(params: {
@@ -37,7 +55,7 @@ export async function decryptSecureDownload(params: {
   try {
     if (params.encryption.kdf === SECURE_KDF_PBKDF2) {
       if (!params.encryption.salt) {
-        throw new Error('Secure file metadata is incomplete.');
+        throw new SecureDecryptionError('Secure file metadata is incomplete.');
       }
 
       const plaintext = await decryptSecureFileWithPassphrase({
@@ -63,8 +81,19 @@ export async function decryptSecureDownload(params: {
       mimeType: params.encryption.mimeType,
       fileName: params.fileName,
     };
-  } catch {
-    throw new Error('Incorrect key or passphrase. Secure files cannot be recovered without the correct secret.');
+  } catch (error) {
+    if (
+      error instanceof SecureDecryptionError ||
+      error instanceof SecureKeyDecryptionError
+    ) {
+      throw error;
+    }
+
+    if (params.encryption.kdf === SECURE_KDF_PBKDF2) {
+      throw new SecureDecryptionError();
+    }
+
+    throw new SecureKeyDecryptionError();
   }
 }
 
@@ -102,7 +131,7 @@ export async function handleSecureFileDownload(params: {
   keyInput: string;
   preview?: boolean;
 }): Promise<{ previewUrl?: string }> {
-  const ciphertext = await fetchSecureCiphertext(params.payload.downloadUrl);
+  const ciphertext = await fetchSecureCiphertext(params.payload.fileId);
   const decrypted = await decryptSecureDownload({
     ciphertext,
     encryption: params.payload.encryption!,
@@ -125,9 +154,19 @@ export async function handleSecureFileDownload(params: {
 }
 
 export async function handleNormalFileDownload(payload: SecureDownloadPayload): Promise<void> {
+  if (!payload.downloadUrl) {
+    throw new SecureCiphertextFetchError('Unable to download file.');
+  }
+
   const link = document.createElement('a');
   link.href = payload.downloadUrl;
   link.download = payload.fileName;
   link.rel = 'noopener noreferrer';
   link.click();
 }
+
+export {
+  SecureCiphertextFetchError,
+  SecureDecryptionError,
+  SecureKeyDecryptionError,
+} from '@/lib/crypto/secure-file-errors';

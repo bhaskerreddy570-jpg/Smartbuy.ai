@@ -228,7 +228,7 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
         fileId,
         fileName: payload.fileName,
         usesPassphrase: payload.encryption.kdf === "PBKDF2-SHA256",
-        payload,
+        payload: { ...payload, fileId },
       });
       return;
     }

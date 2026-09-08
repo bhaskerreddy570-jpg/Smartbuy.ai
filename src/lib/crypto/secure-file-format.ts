@@ -17,6 +17,7 @@ export const CSN1_FLAG_PASSPHRASE = 0x01;
 
 /** PBKDF2 iteration count (Web Crypto native KDF; see docs/secure-upload-zero-knowledge.md). */
 export const PBKDF2_ITERATIONS = 600_000;
+export const SECURE_PASSPHRASE_MIN_LENGTH = 8;
 
 export type SecureFileSecurityMode = 'NORMAL' | 'SECURE';
 

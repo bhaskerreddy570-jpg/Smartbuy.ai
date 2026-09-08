@@ -61,7 +61,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     if (isSecureFileRecord(owned.file)) {
       return NextResponse.json({
-        downloadUrl,
+        fileId: owned.file.id,
         fileName: owned.file.name,
         category: owned.file.category,
         securityMode: 'SECURE',
@@ -70,6 +70,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     return NextResponse.json({
+      fileId: owned.file.id,
       downloadUrl,
       fileName: owned.file.name,
       category: owned.file.category,

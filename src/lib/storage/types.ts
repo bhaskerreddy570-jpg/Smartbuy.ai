@@ -14,6 +14,9 @@ export type StorageProviderId = (typeof STORAGE_PROVIDERS)[number];
 
 export const DEFAULT_STORAGE_NAMESPACE = 'default';
 
+/** Stored objects use a neutral type; original type is kept in database metadata only. */
+export const STORAGE_OBJECT_CONTENT_TYPE = 'application/octet-stream';
+
 export type StorageObjectRef = {
   provider: StorageProviderId;
   namespace: string;
@@ -51,11 +54,18 @@ export type PutObjectParams = {
   size: bigint;
 };
 
+export type GetObjectBodyResult = {
+  body: Uint8Array;
+  size: bigint;
+  contentType?: string;
+};
+
 export type ObjectStoreProvider = {
   readonly providerId: StorageProviderId;
   prepareUpload(params: PrepareUploadParams): Promise<PrepareUploadResult>;
   putObject(params: PutObjectParams): Promise<void>;
   createDownloadUrl(params: CreateDownloadParams): Promise<string>;
+  getObjectBody(objectRef: StorageObjectRef): Promise<GetObjectBodyResult>;
   headObject(objectRef: StorageObjectRef): Promise<StoredObjectMetadata>;
   deleteObject(objectRef: StorageObjectRef): Promise<void>;
   objectExists(objectRef: StorageObjectRef): Promise<boolean>;

@@ -146,7 +146,8 @@ describe('security scenarios (logic-level)', () => {
       'utf8',
     );
 
-    assert.match(s3Source, /process\.env\.AWS_/);
+    assert.match(s3Source, /requireS3Config\(\)/);
+    assert.match(s3Source, /resolveAwsCredentials\(\)/);
     assert.doesNotMatch(dashboardSource, /AWS_/);
     assert.doesNotMatch(dashboardSource, /process\.env/);
   });
@@ -156,14 +157,20 @@ describe('security scenarios (logic-level)', () => {
       join(projectRoot, 'app/api/files/[fileId]/route.ts'),
       'utf8',
     );
+    const ciphertextRouteSource = readFileSync(
+      join(projectRoot, 'app/api/files/[fileId]/ciphertext/route.ts'),
+      'utf8',
+    );
     const completeRouteSource = readFileSync(
       join(projectRoot, 'app/api/files/upload/complete/route.ts'),
       'utf8',
     );
 
     assert.match(fileRouteSource, /getStorageService\(\)/);
+    assert.match(ciphertextRouteSource, /getStorageService\(\)/);
     assert.match(completeRouteSource, /getStorageService\(\)/);
     assert.doesNotMatch(fileRouteSource, /from '@\/lib\/storage\/s3'/);
+    assert.doesNotMatch(ciphertextRouteSource, /from '@\/lib\/storage\/s3'/);
     assert.doesNotMatch(completeRouteSource, /from '@\/lib\/storage\/s3'/);
   });
 });

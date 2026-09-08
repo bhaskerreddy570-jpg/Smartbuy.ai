@@ -39,6 +39,33 @@ describe('secure upload security boundaries', () => {
     assert.match(uploadFlowSource, /secure: params.secure/);
   });
 
+  it('secure downloads use same-origin ciphertext proxy instead of browser S3 fetch', () => {
+    const accessSource = readFileSync(
+      join(projectRoot, 'lib/client/secure-file-access.ts'),
+      'utf8',
+    );
+    const ciphertextRouteSource = readFileSync(
+      join(projectRoot, 'app/api/files/[fileId]/ciphertext/route.ts'),
+      'utf8',
+    );
+    const fileRouteSource = readFileSync(
+      join(projectRoot, 'app/api/files/[fileId]/route.ts'),
+      'utf8',
+    );
+
+    assert.match(accessSource, /\/api\/files\/\$\{fileId\}\/ciphertext/);
+    assert.doesNotMatch(accessSource, /fetch\(.*downloadUrl/);
+    assert.match(ciphertextRouteSource, /resolveOwnedFileStorage/);
+    assert.match(ciphertextRouteSource, /isSecureFileRecord/);
+    assert.match(fileRouteSource, /buildDownloadEncryptionPayload/);
+    assert.match(fileRouteSource, /securityMode: 'SECURE'/);
+    assert.match(fileRouteSource, /encryption: buildDownloadEncryptionPayload/);
+    assert.doesNotMatch(
+      fileRouteSource,
+      /securityMode: 'SECURE'[\s\S]*downloadUrl:/,
+    );
+  });
+
   it('storage keys remain server-generated during secure upload lifecycle', () => {
     const lifecycleSource = readFileSync(
       join(projectRoot, 'lib/storage/upload-lifecycle.ts'),

@@ -155,7 +155,10 @@ export async function encryptSecureFile(params: {
   encryptedBlob.set(new Uint8Array(ciphertextWithTag), header.length);
 
   return {
-    encryptedBlob: encryptedBlob.buffer,
+    encryptedBlob: encryptedBlob.buffer.slice(
+      encryptedBlob.byteOffset,
+      encryptedBlob.byteOffset + encryptedBlob.byteLength,
+    ),
     iv,
     encryptedSize: encryptedBlob.byteLength,
     metadata: {
