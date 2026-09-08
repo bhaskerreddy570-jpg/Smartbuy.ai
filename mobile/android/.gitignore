@@ -1,0 +1,19 @@
+# Local SDK + API config (do not commit secrets)
+local.properties
+
+# Gradle / Android build outputs
+.gradle/
+build/
+app/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Keystore (if added later)
+*.jks
+*.keystore

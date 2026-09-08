@@ -1,0 +1,28 @@
+<resources>
+    <string name="app_name">CloudStoreNow Contacts</string>
+    <string name="login_title">Sign in</string>
+    <string name="login_subtitle">Back up your contacts securely to CloudStoreNow.</string>
+    <string name="email_label">Email</string>
+    <string name="password_label">Password</string>
+    <string name="sign_in">Sign in</string>
+    <string name="enable_backup_title">Enable automatic backup</string>
+    <string name="enable_backup_body">CloudStoreNow can automatically back up contact changes in the background. We only upload changes since your last sync.</string>
+    <string name="enable_backup_button">Enable automatic backup</string>
+    <string name="skip_for_now">Skip for now</string>
+    <string name="backup_status_title">Backup</string>
+    <string name="backup_now">Backup now</string>
+    <string name="automatic_backup">Automatic backup</string>
+    <string name="last_backup">Last successful backup</string>
+    <string name="never">Never</string>
+    <string name="pending_changes">Pending changes</string>
+    <string name="contacts_permission_required">Contacts permission is required to read and back up your address book.</string>
+    <string name="grant_permission">Grant permission</string>
+    <string name="permission_denied">Contacts permission was denied. Open Settings to allow access.</string>
+    <string name="open_settings">Open settings</string>
+    <string name="sign_out">Sign out</string>
+    <string name="sync_status">Sync status</string>
+    <string name="cloud_contacts">Contacts in cloud</string>
+    <string name="syncing">Syncing…</string>
+    <string name="sync_failed">Sync failed</string>
+    <string name="signed_in_as">Signed in as %1$s</string>
+</resources>

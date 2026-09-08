@@ -1,0 +1,7 @@
+# Copy to local.properties and adjust for your machine.
+# AUTH_URL is the CloudStoreNow server base URL (no trailing slash).
+# Android emulator uses 10.0.2.2 to reach the host machine's localhost.
+AUTH_URL=http://10.0.2.2:3000
+
+# Android SDK location (required for local builds)
+# sdk.dir=/path/to/Android/sdk
