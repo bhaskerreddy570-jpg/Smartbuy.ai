@@ -116,6 +116,31 @@
               }
             ]
           },
+          "FileCategory": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "CONTACTS",
+                "value": "CONTACTS"
+              },
+              {
+                "name": "IMAGES",
+                "value": "IMAGES"
+              },
+              {
+                "name": "VIDEOS",
+                "value": "VIDEOS"
+              },
+              {
+                "name": "DOCUMENTS",
+                "value": "DOCUMENTS"
+              },
+              {
+                "name": "OTHER",
+                "value": "OTHER"
+              }
+            ]
+          },
           "FileStatus": {
             "codecId": "pg/text@1",
             "members": [
@@ -147,6 +172,15 @@
               {
                 "name": "BUSINESS",
                 "value": "BUSINESS"
+              }
+            ]
+          },
+          "StorageProviderKind": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "S3",
+                "value": "S3"
               }
             ]
           },
@@ -674,6 +708,19 @@
           },
           "File": {
             "fields": {
+              "category": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "FileCategory",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
               "createdAt": {
                 "nullable": false,
                 "type": {
@@ -750,6 +797,26 @@
                   "kind": "scalar"
                 }
               },
+              "storageNamespace": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "storageProvider": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "StorageProviderKind",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
               "updatedAt": {
                 "nullable": false,
                 "type": {
@@ -799,6 +866,9 @@
             },
             "storage": {
               "fields": {
+                "category": {
+                  "column": "category"
+                },
                 "createdAt": {
                   "column": "createdAt"
                 },
@@ -828,6 +898,12 @@
                 },
                 "storageKey": {
                   "column": "storageKey"
+                },
+                "storageNamespace": {
+                  "column": "storageNamespace"
+                },
+                "storageProvider": {
+                  "column": "storageProvider"
                 },
                 "updatedAt": {
                   "column": "updatedAt"
@@ -1710,12 +1786,37 @@
             "file": {
               "checks": [
                 {
+                  "expression": "\"category\" IN ('CONTACTS', 'IMAGES', 'VIDEOS', 'DOCUMENTS', 'OTHER')",
+                  "name": "file_category_check_b60b453e",
+                  "prefix": "file_category_check"
+                },
+                {
                   "expression": "\"status\" IN ('PENDING', 'READY')",
                   "name": "file_status_check_4eced728",
                   "prefix": "file_status_check"
+                },
+                {
+                  "expression": "\"storageProvider\" IN ('S3')",
+                  "name": "file_storageProvider_check_9da2fab1",
+                  "prefix": "file_storageProvider_check"
                 }
               ],
               "columns": {
+                "category": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "OTHER"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "FileCategory",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
                 "createdAt": {
                   "codecId": "pg/timestamptz-string@1",
                   "default": {
@@ -1776,6 +1877,30 @@
                   "nativeType": "text",
                   "nullable": false
                 },
+                "storageNamespace": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "default"
+                  },
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "storageProvider": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "S3"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "StorageProviderKind",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
                 "updatedAt": {
                   "codecId": "pg/timestamptz-string@1",
                   "nativeType": "timestamptz",
@@ -1829,6 +1954,25 @@
                   ],
                   "name": "file_folderId_idx_5985e562",
                   "prefix": "file_folderId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "category"
+                  ],
+                  "name": "file_userId_category_idx_6e270954",
+                  "prefix": "file_userId_category_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "category",
+                    "status"
+                  ],
+                  "name": "file_userId_category_status_idx_1c139799",
+                  "prefix": "file_userId_category_status_idx",
                   "unique": false
                 },
                 {
@@ -2204,6 +2348,16 @@
                 "ANNUAL"
               ]
             },
+            "FileCategory": {
+              "kind": "valueSet",
+              "values": [
+                "CONTACTS",
+                "IMAGES",
+                "VIDEOS",
+                "DOCUMENTS",
+                "OTHER"
+              ]
+            },
             "FileStatus": {
               "kind": "valueSet",
               "values": [
@@ -2218,6 +2372,12 @@
                 "BASIC",
                 "PRO",
                 "BUSINESS"
+              ]
+            },
+            "StorageProviderKind": {
+              "kind": "valueSet",
+              "values": [
+                "S3"
               ]
             },
             "SubscriptionStatus": {
@@ -2235,7 +2395,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "c867c19b707482746d43885b3edc5e9ac98d6aeb2181107b422294860795b9f7"
+    "storageHash": "ddd72e69619b76a48ba676f09f315805ab0a18363438a67c3be680c6996bd7df"
   },
   "execution": {
     "executionHash": "167538b45ed1d29d3463459c5037545f2eaa34cd7c9a33a97c2f266226caf717",

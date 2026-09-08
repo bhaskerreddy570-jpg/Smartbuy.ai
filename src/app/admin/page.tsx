@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminNav } from "@/components/admin/admin-nav";
+import { AdminCustomerStoragePanel } from "@/components/admin/admin-customer-storage-panel";
 import {
   ADMIN_SESSION_COOKIE,
   getAdminSessionUser,
@@ -24,6 +25,8 @@ export default async function AdminDashboardPage() {
         <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
           Server-side admin authorization, audit logging, and account recovery hooks.
         </p>
+
+        <AdminCustomerStoragePanel />
 
         <section className="mt-8 grid gap-4 md:grid-cols-2">
           <article className="rounded-2xl border border-zinc-200 p-6 dark:border-zinc-800">

@@ -1,12 +1,17 @@
 import { orm } from '@/lib/db';
-import { formatBytes } from '@/lib/storage/validation';
+import { getCategoryLabel } from '@/lib/storage/categories';
 import { listReadyFiles } from '@/lib/storage/files';
+import { FILE_CATEGORIES, type FileCategory } from '@/lib/storage/types';
+import { formatBytes } from '@/lib/storage/validation';
 
 function toBigInt(value: bigint | number | string): bigint {
   return typeof value === 'bigint' ? value : BigInt(value);
 }
 
-export async function getDashboardData(userId: string) {
+export async function getDashboardData(
+  userId: string,
+  category?: FileCategory,
+) {
   const user = await orm.User.where({ id: userId })
     .select('storageQuota', 'storageUsed')
     .first();
@@ -17,7 +22,21 @@ export async function getDashboardData(userId: string) {
 
   const storageQuota = toBigInt(user.storageQuota);
   const storageUsed = toBigInt(user.storageUsed);
-  const files = await listReadyFiles(userId);
+  const allFiles = await listReadyFiles(userId);
+  const files = category
+    ? allFiles.filter((file) => file.category === category)
+    : allFiles;
+
+  const countsByCategory = new Map<FileCategory, number>();
+  for (const fileCategory of FILE_CATEGORIES) {
+    countsByCategory.set(fileCategory, 0);
+  }
+  for (const file of allFiles) {
+    countsByCategory.set(
+      file.category,
+      (countsByCategory.get(file.category) ?? 0) + 1,
+    );
+  }
 
   return {
     storage: {
@@ -28,6 +47,12 @@ export async function getDashboardData(userId: string) {
       usedLabel: formatBytes(storageUsed),
       availableLabel: formatBytes(storageQuota - storageUsed),
     },
+    activeCategory: category ?? null,
+    categories: FILE_CATEGORIES.map((fileCategory) => ({
+      id: fileCategory,
+      label: getCategoryLabel(fileCategory),
+      count: countsByCategory.get(fileCategory) ?? 0,
+    })),
     files: files.map((file) => ({
       id: file.id,
       name: file.name,
@@ -35,6 +60,8 @@ export async function getDashboardData(userId: string) {
       size: toBigInt(file.size).toString(),
       sizeLabel: formatBytes(toBigInt(file.size)),
       mimeType: file.mimeType,
+      category: file.category,
+      categoryLabel: getCategoryLabel(file.category),
       createdAt: file.createdAt,
     })),
   };

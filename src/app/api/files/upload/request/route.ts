@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
 import { appConfig } from '@/lib/config';
-import { createUploadUrl } from '@/lib/storage/s3';
+import { resolveFileCategory } from '@/lib/storage/categories';
+import { FILE_CATEGORIES } from '@/lib/storage/types';
 import { createPendingUpload } from '@/lib/storage/upload-lifecycle';
 import {
   normalizeStoredMimeType,
@@ -13,6 +14,7 @@ const uploadRequestSchema = z.object({
   fileName: z.string().min(1).max(512),
   mimeType: z.string().max(255).optional().default('application/octet-stream'),
   size: z.number().int().positive(),
+  category: z.enum(FILE_CATEGORIES).optional(),
 });
 
 export async function POST(request: Request) {
@@ -48,6 +50,11 @@ export async function POST(request: Request) {
     }
 
     const storedMimeType = normalizeStoredMimeType(parsed.data.mimeType);
+    const category = resolveFileCategory({
+      fileName: filenameValidation.sanitizedName,
+      mimeType: storedMimeType,
+      requestedCategory: parsed.data.category,
+    });
 
     const pendingUpload = await createPendingUpload({
       userId: user.id,
@@ -55,24 +62,21 @@ export async function POST(request: Request) {
       originalName: filenameValidation.sanitizedName,
       mimeType: storedMimeType,
       uploadSize,
+      category,
     });
 
     if (!pendingUpload.ok) {
       if (pendingUpload.reason === 'quota_exceeded') {
-        return NextResponse.json({ error: 'Storage quota exceeded' }, { status: 403 });
+        return NextResponse.json({ error: 'STORAGE_QUOTA_EXCEEDED' }, { status: 413 });
       }
 
       return notFoundResponse();
     }
 
-    const uploadUrl = await createUploadUrl({
-      storageKey: pendingUpload.file.storageKey,
-      size: uploadSize,
-    });
-
     return NextResponse.json({
       fileId: pendingUpload.file.fileId,
-      uploadUrl,
+      uploadUrl: pendingUpload.file.uploadUrl,
+      category: pendingUpload.file.category,
       contentType: 'application/octet-stream',
     });
   } catch (uploadError) {

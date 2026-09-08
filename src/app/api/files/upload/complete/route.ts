@@ -3,8 +3,12 @@ import { z } from 'zod';
 import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
 import { orm } from '@/lib/db';
 import { runAntivirusScanHook } from '@/lib/storage/antivirus';
-import { deleteObject, getObjectMetadata } from '@/lib/storage/s3';
+import { assertStorageKeyOwnership } from '@/lib/storage/keys';
 import { getOwnedFileIncludingPending } from '@/lib/storage/files';
+import {
+  getStorageService,
+  toStorageObjectRef,
+} from '@/lib/storage/storage-service';
 import {
   finalizePendingUpload,
   releaseReservedStorageForUser,
@@ -19,9 +23,19 @@ async function cleanupPendingUpload(params: {
   userId: string;
   fileId: string;
   storageKey: string;
+  storageProvider: string;
+  storageNamespace: string;
   reservedBytes: bigint;
 }): Promise<void> {
-  await deleteObject(params.storageKey).catch(() => undefined);
+  await getStorageService()
+    .deleteObject(
+      toStorageObjectRef({
+        storageKey: params.storageKey,
+        storageProvider: params.storageProvider,
+        storageNamespace: params.storageNamespace,
+      }),
+    )
+    .catch(() => undefined);
   await orm.File.where({ id: params.fileId, userId: params.userId }).delete();
   await releaseReservedStorageForUser(params.userId, params.reservedBytes).catch(
     () => undefined,
@@ -47,7 +61,14 @@ export async function POST(request: Request) {
 
     const file = await getOwnedFileIncludingPending(user.id, parsed.data.fileId);
 
-    if (!file) {
+    if (
+      !file ||
+      !assertStorageKeyOwnership({
+        storageKey: file.storageKey,
+        userId: user.id,
+        category: file.category,
+      })
+    ) {
       return notFoundResponse();
     }
 
@@ -57,6 +78,8 @@ export async function POST(request: Request) {
         userId: user.id,
         fileId: file.id,
         storageKey: file.storageKey,
+        storageProvider: file.storageProvider,
+        storageNamespace: file.storageNamespace,
         reservedBytes: BigInt(file.size),
       });
       return NextResponse.json({ error: filenameValidation.reason }, { status: 415 });
@@ -66,7 +89,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ fileId: file.id, status: file.status });
     }
 
-    const metadata = await getObjectMetadata(file.storageKey);
+    const objectRef = toStorageObjectRef(file);
+    const metadata = await getStorageService().headObject(objectRef);
     const reservedBytes = BigInt(file.size);
 
     const scanResult = await runAntivirusScanHook({
@@ -83,6 +107,8 @@ export async function POST(request: Request) {
         userId: user.id,
         fileId: file.id,
         storageKey: file.storageKey,
+        storageProvider: file.storageProvider,
+        storageNamespace: file.storageNamespace,
         reservedBytes,
       });
       return NextResponse.json({ error: 'File rejected by security policy' }, { status: 415 });
@@ -108,6 +134,8 @@ export async function POST(request: Request) {
           userId: user.id,
           fileId: file.id,
           storageKey: file.storageKey,
+          storageProvider: file.storageProvider,
+          storageNamespace: file.storageNamespace,
           reservedBytes,
         });
         return NextResponse.json({ error: 'Storage quota exceeded' }, { status: 403 });

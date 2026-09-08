@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { buildSafeContentDisposition, validateUploadFilename, validateUploadRequest } from '@/lib/storage/file-policy';
-import { buildStorageKey } from '@/lib/storage/keys';
+import { buildLegacyStorageKey, buildStorageKey } from '@/lib/storage/keys';
 import { exceedsStorageQuota } from '@/lib/storage/quota';
 import { STORAGE_OBJECT_CONTENT_TYPE } from '@/lib/storage/s3';
 
@@ -44,12 +44,20 @@ describe('security scenarios (logic-level)', () => {
     const userBId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
     const fileId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 
-    const userAKey = buildStorageKey(userAId, fileId);
-    const userBKey = buildStorageKey(userBId, fileId);
+    const userAKey = buildStorageKey({ userId: userAId, objectId: fileId, category: 'OTHER' });
+    const userBKey = buildStorageKey({ userId: userBId, objectId: fileId, category: 'OTHER' });
 
     assert.notEqual(userAKey, userBKey);
     assert.ok(userAKey.includes(userAId));
     assert.ok(!userAKey.includes(userBId));
+  });
+
+  it('legacy keys remain valid for existing customer files', () => {
+    const userAId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    const fileId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    const legacyKey = buildLegacyStorageKey(userAId, fileId);
+
+    assert.match(legacyKey, /^users\//);
   });
 
   it('unauthenticated API routes require a server-side session user id', () => {
@@ -104,5 +112,21 @@ describe('security scenarios (logic-level)', () => {
     assert.match(s3Source, /process\.env\.AWS_/);
     assert.doesNotMatch(dashboardSource, /AWS_/);
     assert.doesNotMatch(dashboardSource, /process\.env/);
+  });
+
+  it('file routes use storage service abstraction instead of direct S3 imports', () => {
+    const fileRouteSource = readFileSync(
+      join(projectRoot, 'app/api/files/[fileId]/route.ts'),
+      'utf8',
+    );
+    const completeRouteSource = readFileSync(
+      join(projectRoot, 'app/api/files/upload/complete/route.ts'),
+      'utf8',
+    );
+
+    assert.match(fileRouteSource, /getStorageService\(\)/);
+    assert.match(completeRouteSource, /getStorageService\(\)/);
+    assert.doesNotMatch(fileRouteSource, /from '@\/lib\/storage\/s3'/);
+    assert.doesNotMatch(completeRouteSource, /from '@\/lib\/storage\/s3'/);
   });
 });

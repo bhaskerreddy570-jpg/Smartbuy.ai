@@ -1,4 +1,5 @@
 import { orm } from '@/lib/db';
+import type { FileCategory } from '@/lib/storage/types';
 
 export async function getOwnedFile(userId: string, fileId: string) {
   return orm.File.where({
@@ -20,12 +21,26 @@ export async function getOwnedFileIncludingPending(
   }).first();
 }
 
-export async function listReadyFiles(userId: string) {
-  return orm.File.where({
+export async function listReadyFiles(userId: string, category?: FileCategory) {
+  const query = orm.File.where({
     userId,
     deletedAt: null,
     status: 'READY',
-  })
-    .select('id', 'name', 'originalName', 'size', 'mimeType', 'createdAt')
+    ...(category ? { category } : {}),
+  });
+
+  return query
+    .select(
+      'id',
+      'name',
+      'originalName',
+      'size',
+      'mimeType',
+      'category',
+      'storageKey',
+      'storageProvider',
+      'storageNamespace',
+      'createdAt',
+    )
     .all();
 }

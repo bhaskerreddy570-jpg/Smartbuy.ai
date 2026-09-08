@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { ChangeEvent, useState } from "react";
 import { StorageMeter } from "@/components/storage-meter";
 import type { DashboardData } from "@/lib/dashboard";
+import type { FileCategory } from "@/lib/storage/types";
 
 type DashboardClientProps = {
   initialData: DashboardData;
@@ -16,8 +17,17 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
   const [uploading, setUploading] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
-  async function refreshFiles() {
-    const response = await fetch("/api/files");
+  async function refreshFiles(category?: FileCategory | null) {
+    const query =
+      category && category !== data.activeCategory
+        ? `?category=${encodeURIComponent(category)}`
+        : category
+          ? `?category=${encodeURIComponent(category)}`
+          : data.activeCategory
+            ? `?category=${encodeURIComponent(data.activeCategory)}`
+            : "";
+
+    const response = await fetch(`/api/files${query}`);
 
     if (response.status === 401) {
       router.push("/login");
@@ -32,6 +42,27 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
     const payload = (await response.json()) as DashboardData;
     setData(payload);
     setError(null);
+  }
+
+  async function handleCategoryChange(category: FileCategory | null) {
+    setActionMessage(null);
+    setError(null);
+
+    const query = category ? `?category=${encodeURIComponent(category)}` : "";
+    const response = await fetch(`/api/files${query}`);
+
+    if (response.status === 401) {
+      router.push("/login");
+      return;
+    }
+
+    if (!response.ok) {
+      setError("Unable to load your files");
+      return;
+    }
+
+    const payload = (await response.json()) as DashboardData;
+    setData(payload);
   }
 
   async function handleUpload(event: ChangeEvent<HTMLInputElement>) {
@@ -96,7 +127,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
       }
 
       setActionMessage(`${file.name} uploaded successfully`);
-      await refreshFiles();
+      await refreshFiles(data.activeCategory);
     } catch (uploadError) {
       setError(
         uploadError instanceof Error ? uploadError.message : "Upload failed",
@@ -145,7 +176,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
     }
 
     setActionMessage(`${fileName} deleted`);
-    await refreshFiles();
+    await refreshFiles(data.activeCategory);
   }
 
   return (
@@ -160,7 +191,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
       <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-semibold">Your files</h2>
+            <h2 className="text-lg font-semibold">My Files</h2>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               Upload, download, and manage your private cloud storage.
             </p>
@@ -174,6 +205,35 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
               onChange={handleUpload}
             />
           </label>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => handleCategoryChange(null)}
+            className={`rounded-full px-3 py-1.5 text-sm transition ${
+              data.activeCategory === null
+                ? "bg-blue-600 text-white"
+                : "border border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            }`}
+          >
+            All Files
+          </button>
+          {data.categories.map((category) => (
+            <button
+              key={category.id}
+              type="button"
+              onClick={() => handleCategoryChange(category.id)}
+              className={`rounded-full px-3 py-1.5 text-sm transition ${
+                data.activeCategory === category.id
+                  ? "bg-blue-600 text-white"
+                  : "border border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+              }`}
+            >
+              {category.label}
+              {category.count > 0 ? ` (${category.count})` : ""}
+            </button>
+          ))}
         </div>
 
         {actionMessage ? (
@@ -193,6 +253,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
             <thead className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
               <tr>
                 <th className="px-3 py-3 font-medium">Name</th>
+                <th className="px-3 py-3 font-medium">Category</th>
                 <th className="px-3 py-3 font-medium">Size</th>
                 <th className="px-3 py-3 font-medium">Uploaded</th>
                 <th className="px-3 py-3 font-medium">Actions</th>
@@ -202,10 +263,10 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
               {data.files.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="px-3 py-8 text-center text-zinc-500 dark:text-zinc-400"
                   >
-                    No files yet. Upload your first file to get started.
+                    No files in this category yet.
                   </td>
                 </tr>
               ) : (
@@ -215,6 +276,7 @@ export function DashboardClient({ initialData }: DashboardClientProps) {
                     className="border-b border-zinc-100 last:border-none dark:border-zinc-900"
                   >
                     <td className="px-3 py-4 font-medium">{file.name}</td>
+                    <td className="px-3 py-4">{file.categoryLabel}</td>
                     <td className="px-3 py-4">{file.sizeLabel}</td>
                     <td className="px-3 py-4">
                       {new Date(file.createdAt).toLocaleString()}

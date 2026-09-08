@@ -1,12 +1,33 @@
 import { NextResponse } from 'next/server';
 import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
 import { db } from '@/lib/db';
-import { createDownloadUrl, deleteObject } from '@/lib/storage/s3';
+import { assertStorageKeyOwnership } from '@/lib/storage/keys';
 import { getOwnedFile } from '@/lib/storage/files';
+import {
+  getStorageService,
+  toStorageObjectRef,
+} from '@/lib/storage/storage-service';
 
 type RouteParams = {
   params: Promise<{ fileId: string }>;
 };
+
+function verifyOwnedStorageObject(
+  file: NonNullable<Awaited<ReturnType<typeof getOwnedFile>>>,
+  userId: string,
+) {
+  if (
+    !assertStorageKeyOwnership({
+      storageKey: file.storageKey,
+      userId,
+      category: file.category,
+    })
+  ) {
+    return false;
+  }
+
+  return true;
+}
 
 export async function GET(_request: Request, { params }: RouteParams) {
   const { error, user } = await requireAuthUser();
@@ -20,16 +41,20 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const { fileId } = await params;
   const file = await getOwnedFile(user.id, fileId);
 
-  if (!file) {
+  if (!file || !verifyOwnedStorageObject(file, user.id)) {
     return notFoundResponse();
   }
 
   try {
-    const downloadUrl = await createDownloadUrl({
-      storageKey: file.storageKey,
+    const downloadUrl = await getStorageService().createDownloadUrl({
+      objectRef: toStorageObjectRef(file),
       fileName: file.name,
     });
-    return NextResponse.json({ downloadUrl, fileName: file.name });
+    return NextResponse.json({
+      downloadUrl,
+      fileName: file.name,
+      category: file.category,
+    });
   } catch (downloadError) {
     console.error('Download URL generation failed', downloadError);
     return NextResponse.json({ error: 'Unable to prepare download' }, { status: 500 });
@@ -48,12 +73,12 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   const { fileId } = await params;
   const file = await getOwnedFile(user.id, fileId);
 
-  if (!file) {
+  if (!file || !verifyOwnedStorageObject(file, user.id)) {
     return notFoundResponse();
   }
 
   try {
-    await deleteObject(file.storageKey);
+    await getStorageService().deleteObject(toStorageObjectRef(file));
 
     await db.transaction(async (tx) => {
       const userRecord = await tx.orm.public.User.where({ id: user.id })

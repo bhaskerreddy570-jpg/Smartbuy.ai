@@ -5,6 +5,18 @@ enum FileStatus {
   READY
 }
 
+enum FileCategory {
+  CONTACTS
+  IMAGES
+  VIDEOS
+  DOCUMENTS
+  OTHER
+}
+
+enum StorageProviderKind {
+  S3
+}
+
 enum Plan {
   FREE
   BASIC
@@ -69,6 +81,9 @@ model File {
   size         BigInt
   mimeType     String
   status       FileStatus
+  category     FileCategory      @default(OTHER)
+  storageProvider StorageProviderKind @default(S3)
+  storageNamespace String          @default("default")
   folderId     Uuid?
   createdAt    TimestamptzString @default(now())
   updatedAt    temporal.updatedAtString()
@@ -80,6 +95,8 @@ model File {
   @@index([userId])
   @@index([folderId])
   @@index([userId, status])
+  @@index([userId, category])
+  @@index([userId, category, status])
 }
 
 model Folder {

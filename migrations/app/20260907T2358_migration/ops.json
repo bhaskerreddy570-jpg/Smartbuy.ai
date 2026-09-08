@@ -1,0 +1,290 @@
+[
+  {
+    "id": "column.public.file.category",
+    "label": "Add column \"category\" to \"file\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "category",
+        "table": "file"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"category\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "file",
+          "category"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"category\"",
+        "sql": "ALTER TABLE \"public\".\"file\" ADD COLUMN \"category\" text DEFAULT 'OTHER' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"category\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "file",
+          "category"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.file.storageNamespace",
+    "label": "Add column \"storageNamespace\" to \"file\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "storageNamespace",
+        "table": "file"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"storageNamespace\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "file",
+          "storageNamespace"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"storageNamespace\"",
+        "sql": "ALTER TABLE \"public\".\"file\" ADD COLUMN \"storageNamespace\" text DEFAULT 'default' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"storageNamespace\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "file",
+          "storageNamespace"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.file.storageProvider",
+    "label": "Add column \"storageProvider\" to \"file\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "storageProvider",
+        "table": "file"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"storageProvider\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "file",
+          "storageProvider"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"storageProvider\"",
+        "sql": "ALTER TABLE \"public\".\"file\" ADD COLUMN \"storageProvider\" text DEFAULT 'S3' NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"storageProvider\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "file",
+          "storageProvider"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.file.file_category_check_b60b453e",
+    "label": "Add check constraint \"file_category_check_b60b453e\" on \"file\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "file_category_check_b60b453e",
+        "table": "file"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"file_category_check_b60b453e\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "file_category_check_b60b453e",
+          "public",
+          "\"public\".\"file\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"file_category_check_b60b453e\"",
+        "sql": "ALTER TABLE \"public\".\"file\" ADD CONSTRAINT \"file_category_check_b60b453e\" CHECK (\"category\" IN ('CONTACTS', 'IMAGES', 'VIDEOS', 'DOCUMENTS', 'OTHER'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"file_category_check_b60b453e\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "file_category_check_b60b453e",
+          "public",
+          "\"public\".\"file\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.file.file_storageProvider_check_9da2fab1",
+    "label": "Add check constraint \"file_storageProvider_check_9da2fab1\" on \"file\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "file_storageProvider_check_9da2fab1",
+        "table": "file"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"file_storageProvider_check_9da2fab1\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "file_storageProvider_check_9da2fab1",
+          "public",
+          "\"public\".\"file\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"file_storageProvider_check_9da2fab1\"",
+        "sql": "ALTER TABLE \"public\".\"file\" ADD CONSTRAINT \"file_storageProvider_check_9da2fab1\" CHECK (\"storageProvider\" IN ('S3'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"file_storageProvider_check_9da2fab1\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "file_storageProvider_check_9da2fab1",
+          "public",
+          "\"public\".\"file\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.file.file_userId_category_idx_6e270954",
+    "label": "Create index \"file_userId_category_idx_6e270954\" on \"file\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "file_userId_category_idx_6e270954",
+        "table": "file"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"file_userId_category_idx_6e270954\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"file_userId_category_idx_6e270954\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"file_userId_category_idx_6e270954\"",
+        "sql": "CREATE INDEX \"file_userId_category_idx_6e270954\" ON \"public\".\"file\" (\"userId\", \"category\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"file_userId_category_idx_6e270954\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"file_userId_category_idx_6e270954\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.file.file_userId_category_status_idx_1c139799",
+    "label": "Create index \"file_userId_category_status_idx_1c139799\" on \"file\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "file_userId_category_status_idx_1c139799",
+        "table": "file"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"file_userId_category_status_idx_1c139799\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"file_userId_category_status_idx_1c139799\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"file_userId_category_status_idx_1c139799\"",
+        "sql": "CREATE INDEX \"file_userId_category_status_idx_1c139799\" ON \"public\".\"file\" (\"userId\", \"category\", \"status\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"file_userId_category_status_idx_1c139799\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"file_userId_category_status_idx_1c139799\""
+        ]
+      }
+    ]
+  }
+]

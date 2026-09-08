@@ -1,6 +1,8 @@
 import type { PoolClient } from 'pg';
 import { randomUUID } from 'node:crypto';
-import { buildStorageKey } from '@/lib/storage/keys';
+import { getStorageService } from '@/lib/storage/storage-service';
+import type { FileCategory } from '@/lib/storage/types';
+import { DEFAULT_STORAGE_NAMESPACE } from '@/lib/storage/types';
 import {
   reserveStorageBytes,
   setUserStorageUsed,
@@ -15,12 +17,17 @@ type PendingUploadRow = {
   storageKey: string;
   size: string;
   status: 'PENDING' | 'READY';
+  category: FileCategory;
+  storageProvider: 'S3';
+  storageNamespace: string;
 };
 
 export type CreatedPendingUpload = {
   fileId: string;
   storageKey: string;
+  uploadUrl: string;
   reservedBytes: bigint;
+  category: FileCategory;
 };
 
 export async function createPendingUpload(params: {
@@ -29,6 +36,7 @@ export async function createPendingUpload(params: {
   originalName: string;
   mimeType: string;
   uploadSize: bigint;
+  category: FileCategory;
 }): Promise<
   | { ok: true; file: CreatedPendingUpload }
   | { ok: false; reason: 'quota_exceeded' | 'not_found' }
@@ -41,20 +49,29 @@ export async function createPendingUpload(params: {
       }
 
       const fileId = randomUUID();
-      const storageKey = buildStorageKey(params.userId, fileId);
+      const prepared = await getStorageService().prepareUpload({
+        userId: params.userId,
+        objectId: fileId,
+        category: params.category,
+        size: params.uploadSize,
+        namespace: DEFAULT_STORAGE_NAMESPACE,
+      });
 
       await client.query(
         `INSERT INTO file (
-          id, "userId", name, "originalName", "storageKey", size, "mimeType", status, "updatedAt"
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', NOW())`,
+          id, "userId", name, "originalName", "storageKey", size, "mimeType", status,
+          category, "storageProvider", "storageNamespace", "updatedAt"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8, 'S3', $9, NOW())`,
         [
           fileId,
           params.userId,
           params.fileName,
           params.originalName,
-          storageKey,
+          prepared.objectRef.key,
           params.uploadSize.toString(),
           params.mimeType,
+          params.category,
+          prepared.objectRef.namespace,
         ],
       );
 
@@ -64,8 +81,10 @@ export async function createPendingUpload(params: {
         ok: true,
         file: {
           fileId,
-          storageKey,
+          storageKey: prepared.objectRef.key,
+          uploadUrl: prepared.uploadUrl,
           reservedBytes: params.uploadSize,
+          category: params.category,
         },
       };
     });
@@ -114,7 +133,7 @@ export async function finalizePendingUpload(params: {
 > {
   return withLockedUser(params.userId, async (user, client) => {
     const fileResult = await client.query<PendingUploadRow>(
-      `SELECT id, "userId", name, "storageKey", size, status
+      `SELECT id, "userId", name, "storageKey", size, status, category, "storageProvider", "storageNamespace"
        FROM file
        WHERE id = $1 AND "userId" = $2 AND "deletedAt" IS NULL
        FOR UPDATE`,
