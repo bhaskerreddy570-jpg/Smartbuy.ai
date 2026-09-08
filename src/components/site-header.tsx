@@ -14,7 +14,14 @@ export function SiteHeader() {
           CloudStoreNow
         </Link>
         <nav className="flex items-center gap-2 text-sm sm:gap-3">
-          {pathname.startsWith("/dashboard") ? (
+          {pathname.startsWith("/overview") ||
+          pathname.startsWith("/files") ||
+          pathname.startsWith("/profile") ||
+          pathname.startsWith("/settings") ||
+          pathname.startsWith("/security") ||
+          pathname.startsWith("/starred") ||
+          pathname.startsWith("/trash") ||
+          pathname.startsWith("/dashboard") ? (
             <SignOutButton />
           ) : (
             <>

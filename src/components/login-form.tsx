@@ -47,7 +47,7 @@ export function LoginForm() {
         return;
       }
 
-      router.push("/dashboard");
+      router.push("/overview");
       router.refresh();
     } catch {
       setError("Unable to sign in right now. Please try again.");

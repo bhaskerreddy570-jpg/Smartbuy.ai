@@ -61,3 +61,131 @@ body {
     animation: none;
   }
 }
+
+.portal-card {
+  @apply rounded-[1.75rem] border border-white/70 bg-white/80 p-6 shadow-sm backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/60;
+}
+
+.portal-stat-card {
+  @apply rounded-[1.5rem] border border-white/70 bg-white/80 p-5 shadow-sm backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/60;
+}
+
+.portal-page-header {
+  @apply flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between;
+}
+
+.portal-primary-button {
+  @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 px-4 py-3 text-sm font-medium text-white shadow-lg shadow-sky-500/20 transition hover:from-sky-500 hover:to-indigo-500 disabled:opacity-60;
+}
+
+.portal-secondary-button {
+  @apply inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900;
+}
+
+.portal-danger-button {
+  @apply inline-flex items-center justify-center rounded-xl border border-red-200 px-4 py-2.5 text-sm font-medium text-red-700 transition hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40;
+}
+
+.portal-chip {
+  @apply rounded-full border border-zinc-200 px-3 py-1.5 text-sm transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900;
+}
+
+.portal-chip-active {
+  @apply rounded-full bg-gradient-to-r from-sky-600 to-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm;
+}
+
+.portal-alert-success {
+  @apply rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300;
+}
+
+.portal-alert-error {
+  @apply rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300;
+}
+
+.portal-empty-state {
+  @apply flex flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-zinc-200 bg-zinc-50/70 px-6 py-16 text-center dark:border-zinc-800 dark:bg-zinc-900/40;
+}
+
+.portal-menu-item {
+  @apply block rounded-lg px-3 py-2 text-sm transition hover:bg-zinc-100 dark:hover:bg-zinc-900;
+}
+
+.portal-table thead {
+  @apply border-b border-zinc-200 text-zinc-500 dark:border-zinc-800 dark:text-zinc-400;
+}
+
+.portal-table th {
+  @apply px-3 py-3 text-left text-xs font-medium uppercase tracking-wide;
+}
+
+.portal-table td {
+  @apply border-b border-zinc-100 px-3 py-4 dark:border-zinc-900;
+}
+
+.portal-file-card {
+  @apply rounded-[1.5rem] border border-zinc-100 bg-zinc-50/70 p-5 dark:border-zinc-800 dark:bg-zinc-900/40;
+}
+
+.portal-action-card {
+  @apply flex items-center gap-4 rounded-2xl border border-zinc-100 bg-zinc-50/70 p-4 transition hover:border-sky-200 hover:bg-white dark:border-zinc-800 dark:bg-zinc-900/40 dark:hover:border-sky-900;
+}
+
+.portal-action-icon {
+  @apply flex h-11 w-11 items-center justify-center rounded-2xl text-white;
+}
+
+.portal-mobile-drawer > summary {
+  list-style: none;
+}
+
+.portal-mobile-drawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-logo {
+  @apply flex items-center gap-3;
+}
+
+.admin-nav-link {
+  @apply block rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-600 transition hover:bg-amber-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-amber-950/20 dark:hover:text-zinc-100;
+}
+
+.admin-nav-link-active {
+  @apply bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200;
+}
+
+.admin-card {
+  @apply rounded-[1.75rem] border border-amber-100 bg-white/80 p-6 shadow-sm backdrop-blur-xl dark:border-amber-900/30 dark:bg-zinc-950/60;
+}
+
+.admin-stat-card {
+  @apply rounded-[1.5rem] border border-amber-100 bg-white/80 p-5 shadow-sm dark:border-amber-900/30 dark:bg-zinc-950/60;
+}
+
+.admin-stat-label {
+  @apply text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300;
+}
+
+.admin-stat-value {
+  @apply mt-3 text-2xl font-semibold;
+}
+
+.admin-primary-button {
+  @apply inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-4 py-3 text-sm font-medium text-white shadow-lg shadow-amber-500/20 transition hover:from-amber-400 hover:to-orange-500;
+}
+
+.admin-secondary-button {
+  @apply inline-flex items-center justify-center rounded-xl border border-amber-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-amber-50 dark:border-amber-900/40 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-amber-950/20;
+}
+
+.admin-table thead {
+  @apply border-b border-amber-100 text-zinc-500 dark:border-amber-900/30 dark:text-zinc-400;
+}
+
+.admin-table th {
+  @apply px-4 py-3 text-left text-xs font-medium uppercase tracking-wide;
+}
+
+.admin-table td {
+  @apply border-b border-zinc-100 px-4 py-3 dark:border-zinc-900;
+}

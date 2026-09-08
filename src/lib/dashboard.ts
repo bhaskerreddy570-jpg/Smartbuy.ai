@@ -1,5 +1,6 @@
 import { orm } from '@/lib/db';
 import { resolveCustomerLimits, shouldResetBandwidthPeriod } from '@/lib/customer-limits';
+import { ensureCustomerQuotaPersisted } from '@/lib/quota-backfill';
 import { getCategoryLabel } from '@/lib/storage/categories';
 import { listReadyFiles } from '@/lib/storage/files';
 import { FILE_CATEGORIES, type FileCategory } from '@/lib/storage/types';
@@ -9,6 +10,8 @@ export async function getDashboardData(
   userId: string,
   category?: FileCategory,
 ) {
+  await ensureCustomerQuotaPersisted(userId);
+
   const user = await orm.User.where({ id: userId })
     .select(
       'storageQuota',
