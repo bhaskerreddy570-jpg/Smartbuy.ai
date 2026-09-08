@@ -3,6 +3,13 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --portal-z-bottom-nav: 30;
+  --portal-z-header: 40;
+  --portal-z-backdrop: 50;
+  --portal-z-drawer: 60;
+  --portal-z-dropdown: 70;
+  --portal-header-height: 4.25rem;
+  --portal-mobile-nav-height: 4.5rem;
 }
 
 @theme inline {
@@ -134,12 +141,76 @@ body {
   @apply flex h-11 w-11 items-center justify-center rounded-2xl text-white;
 }
 
-.portal-mobile-drawer > summary {
-  list-style: none;
+.portal-topbar {
+  z-index: var(--portal-z-header);
 }
 
-.portal-mobile-drawer > summary::-webkit-details-marker {
-  display: none;
+.portal-mobile-nav {
+  z-index: var(--portal-z-bottom-nav);
+}
+
+.portal-mobile-backdrop {
+  position: fixed;
+  inset: var(--portal-header-height) 0 var(--portal-mobile-nav-height) 0;
+  z-index: var(--portal-z-backdrop);
+  border: 0;
+  background: rgb(15 23 42 / 0.45);
+  backdrop-filter: blur(2px);
+}
+
+@media (min-width: 1024px) {
+  .portal-mobile-backdrop {
+    display: none;
+  }
+}
+
+.portal-mobile-drawer-panel {
+  position: fixed;
+  top: var(--portal-header-height);
+  bottom: var(--portal-mobile-nav-height);
+  left: 0;
+  z-index: var(--portal-z-drawer);
+  display: flex;
+  width: min(18rem, 88vw);
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid rgb(228 228 231);
+  background: rgb(255 255 255);
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+@media (prefers-color-scheme: dark) {
+  .portal-mobile-drawer-panel {
+    border-right-color: rgb(39 39 42);
+    background: rgb(9 9 11);
+  }
+}
+
+@media (min-width: 1024px) {
+  .portal-mobile-drawer-panel {
+    display: none;
+  }
+}
+
+.portal-mobile-drawer-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1rem;
+}
+
+.portal-profile-dropdown {
+  z-index: var(--portal-z-dropdown);
+}
+
+.portal-main-content {
+  padding-bottom: calc(var(--portal-mobile-nav-height) + 1.5rem);
+}
+
+@media (min-width: 1024px) {
+  .portal-main-content {
+    padding-bottom: 1.5rem;
+  }
 }
 
 .admin-logo {

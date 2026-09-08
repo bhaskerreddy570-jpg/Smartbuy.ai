@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PortalSignOutButton } from "@/components/portal/portal-sign-out-button";
 import type { PortalStorageSummary, PortalUser } from "@/lib/portal/data";
 
@@ -68,9 +69,9 @@ function NavIcon({ name }: { name: string }) {
   return <>{paths[name] ?? null}</>;
 }
 
-function PortalLogo() {
+function PortalLogo({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <Link href="/overview" className="portal-logo flex items-center gap-3 px-1">
+    <Link href="/overview" onClick={onNavigate} className="portal-logo flex items-center gap-3 px-1">
       <span className="portal-logo-mark flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/20">
         <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true">
           <path d="M6 14.5c0-3.3 2.7-6 6-6 1.6 0 3 .6 4.1 1.7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -168,19 +169,48 @@ function SidebarNav({
 function ProfileMenu({
   user,
   hasAdminSession,
+  open,
+  onOpen,
+  onClose,
 }: {
   user: PortalUser;
   hasAdminSession: boolean;
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
 }) {
+  const menuRef = useRef<HTMLDivElement>(null);
   const initials = (user.name ?? user.email)
     .split(/\s+/)
     .map((part) => part[0]?.toUpperCase())
     .slice(0, 2)
     .join("");
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [open, onClose]);
+
   return (
-    <details className="portal-profile-menu relative">
-      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-zinc-200 bg-white px-2 py-1.5 pl-1.5 shadow-sm transition hover:border-sky-200 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:border-sky-800">
+    <div ref={menuRef} className="portal-profile-menu relative shrink-0">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-controls="portal-profile-dropdown"
+        onClick={() => (open ? onClose() : onOpen())}
+        className="flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-2 py-1.5 pl-1.5 shadow-sm transition hover:border-sky-200 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:border-sky-800"
+      >
         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-sm font-semibold text-white">
           {initials || "U"}
         </span>
@@ -192,32 +222,46 @@ function ProfileMenu({
             {user.email}
           </span>
         </span>
-      </summary>
-      <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-          <p className="truncate text-sm font-medium">{user.name ?? "Account"}</p>
-          <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{user.email}</p>
+      </button>
+      {open ? (
+        <div
+          id="portal-profile-dropdown"
+          role="menu"
+          className="portal-profile-dropdown absolute right-0 mt-2 max-h-[min(24rem,calc(100dvh-var(--portal-header-height)-1rem))] w-56 overflow-y-auto rounded-2xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-950"
+        >
+          <div className="border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
+            <p className="truncate text-sm font-medium">{user.name ?? "Account"}</p>
+            <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{user.email}</p>
+          </div>
+          <div className="p-2">
+            <Link href="/profile" role="menuitem" className="portal-menu-item" onClick={onClose}>
+              Profile
+            </Link>
+            <Link href="/settings" role="menuitem" className="portal-menu-item" onClick={onClose}>
+              Settings
+            </Link>
+            <Link href="/security" role="menuitem" className="portal-menu-item" onClick={onClose}>
+              Security
+            </Link>
+            {hasAdminSession ? (
+              <>
+                <div className="my-2 border-t border-zinc-100 dark:border-zinc-800" />
+                <Link
+                  href="/admin"
+                  role="menuitem"
+                  className="portal-menu-item font-medium text-amber-700 dark:text-amber-300"
+                  onClick={onClose}
+                >
+                  Admin Portal
+                </Link>
+              </>
+            ) : null}
+            <div className="my-2 border-t border-zinc-100 dark:border-zinc-800" />
+            <PortalSignOutButton />
+          </div>
         </div>
-        <div className="p-2">
-          <Link href="/profile" className="portal-menu-item">Profile</Link>
-          <Link href="/settings" className="portal-menu-item">Settings</Link>
-          <Link href="/security" className="portal-menu-item">Security</Link>
-          {hasAdminSession ? (
-            <>
-              <div className="my-2 border-t border-zinc-100 dark:border-zinc-800" />
-              <Link
-                href="/admin"
-                className="portal-menu-item font-medium text-amber-700 dark:text-amber-300"
-              >
-                Admin Portal
-              </Link>
-            </>
-          ) : null}
-          <div className="my-2 border-t border-zinc-100 dark:border-zinc-800" />
-          <PortalSignOutButton />
-        </div>
-      </div>
-    </details>
+      ) : null}
+    </div>
   );
 }
 
@@ -228,6 +272,77 @@ export function PortalShell({
   children,
 }: PortalShellProps) {
   const pathname = usePathname();
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+
+  const closeMobileDrawer = useCallback(() => {
+    setMobileDrawerOpen(false);
+  }, []);
+
+  const closeProfileMenu = useCallback(() => {
+    setProfileMenuOpen(false);
+  }, []);
+
+  const openMobileDrawer = useCallback(() => {
+    setProfileMenuOpen(false);
+    setMobileDrawerOpen(true);
+  }, []);
+
+  const openProfileMenu = useCallback(() => {
+    setMobileDrawerOpen(false);
+    setProfileMenuOpen(true);
+  }, []);
+
+  const toggleMobileDrawer = useCallback(() => {
+    if (mobileDrawerOpen) {
+      closeMobileDrawer();
+      return;
+    }
+    openMobileDrawer();
+  }, [mobileDrawerOpen, closeMobileDrawer, openMobileDrawer]);
+
+  const handleMobileNavigate = useCallback(() => {
+    closeMobileDrawer();
+  }, [closeMobileDrawer]);
+
+  useEffect(() => {
+    // Close overlays when navigating (including browser back/forward).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- route transitions must reset overlay state
+    closeMobileDrawer();
+    closeProfileMenu();
+  }, [pathname, closeMobileDrawer, closeProfileMenu]);
+
+  useEffect(() => {
+    if (!mobileDrawerOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileDrawerOpen]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (profileMenuOpen) {
+        closeProfileMenu();
+        return;
+      }
+
+      if (mobileDrawerOpen) {
+        closeMobileDrawer();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [mobileDrawerOpen, profileMenuOpen, closeMobileDrawer, closeProfileMenu]);
 
   return (
     <div className="portal-shell min-h-screen bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.12),_transparent_35%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] dark:bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.08),_transparent_35%),linear-gradient(180deg,#020617_0%,#0f172a_100%)]">
@@ -247,24 +362,26 @@ export function PortalShell({
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="portal-topbar sticky top-0 z-40 border-b border-white/70 bg-white/70 px-4 py-3 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/70 sm:px-6">
-            <div className="flex items-center gap-3">
-              <details className="portal-mobile-drawer lg:hidden">
-                <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-950">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+          <header className="portal-topbar sticky top-0 border-b border-white/70 bg-white/70 px-4 py-3 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/70 sm:px-6">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-950 lg:hidden"
+                aria-expanded={mobileDrawerOpen}
+                aria-controls="portal-mobile-drawer"
+                aria-label={mobileDrawerOpen ? "Close navigation menu" : "Open navigation menu"}
+                onClick={toggleMobileDrawer}
+              >
+                {mobileDrawerOpen ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5" aria-hidden="true">
+                    <path d="m6 6 12 12M18 6 6 18" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5" aria-hidden="true">
                     <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
                   </svg>
-                </summary>
-                <div className="portal-mobile-drawer-panel absolute left-0 right-0 top-[4.25rem] z-50 border-b border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-800 dark:bg-zinc-950">
-                  <PortalLogo />
-                  <div className="mt-4">
-                    <SidebarNav pathname={pathname} />
-                  </div>
-                  <div className="mt-4">
-                    <StorageMini summary={storageSummary} />
-                  </div>
-                </div>
-              </details>
+                )}
+              </button>
 
               <div className="min-w-0 flex-1">
                 <label className="relative block">
@@ -276,7 +393,7 @@ export function PortalShell({
                   <input
                     type="search"
                     placeholder="Search your files..."
-                    className="w-full rounded-2xl border border-zinc-200 bg-white py-2.5 pl-10 pr-4 text-sm outline-none ring-sky-500/30 transition focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950"
+                    className="w-full min-w-0 rounded-2xl border border-zinc-200 bg-white py-2.5 pl-10 pr-3 text-sm outline-none ring-sky-500/30 transition focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 sm:pr-4"
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
                         const value = (event.target as HTMLInputElement).value.trim();
@@ -292,7 +409,7 @@ export function PortalShell({
               <button
                 type="button"
                 aria-label="Notifications"
-                className="hidden h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:text-zinc-200 sm:flex"
+                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:text-zinc-200 sm:flex"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
                   <path d="M15 17H9l-1 4h8l-1-4Z" strokeLinecap="round" strokeLinejoin="round" />
@@ -300,15 +417,52 @@ export function PortalShell({
                 </svg>
               </button>
 
-              <ProfileMenu user={user} hasAdminSession={hasAdminSession} />
+              <ProfileMenu
+                user={user}
+                hasAdminSession={hasAdminSession}
+                open={profileMenuOpen}
+                onOpen={openProfileMenu}
+                onClose={closeProfileMenu}
+              />
             </div>
           </header>
 
-          <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+          {mobileDrawerOpen ? (
+            <>
+              <button
+                type="button"
+                className="portal-mobile-backdrop lg:hidden"
+                aria-label="Close navigation menu"
+                onClick={closeMobileDrawer}
+              />
+              <nav
+                id="portal-mobile-drawer"
+                aria-label="Main navigation"
+                className="portal-mobile-drawer-panel lg:hidden"
+              >
+                <div className="portal-mobile-drawer-scroll">
+                  <PortalLogo onNavigate={handleMobileNavigate} />
+                  <div className="mt-4">
+                    <SidebarNav pathname={pathname} onNavigate={handleMobileNavigate} />
+                  </div>
+                  <div className="mt-4">
+                    <StorageMini summary={storageSummary} />
+                  </div>
+                </div>
+              </nav>
+            </>
+          ) : null}
+
+          <main className="portal-main-content flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
         </div>
       </div>
 
-      <nav className="portal-mobile-nav fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95 lg:hidden">
+      <nav
+        aria-hidden={mobileDrawerOpen}
+        className={`portal-mobile-nav fixed inset-x-0 bottom-0 border-t border-zinc-200 bg-white/95 backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-950/95 lg:hidden ${
+          mobileDrawerOpen ? "pointer-events-none opacity-0" : ""
+        }`}
+      >
         <div className="mx-auto grid max-w-lg grid-cols-5 gap-1 px-2 py-2">
           {[...navItems.slice(0, 4), { href: "/profile", label: "Account", icon: "profile" as const }].map((item) => {
             const active = pathname === item.href;
@@ -316,6 +470,11 @@ export function PortalShell({
               <Link
                 key={item.href}
                 href={item.href}
+                tabIndex={mobileDrawerOpen ? -1 : undefined}
+                onClick={() => {
+                  closeMobileDrawer();
+                  closeProfileMenu();
+                }}
                 className={`flex flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-medium ${
                   active
                     ? "text-sky-700 dark:text-sky-300"
