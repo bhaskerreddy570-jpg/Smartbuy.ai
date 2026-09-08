@@ -55,6 +55,8 @@ function plan(change) {
   plannedChanges.push(change);
 }
 
+const DEFAULT_STORAGE_QUOTA_BYTES = 32212254720; // 30 GiB
+
 async function buildPlan() {
   if (!(await columnExists('file', 'category'))) {
     plan('Add column file.category');
@@ -64,6 +66,9 @@ async function buildPlan() {
   }
   if (!(await columnExists('file', 'storageProvider'))) {
     plan('Add column file.storageProvider');
+  }
+  if (!(await columnExists('file', 'starred'))) {
+    plan('Add column file.starred');
   }
   if (!(await constraintExists('file_category_check_b60b453e'))) {
     plan('Add check constraint file_category_check_b60b453e');
@@ -76,6 +81,15 @@ async function buildPlan() {
   }
   if (!(await indexExists('file_userId_category_status_idx_1c139799'))) {
     plan('Create index file_userId_category_status_idx_1c139799');
+  }
+  if (!(await indexExists('file_userId_starred_idx_57631854'))) {
+    plan('Create index file_userId_starred_idx_57631854');
+  }
+  const wrongStarredIndex = await pool.query(
+    `SELECT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'file_userId_starred_idx') AS exists`,
+  );
+  if (wrongStarredIndex.rows[0]?.exists === true) {
+    plan('Replace legacy file_userId_starred_idx with file_userId_starred_idx_57631854');
   }
   if (!(await columnExists('user', 'maxFileSizeBytes'))) {
     plan('Add column user.maxFileSizeBytes');
@@ -94,14 +108,14 @@ async function buildPlan() {
     'SELECT COUNT(*)::text AS count FROM "user" WHERE "storageQuota" = 0',
   );
   if (Number(zeroQuota.rows[0]?.count ?? 0) > 0) {
-    plan('Backfill zero user.storageQuota to default (5368709120) — does not reduce any quota');
+    plan(`Backfill zero user.storageQuota to default (${DEFAULT_STORAGE_QUOTA_BYTES}) — does not reduce any quota`);
   }
 
   const zeroSubQuota = await pool.query(
     'SELECT COUNT(*)::text AS count FROM subscription WHERE "storageQuota" = 0',
   );
   if (Number(zeroSubQuota.rows[0]?.count ?? 0) > 0) {
-    plan('Backfill zero subscription.storageQuota to default (5368709120)');
+    plan(`Backfill zero subscription.storageQuota to default (${DEFAULT_STORAGE_QUOTA_BYTES})`);
   }
 
   if (!(await constraintExists('adminAuditLog_action_check_0f9926f8'))) {
@@ -113,6 +127,7 @@ const statements = [
   `ALTER TABLE "file" ADD COLUMN IF NOT EXISTS "category" text DEFAULT 'OTHER' NOT NULL`,
   `ALTER TABLE "file" ADD COLUMN IF NOT EXISTS "storageNamespace" text DEFAULT 'default' NOT NULL`,
   `ALTER TABLE "file" ADD COLUMN IF NOT EXISTS "storageProvider" text DEFAULT 'S3' NOT NULL`,
+  `ALTER TABLE "file" ADD COLUMN IF NOT EXISTS "starred" boolean DEFAULT false NOT NULL`,
   `DO $$ BEGIN
      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'file_category_check_b60b453e') THEN
        ALTER TABLE "file" ADD CONSTRAINT "file_category_check_b60b453e"
@@ -127,12 +142,14 @@ const statements = [
    END $$`,
   `CREATE INDEX IF NOT EXISTS "file_userId_category_idx_6e270954" ON "file" ("userId", "category")`,
   `CREATE INDEX IF NOT EXISTS "file_userId_category_status_idx_1c139799" ON "file" ("userId", "category", "status")`,
+  `CREATE INDEX IF NOT EXISTS "file_userId_starred_idx_57631854" ON "file" ("userId", "starred")`,
+  `DROP INDEX IF EXISTS "file_userId_starred_idx"`,
   `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "maxFileSizeBytes" int8 DEFAULT 2147483648 NOT NULL`,
   `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "monthlyBandwidthLimitBytes" int8 DEFAULT 268435456000 NOT NULL`,
   `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "monthlyBandwidthUsedBytes" int8 DEFAULT 0 NOT NULL`,
   `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "bandwidthPeriodStart" timestamptz`,
-  `UPDATE "user" SET "storageQuota" = 5368709120 WHERE "storageQuota" = 0`,
-  `UPDATE subscription SET "storageQuota" = 5368709120 WHERE "storageQuota" = 0`,
+  `UPDATE "user" SET "storageQuota" = ${DEFAULT_STORAGE_QUOTA_BYTES} WHERE "storageQuota" = 0`,
+  `UPDATE subscription SET "storageQuota" = ${DEFAULT_STORAGE_QUOTA_BYTES} WHERE "storageQuota" = 0`,
   `DO $$ BEGIN
      IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'adminAuditLog_action_check_b75dd9a3') THEN
        ALTER TABLE "adminAuditLog" DROP CONSTRAINT "adminAuditLog_action_check_b75dd9a3";

@@ -19,7 +19,7 @@ export default async function FilesPage({ searchParams }: FilesPageProps) {
     params.category && isFileCategory(params.category)
       ? params.category
       : undefined;
-  const data = await getDashboardData(session.user.id, category);
+  const data = await getDashboardData(session.user.id, { category });
 
   if (!data) {
     redirect("/login");

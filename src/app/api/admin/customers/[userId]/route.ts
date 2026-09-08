@@ -14,6 +14,7 @@ import {
   unlockCustomerAccount,
 } from '@/lib/admin/customer-accounts';
 import { getClientIp, getUserAgent } from '@/lib/admin/request-context';
+import { orm } from '@/lib/db';
 
 const limitsSchema = z.object({
   storageQuotaBytes: z.string().regex(/^\d+$/).optional(),
@@ -70,8 +71,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid customer limits' }, { status: 400 });
     }
 
-    const before = await getAdminCustomerDetail(userId);
-    if (!before) {
+    const beforeRaw = await orm.User.where({ id: userId })
+      .select('storageQuota', 'maxFileSizeBytes', 'monthlyBandwidthLimitBytes')
+      .first();
+    if (!beforeRaw) {
       return adminNotFoundResponse();
     }
 
@@ -95,12 +98,17 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return adminNotFoundResponse();
     }
 
+    const afterRaw = await orm.User.where({ id: userId })
+      .select('storageQuota', 'maxFileSizeBytes', 'monthlyBandwidthLimitBytes')
+      .first();
+
     const ipAddress = getClientIp(request);
     const userAgent = getUserAgent(request);
 
     if (
       parsed.data.storageQuotaBytes !== undefined &&
-      before.storageQuota !== customer.storageQuota
+      afterRaw &&
+      BigInt(afterRaw.storageQuota) !== BigInt(beforeRaw.storageQuota)
     ) {
       await writeAdminAuditLog({
         adminUserId: admin!.id,
@@ -108,8 +116,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         targetType: 'user',
         targetId: userId,
         metadata: {
-          before: before.storageQuota,
-          after: customer.storageQuota,
+          before: beforeRaw.storageQuota.toString(),
+          after: afterRaw.storageQuota.toString(),
         },
         ipAddress,
         userAgent,
@@ -118,7 +126,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     if (
       parsed.data.maxFileSizeBytes !== undefined &&
-      before.maxFileSizeBytes !== customer.maxFileSizeBytes
+      afterRaw &&
+      BigInt(afterRaw.maxFileSizeBytes) !== BigInt(beforeRaw.maxFileSizeBytes)
     ) {
       await writeAdminAuditLog({
         adminUserId: admin!.id,
@@ -126,8 +135,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         targetType: 'user',
         targetId: userId,
         metadata: {
-          before: before.maxFileSizeBytes,
-          after: customer.maxFileSizeBytes,
+          before: beforeRaw.maxFileSizeBytes.toString(),
+          after: afterRaw.maxFileSizeBytes.toString(),
         },
         ipAddress,
         userAgent,
@@ -136,7 +145,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     if (
       parsed.data.monthlyBandwidthLimitBytes !== undefined &&
-      before.bandwidthLimit !== customer.bandwidthLimit
+      afterRaw &&
+      BigInt(afterRaw.monthlyBandwidthLimitBytes) !==
+        BigInt(beforeRaw.monthlyBandwidthLimitBytes)
     ) {
       await writeAdminAuditLog({
         adminUserId: admin!.id,
@@ -144,8 +155,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         targetType: 'user',
         targetId: userId,
         metadata: {
-          before: before.bandwidthLimit,
-          after: customer.bandwidthLimit,
+          before: beforeRaw.monthlyBandwidthLimitBytes.toString(),
+          after: afterRaw.monthlyBandwidthLimitBytes.toString(),
         },
         ipAddress,
         userAgent,

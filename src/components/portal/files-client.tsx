@@ -207,7 +207,7 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
   }
 
   async function handleDelete(fileId: string, fileName: string) {
-    if (!window.confirm(`Delete ${fileName}?`)) {
+    if (!window.confirm(`Move ${fileName} to trash?`)) {
       return;
     }
 
@@ -217,11 +217,30 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
     const response = await fetch(`/api/files/${fileId}`, { method: "DELETE" });
 
     if (!response.ok) {
-      setError("Unable to delete file");
+      setError("Unable to move file to trash");
       return;
     }
 
-    setActionMessage(`${fileName} deleted`);
+    setActionMessage(`${fileName} moved to trash`);
+    await refreshFiles(data.activeCategory);
+  }
+
+  async function handleStar(fileId: string, starred: boolean, fileName: string) {
+    setActionMessage(null);
+    setError(null);
+
+    const response = await fetch(`/api/files/${fileId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "star", starred }),
+    });
+
+    if (!response.ok) {
+      setError("Unable to update starred status");
+      return;
+    }
+
+    setActionMessage(starred ? `${fileName} starred` : `${fileName} unstarred`);
     await refreshFiles(data.activeCategory);
   }
 
@@ -364,9 +383,16 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
                     </p>
                   </div>
                 </div>
-                <div className="mt-4 flex gap-2">
+                <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" className="portal-secondary-button" onClick={() => handleDownload(file.id)}>
                     Download
+                  </button>
+                  <button
+                    type="button"
+                    className="portal-secondary-button"
+                    onClick={() => void handleStar(file.id, !file.starred, file.name)}
+                  >
+                    {file.starred ? "Unstar" : "Star"}
                   </button>
                   <button
                     type="button"
@@ -425,6 +451,16 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
                               }}
                             >
                               Download
+                            </button>
+                            <button
+                              type="button"
+                              className="portal-menu-item w-full text-left"
+                              onClick={() => {
+                                setOpenMenuId(null);
+                                void handleStar(file.id, !file.starred, file.name);
+                              }}
+                            >
+                              {file.starred ? "Unstar" : "Star"}
                             </button>
                             <button
                               type="button"

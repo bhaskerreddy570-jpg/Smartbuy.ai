@@ -33,7 +33,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'c981e8ad0bad900bf4c3f162dfcb770ec981bb93a2f434949ac658f92ce6241c'>;
+  StorageHashBase<'a1a6cc5551c104dbac2f0d1c892162a3b1d60ebb23f87f95b2ab2949637f9543'>;
 export type ExecutionHash =
   ExecutionHashBase<'167538b45ed1d29d3463459c5037545f2eaa34cd7c9a33a97c2f266226caf717'>;
 export type ProfileHash =
@@ -317,6 +317,7 @@ export type FieldOutputTypes = {
       readonly category: 'CONTACTS' | 'IMAGES' | 'VIDEOS' | 'DOCUMENTS' | 'OTHER';
       readonly storageProvider: 'S3';
       readonly storageNamespace: CodecTypes['pg/text@1']['output'];
+      readonly starred: CodecTypes['pg/bool@1']['output'];
       readonly folderId: CodecTypes['pg/uuid@1']['output'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['output'];
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['output'];
@@ -439,6 +440,7 @@ export type FieldInputTypes = {
       readonly category: 'CONTACTS' | 'IMAGES' | 'VIDEOS' | 'DOCUMENTS' | 'OTHER';
       readonly storageProvider: 'S3';
       readonly storageNamespace: CodecTypes['pg/text@1']['input'];
+      readonly starred: CodecTypes['pg/bool@1']['input'];
       readonly folderId: CodecTypes['pg/uuid@1']['input'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-string@1']['input'];
       readonly updatedAt: CodecTypes['pg/timestamptz-string@1']['input'];
@@ -559,6 +561,7 @@ export type StorageColumnTypes = {
       readonly name: CodecTypes['pg/text@1']['output'];
       readonly originalName: CodecTypes['pg/text@1']['output'];
       readonly size: CodecTypes['pg/int8@1']['output'];
+      readonly starred: CodecTypes['pg/bool@1']['output'];
       readonly status: 'PENDING' | 'READY';
       readonly storageKey: CodecTypes['pg/text@1']['output'];
       readonly storageNamespace: CodecTypes['pg/text@1']['output'];
@@ -681,6 +684,7 @@ export type StorageColumnInputTypes = {
       readonly name: CodecTypes['pg/text@1']['input'];
       readonly originalName: CodecTypes['pg/text@1']['input'];
       readonly size: CodecTypes['pg/int8@1']['input'];
+      readonly starred: CodecTypes['pg/bool@1']['input'];
       readonly status: 'PENDING' | 'READY';
       readonly storageKey: CodecTypes['pg/text@1']['input'];
       readonly storageNamespace: CodecTypes['pg/text@1']['input'];
@@ -1134,6 +1138,15 @@ type ContractBase = Omit<
                     readonly value: DefaultLiteralValue<'pg/text@1', 'default'>;
                   };
                 };
+                readonly starred: {
+                  readonly nativeType: 'bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', false>;
+                  };
+                };
                 readonly folderId: {
                   readonly nativeType: 'uuid';
                   readonly codecId: 'pg/uuid@1';
@@ -1187,6 +1200,12 @@ type ContractBase = Omit<
                   readonly name: 'file_userId_category_status_idx_1c139799';
                   readonly prefix: 'file_userId_category_status_idx';
                   readonly columns: readonly ['userId', 'category', 'status'];
+                  readonly unique: false;
+                },
+                {
+                  readonly name: 'file_userId_starred_idx_57631854';
+                  readonly prefix: 'file_userId_starred_idx';
+                  readonly columns: readonly ['userId', 'starred'];
                   readonly unique: false;
                 },
               ];
@@ -1912,6 +1931,10 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
+              readonly starred: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
               readonly folderId: {
                 readonly nullable: true;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/uuid@1' };
@@ -1974,6 +1997,7 @@ type ContractBase = Omit<
                 readonly category: { readonly column: 'category' };
                 readonly storageProvider: { readonly column: 'storageProvider' };
                 readonly storageNamespace: { readonly column: 'storageNamespace' };
+                readonly starred: { readonly column: 'starred' };
                 readonly folderId: { readonly column: 'folderId' };
                 readonly createdAt: { readonly column: 'createdAt' };
                 readonly updatedAt: { readonly column: 'updatedAt' };

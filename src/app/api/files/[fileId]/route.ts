@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
 import { db } from '@/lib/db';
 import { reserveDownloadBandwidth } from '@/lib/storage/bandwidth-reservation';
 import { assertStorageKeyOwnership } from '@/lib/storage/keys';
-import { getOwnedFile } from '@/lib/storage/files';
+import {
+  getOwnedDeletedFile,
+  getOwnedFile,
+  restoreOwnedFile,
+  setOwnedFileStarred,
+  softDeleteOwnedFile,
+} from '@/lib/storage/files';
 import {
   getStorageService,
   toStorageObjectRef,
@@ -78,7 +85,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(_request: Request, { params }: RouteParams) {
+const patchSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('star'), starred: z.boolean() }),
+  z.object({ action: z.literal('restore') }),
+  z.object({ action: z.literal('purge') }),
+]);
+
+export async function PATCH(request: Request, { params }: RouteParams) {
   const { error, user } = await requireAuthUser();
   if (error) {
     return error;
@@ -88,25 +101,57 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   }
 
   const { fileId } = await params;
-  const file = await getOwnedFile(user.id, fileId);
+  const body = await request.json().catch(() => null);
+  const parsed = patchSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid file action' }, { status: 400 });
+  }
 
-  if (!file || !verifyOwnedStorageObject(file, user.id)) {
+  if (parsed.data.action === 'star') {
+    const updated = await setOwnedFileStarred(
+      user.id,
+      fileId,
+      parsed.data.starred,
+    );
+    if (!updated) {
+      return notFoundResponse();
+    }
+    return NextResponse.json({ success: true, starred: updated.starred });
+  }
+
+  if (parsed.data.action === 'restore') {
+    const restored = await restoreOwnedFile(user.id, fileId);
+    if (!restored) {
+      return notFoundResponse();
+    }
+    return NextResponse.json({ success: true });
+  }
+
+  const deletedFile = await getOwnedDeletedFile(user.id, fileId);
+  if (
+    !deletedFile ||
+    !assertStorageKeyOwnership({
+      storageKey: deletedFile.storageKey,
+      userId: user.id,
+      category: deletedFile.category,
+    })
+  ) {
     return notFoundResponse();
   }
 
   try {
-    await getStorageService().deleteObject(toStorageObjectRef(file));
+    await getStorageService().deleteObject(toStorageObjectRef(deletedFile));
 
     await db.transaction(async (tx) => {
       const userRecord = await tx.orm.public.User.where({ id: user.id })
         .select('storageUsed')
         .first();
 
-      await tx.orm.public.File.where({ id: file.id, userId: user.id }).delete();
+      await tx.orm.public.File.where({ id: deletedFile.id, userId: user.id }).delete();
 
       if (userRecord) {
         const currentUsed = BigInt(userRecord.storageUsed);
-        const fileSize = BigInt(file.size);
+        const fileSize = BigInt(deletedFile.size);
         const nextUsed =
           currentUsed >= fileSize ? currentUsed - fileSize : BigInt(0);
 
@@ -117,8 +162,27 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (deleteError) {
-    console.error('Delete failed', deleteError);
-    return NextResponse.json({ error: 'Unable to delete file' }, { status: 500 });
+  } catch (purgeError) {
+    console.error('Permanent delete failed', purgeError);
+    return NextResponse.json({ error: 'Unable to delete file permanently' }, { status: 500 });
   }
+}
+
+export async function DELETE(_request: Request, { params }: RouteParams) {
+  const { error, user } = await requireAuthUser();
+  if (error) {
+    return error;
+  }
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { fileId } = await params;
+  const file = await softDeleteOwnedFile(user.id, fileId);
+
+  if (!file || !verifyOwnedStorageObject(file, user.id)) {
+    return notFoundResponse();
+  }
+
+  return NextResponse.json({ success: true, trashed: true });
 }

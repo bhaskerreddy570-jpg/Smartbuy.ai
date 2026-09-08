@@ -801,6 +801,13 @@
                   "kind": "scalar"
                 }
               },
+              "starred": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "status": {
                 "nullable": false,
                 "type": {
@@ -916,6 +923,9 @@
                 },
                 "size": {
                   "column": "size"
+                },
+                "starred": {
+                  "column": "starred"
                 },
                 "status": {
                   "column": "status"
@@ -1925,6 +1935,15 @@
                   "nativeType": "int8",
                   "nullable": false
                 },
+                "starred": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
                 "status": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
@@ -2045,6 +2064,15 @@
                   ],
                   "name": "file_userId_idx_a489d58a",
                   "prefix": "file_userId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "starred"
+                  ],
+                  "name": "file_userId_starred_idx_57631854",
+                  "prefix": "file_userId_starred_idx",
                   "unique": false
                 },
                 {
@@ -2489,7 +2517,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "c981e8ad0bad900bf4c3f162dfcb770ec981bb93a2f434949ac658f92ce6241c"
+    "storageHash": "a1a6cc5551c104dbac2f0d1c892162a3b1d60ebb23f87f95b2ab2949637f9543"
   },
   "execution": {
     "executionHash": "167538b45ed1d29d3463459c5037545f2eaa34cd7c9a33a97c2f266226caf717",

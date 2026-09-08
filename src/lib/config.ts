@@ -1,9 +1,9 @@
 const GIB = 1024 * 1024 * 1024;
 const MIB = 1024 * 1024;
 
-const DEFAULT_QUOTA = 5 * GIB;
-const DEFAULT_MAX_FILE_SIZE = 2 * GIB;
-const DEFAULT_MONTHLY_BANDWIDTH = 250 * GIB;
+const DEFAULT_QUOTA = 30 * GIB;
+const DEFAULT_MAX_FILE_SIZE = 5 * GIB;
+const DEFAULT_MONTHLY_BANDWIDTH = 100 * GIB;
 const PLATFORM_MAX_UPLOAD = 100 * MIB;
 
 function readBigIntEnv(name: string, fallback: bigint): bigint {

@@ -12,11 +12,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const categoryParam = new URL(request.url).searchParams.get('category');
+  const url = new URL(request.url);
+  const categoryParam = url.searchParams.get('category');
   const category =
     categoryParam && isFileCategory(categoryParam) ? categoryParam : undefined;
+  const starred = url.searchParams.get('starred') === 'true';
+  const trash = url.searchParams.get('trash') === 'true';
 
-  const data = await getDashboardData(user.id, category);
+  const data = await getDashboardData(user.id, { category, starred, trash });
 
   if (!data) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });

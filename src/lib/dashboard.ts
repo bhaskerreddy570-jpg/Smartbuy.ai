@@ -2,13 +2,17 @@ import { orm } from '@/lib/db';
 import { resolveCustomerLimits, shouldResetBandwidthPeriod } from '@/lib/customer-limits';
 import { ensureCustomerQuotaPersisted } from '@/lib/quota-backfill';
 import { getCategoryLabel } from '@/lib/storage/categories';
-import { listReadyFiles } from '@/lib/storage/files';
+import { listDeletedFiles, listReadyFiles, listStarredFiles } from '@/lib/storage/files';
 import { FILE_CATEGORIES, type FileCategory } from '@/lib/storage/types';
 import { formatBytes } from '@/lib/storage/validation';
 
 export async function getDashboardData(
   userId: string,
-  category?: FileCategory,
+  options?: {
+    category?: FileCategory;
+    starred?: boolean;
+    trash?: boolean;
+  },
 ) {
   await ensureCustomerQuotaPersisted(userId);
 
@@ -37,9 +41,15 @@ export async function getDashboardData(
       : 0n;
 
   const allFiles = await listReadyFiles(userId);
+  const category = options?.category;
+  const sourceFiles = options?.trash
+    ? await listDeletedFiles(userId)
+    : options?.starred
+      ? await listStarredFiles(userId)
+      : allFiles;
   const files = category
-    ? allFiles.filter((file) => file.category === category)
-    : allFiles;
+    ? sourceFiles.filter((file) => file.category === category)
+    : sourceFiles;
 
   const countsByCategory = new Map<FileCategory, number>();
   for (const fileCategory of FILE_CATEGORIES) {
@@ -74,6 +84,7 @@ export async function getDashboardData(
       label: formatBytes(limits.maxFileSizeBytes),
     },
     activeCategory: category ?? null,
+    view: options?.trash ? 'trash' : options?.starred ? 'starred' : 'files',
     categories: FILE_CATEGORIES.map((fileCategory) => ({
       id: fileCategory,
       label: getCategoryLabel(fileCategory),
@@ -88,7 +99,9 @@ export async function getDashboardData(
       mimeType: file.mimeType,
       category: file.category,
       categoryLabel: getCategoryLabel(file.category),
+      starred: Boolean(file.starred),
       createdAt: file.createdAt,
+      deletedAt: file.deletedAt,
     })),
   };
 }

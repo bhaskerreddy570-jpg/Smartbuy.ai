@@ -329,18 +329,19 @@ describeIntegration('admin security integration', () => {
 
   it('11. authenticates ADMIN login and rejects wrong password', async () => {
     const admin = await createTestAdmin();
+    const ipAddress = randomIp();
 
     const success = await authenticateAdminLogin({
       email: admin.email,
       password: 'InitialPassword123!',
-      ipAddress: '127.0.0.7',
+      ipAddress,
     });
     assert.equal(success.ok, true);
 
     const failure = await authenticateAdminLogin({
       email: admin.email,
       password: 'WrongPassword123!',
-      ipAddress: '127.0.0.7',
+      ipAddress,
     });
     assert.equal(failure.ok, false);
 

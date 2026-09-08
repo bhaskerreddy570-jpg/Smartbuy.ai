@@ -94,6 +94,7 @@ model File {
   category     FileCategory      @default(OTHER)
   storageProvider StorageProviderKind @default(S3)
   storageNamespace String          @default("default")
+  starred      Boolean           @default(false)
   folderId     Uuid?
   createdAt    TimestamptzString @default(now())
   updatedAt    temporal.updatedAtString()
@@ -107,6 +108,7 @@ model File {
   @@index([userId, status])
   @@index([userId, category])
   @@index([userId, category, status])
+  @@index([userId, starred])
 }
 
 model Folder {
