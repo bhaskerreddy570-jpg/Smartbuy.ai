@@ -16,14 +16,14 @@ export default async function HomePage() {
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 py-16 sm:px-6 lg:py-24">
         <section className="max-w-3xl">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-600">
-            Cloud Storage Platform
+            CloudStoreNow
           </p>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
-            Secure personal cloud storage built for growth.
+            Secure cloud storage for your files.
           </h1>
           <p className="mt-6 text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Create an account, securely store your files, and manage your
-            personal cloud storage from a private dashboard.
+            Create an account, store your files safely, and manage everything
+            from your private dashboard.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
@@ -39,7 +39,7 @@ export default async function HomePage() {
           {[
             {
               title: "Private by default",
-              body: "Your files stay in secure cloud storage with server-side authorization.",
+              body: "Your files stay private with server-side authorization on every request.",
             },
             {
               title: "Per-user isolation",

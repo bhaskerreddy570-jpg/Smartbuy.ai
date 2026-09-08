@@ -14,6 +14,12 @@ const REQUIRED_USER_COLUMNS = [
   'lockedAt',
 ] as const;
 
+const OPTIONAL_FILE_COLUMNS = [
+  'category',
+  'storageProvider',
+  'storageNamespace',
+] as const;
+
 export async function GET() {
   const envPresence = getEnvPresence();
   const databaseUrl = resolveDatabaseUrl();
@@ -30,6 +36,7 @@ export async function GET() {
         connected: false,
         userTableExists: false,
         userSchemaReady: false,
+        fileSchemaReady: false,
         envPresence,
       },
       { status: 503 },
@@ -66,8 +73,31 @@ export async function GET() {
       );
     }
 
+    let fileSchemaReady = false;
+    const fileTableResult = await pool.query<{ exists: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1
+         FROM information_schema.tables
+         WHERE table_schema = 'public' AND table_name = 'file'
+       ) AS exists`,
+    );
+    if (fileTableResult.rows[0]?.exists === true) {
+      const fileColumns = await pool.query<{ column_name: string }>(
+        `SELECT column_name
+         FROM information_schema.columns
+         WHERE table_schema = 'public'
+           AND table_name = 'file'
+           AND column_name = ANY($1::text[])`,
+        [OPTIONAL_FILE_COLUMNS],
+      );
+      const present = new Set(fileColumns.rows.map((row) => row.column_name));
+      fileSchemaReady = OPTIONAL_FILE_COLUMNS.every((column) =>
+        present.has(column),
+      );
+    }
+
     const ok =
-      authSecretConfigured && userTableExists && userSchemaReady;
+      authSecretConfigured && userTableExists && userSchemaReady && fileSchemaReady;
 
     return NextResponse.json(
       {
@@ -78,6 +108,7 @@ export async function GET() {
         connected: true,
         userTableExists,
         userSchemaReady,
+        fileSchemaReady,
         envPresence,
       },
       { status: ok ? 200 : 503 },
@@ -93,6 +124,7 @@ export async function GET() {
         connected: false,
         userTableExists: false,
         userSchemaReady: false,
+        fileSchemaReady: false,
         envPresence,
       },
       { status: 503 },

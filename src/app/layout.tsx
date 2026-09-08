@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cloud Storage Platform",
-  description: "Secure personal cloud storage for customers",
+  title: "CloudStoreNow",
+  description: "Secure cloud storage for your files.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
