@@ -65,6 +65,27 @@ enum AdminAuditAction {
   RECOVERY_REQUEST_DENIED
   BACKUP_REQUESTED
   DATA_RECOVERY_REQUESTED
+  CONTACT_BACKUP_VIEWED
+  MOBILE_DEVICE_REVOKED
+}
+
+enum MobilePlatform {
+  ANDROID
+  IOS
+}
+
+enum ContactMappingSyncState {
+  SYNCED
+  PENDING
+  CONFLICT
+  PAUSED
+}
+
+enum ContactConflictResolution {
+  KEEP_DEVICE
+  KEEP_CLOUD
+  MERGE
+  DEFER
 }
 
 model PlanConfiguration {
@@ -101,6 +122,9 @@ model User {
   files         File[]
   folders       Folder[]
   subscriptions Subscription[]
+  cloudContacts CloudContact[]
+  customerDevices CustomerDevice[]
+  contactBackupSettings ContactBackupSettings?
 }
 
 model File {
@@ -241,4 +265,114 @@ model AdminLoginAttempt {
 
   @@index([email, attemptedAt])
   @@index([ipAddress, attemptedAt])
+}
+
+model ContactBackupSettings {
+  userId                Uuid              @id
+  automaticBackupEnabled Boolean          @default(false)
+  lastSuccessfulBackupAt TimestamptzString?
+  lastSyncStatus        String?
+  lastSyncError         String?
+  contactCount          Int               @default(0)
+  contactStorageBytes   BigInt            @default(0)
+  syncCursor            BigInt            @default(0)
+  createdAt             TimestamptzString @default(now())
+  updatedAt             temporal.updatedAtString()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CustomerDevice {
+  id          Uuid              @id @default(uuid())
+  userId      Uuid
+  platform    MobilePlatform
+  displayName String
+  appVersion  String?
+  automaticBackupEnabled Boolean @default(true)
+  lastSeenAt  TimestamptzString?
+  lastSyncAt  TimestamptzString?
+  lastSyncStatus String?
+  revokedAt   TimestamptzString?
+  createdAt   TimestamptzString @default(now())
+  updatedAt   temporal.updatedAtString()
+
+  user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokens   CustomerDeviceToken[]
+  mappings DeviceContactMapping[]
+
+  @@index([userId])
+  @@index([userId, revokedAt])
+}
+
+model CustomerDeviceToken {
+  id         Uuid              @id @default(uuid())
+  deviceId   Uuid
+  tokenHash  String            @unique
+  expiresAt  TimestamptzString
+  createdAt  TimestamptzString @default(now())
+  revokedAt  TimestamptzString?
+
+  device CustomerDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId])
+  @@index([expiresAt])
+}
+
+model CloudContact {
+  id            Uuid              @id @default(uuid())
+  userId        Uuid
+  displayName   String?
+  payloadJson   String
+  payloadBytes  BigInt
+  syncVersion   BigInt
+  securityMode  FileSecurityMode  @default(NORMAL)
+  createdAt     TimestamptzString @default(now())
+  updatedAt     temporal.updatedAtString()
+  deletedAt     TimestamptzString?
+
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mappings  DeviceContactMapping[]
+  conflicts ContactSyncConflict[]
+
+  @@index([userId])
+  @@index([userId, deletedAt])
+  @@index([userId, syncVersion])
+}
+
+model DeviceContactMapping {
+  id                 Uuid                  @id @default(uuid())
+  deviceId           Uuid
+  cloudContactId     Uuid
+  localContactId     String
+  lastKnownVersion   BigInt
+  lastLocalModified  TimestamptzString?
+  syncState          ContactMappingSyncState @default(PENDING)
+  createdAt          TimestamptzString     @default(now())
+  updatedAt          temporal.updatedAtString()
+
+  device       CustomerDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  cloudContact CloudContact   @relation(fields: [cloudContactId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, localContactId])
+  @@index([deviceId])
+  @@index([cloudContactId])
+}
+
+model ContactSyncConflict {
+  id                 Uuid                     @id @default(uuid())
+  userId             Uuid
+  cloudContactId     Uuid
+  deviceId           Uuid?
+  devicePayloadJson  String
+  cloudPayloadJson   String
+  resolution         ContactConflictResolution?
+  resolvedAt         TimestamptzString?
+  createdAt          TimestamptzString        @default(now())
+  updatedAt          temporal.updatedAtString()
+
+  cloudContact CloudContact @relation(fields: [cloudContactId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([cloudContactId])
+  @@index([userId, resolvedAt])
 }

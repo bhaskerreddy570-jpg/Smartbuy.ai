@@ -1,0 +1,1166 @@
+[
+  {
+    "id": "dropCheckConstraint.adminAuditLog.adminAuditLog_action_check_50774247",
+    "label": "Drop check constraint \"adminAuditLog_action_check_50774247\" on \"adminAuditLog\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "adminAuditLog_action_check_50774247",
+        "table": "adminAuditLog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"adminAuditLog_action_check_50774247\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_50774247",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop check constraint \"adminAuditLog_action_check_50774247\"",
+        "sql": "ALTER TABLE \"public\".\"adminAuditLog\" DROP CONSTRAINT \"adminAuditLog_action_check_50774247\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"adminAuditLog_action_check_50774247\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_50774247",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.cloudContact",
+    "label": "Create table \"cloudContact\"",
+    "summary": "Creates table \"cloudContact\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "cloudContact"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"cloudContact\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"cloudContact\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"cloudContact\"",
+        "sql": "CREATE TABLE \"public\".\"cloudContact\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deletedAt\" timestamptz,\n  \"displayName\" text,\n  \"id\" uuid NOT NULL,\n  \"payloadBytes\" int8 NOT NULL,\n  \"payloadJson\" text NOT NULL,\n  \"securityMode\" text DEFAULT 'NORMAL' NOT NULL,\n  \"syncVersion\" int8 NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"userId\" uuid NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"cloudContact_securityMode_check_78f49108\" CHECK (\"securityMode\" IN ('NORMAL', 'SECURE'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"cloudContact\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"cloudContact\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.contactBackupSettings",
+    "label": "Create table \"contactBackupSettings\"",
+    "summary": "Creates table \"contactBackupSettings\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "contactBackupSettings"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"contactBackupSettings\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"contactBackupSettings\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"contactBackupSettings\"",
+        "sql": "CREATE TABLE \"public\".\"contactBackupSettings\" (\n  \"automaticBackupEnabled\" bool DEFAULT false NOT NULL,\n  \"contactCount\" int4 DEFAULT 0 NOT NULL,\n  \"contactStorageBytes\" int8 DEFAULT '0'::int8 NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"lastSuccessfulBackupAt\" timestamptz,\n  \"lastSyncError\" text,\n  \"lastSyncStatus\" text,\n  \"syncCursor\" int8 DEFAULT '0'::int8 NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"userId\" uuid NOT NULL,\n  PRIMARY KEY (\"userId\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"contactBackupSettings\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"contactBackupSettings\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.contactSyncConflict",
+    "label": "Create table \"contactSyncConflict\"",
+    "summary": "Creates table \"contactSyncConflict\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "contactSyncConflict"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"contactSyncConflict\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"contactSyncConflict\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"contactSyncConflict\"",
+        "sql": "CREATE TABLE \"public\".\"contactSyncConflict\" (\n  \"cloudContactId\" uuid NOT NULL,\n  \"cloudPayloadJson\" text NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deviceId\" uuid,\n  \"devicePayloadJson\" text NOT NULL,\n  \"id\" uuid NOT NULL,\n  \"resolution\" text,\n  \"resolvedAt\" timestamptz,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"userId\" uuid NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"contactSyncConflict_resolution_check_4feb6906\" CHECK (\"resolution\" IN ('KEEP_DEVICE', 'KEEP_CLOUD', 'MERGE', 'DEFER'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"contactSyncConflict\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"contactSyncConflict\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.customerDevice",
+    "label": "Create table \"customerDevice\"",
+    "summary": "Creates table \"customerDevice\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "customerDevice"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"customerDevice\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerDevice\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"customerDevice\"",
+        "sql": "CREATE TABLE \"public\".\"customerDevice\" (\n  \"appVersion\" text,\n  \"automaticBackupEnabled\" bool DEFAULT true NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"displayName\" text NOT NULL,\n  \"id\" uuid NOT NULL,\n  \"lastSeenAt\" timestamptz,\n  \"lastSyncAt\" timestamptz,\n  \"lastSyncStatus\" text,\n  \"platform\" text NOT NULL,\n  \"revokedAt\" timestamptz,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"userId\" uuid NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"customerDevice_platform_check_fb66222c\" CHECK (\"platform\" IN ('ANDROID', 'IOS'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"customerDevice\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerDevice\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.customerDeviceToken",
+    "label": "Create table \"customerDeviceToken\"",
+    "summary": "Creates table \"customerDeviceToken\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "customerDeviceToken"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"customerDeviceToken\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerDeviceToken\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"customerDeviceToken\"",
+        "sql": "CREATE TABLE \"public\".\"customerDeviceToken\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deviceId\" uuid NOT NULL,\n  \"expiresAt\" timestamptz NOT NULL,\n  \"id\" uuid NOT NULL,\n  \"revokedAt\" timestamptz,\n  \"tokenHash\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"customerDeviceToken\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerDeviceToken\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.deviceContactMapping",
+    "label": "Create table \"deviceContactMapping\"",
+    "summary": "Creates table \"deviceContactMapping\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "deviceContactMapping"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"deviceContactMapping\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"deviceContactMapping\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"deviceContactMapping\"",
+        "sql": "CREATE TABLE \"public\".\"deviceContactMapping\" (\n  \"cloudContactId\" uuid NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deviceId\" uuid NOT NULL,\n  \"id\" uuid NOT NULL,\n  \"lastKnownVersion\" int8 NOT NULL,\n  \"lastLocalModified\" timestamptz,\n  \"localContactId\" text NOT NULL,\n  \"syncState\" text DEFAULT 'PENDING' NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"deviceContactMapping_syncState_check_77a27c68\" CHECK (\"syncState\" IN ('SYNCED', 'PENDING', 'CONFLICT', 'PAUSED'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"deviceContactMapping\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"deviceContactMapping\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "checkConstraint.adminAuditLog.adminAuditLog_action_check_b4f9cc13",
+    "label": "Add check constraint \"adminAuditLog_action_check_b4f9cc13\" on \"adminAuditLog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "checkConstraint",
+        "name": "adminAuditLog_action_check_b4f9cc13",
+        "table": "adminAuditLog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"adminAuditLog_action_check_b4f9cc13\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_b4f9cc13",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add check constraint \"adminAuditLog_action_check_b4f9cc13\"",
+        "sql": "ALTER TABLE \"public\".\"adminAuditLog\" ADD CONSTRAINT \"adminAuditLog_action_check_b4f9cc13\" CHECK (\"action\" IN ('ADMIN_LOGIN_SUCCESS', 'ADMIN_LOGIN_FAILED', 'ADMIN_LOGOUT', 'ADMIN_SESSION_REVOKED', 'ADMIN_PASSWORD_CHANGED', 'CUSTOMER_ACCOUNT_LOCKED', 'CUSTOMER_ACCOUNT_UNLOCKED', 'STORAGE_LIMIT_CHANGED', 'MAX_FILE_SIZE_CHANGED', 'BANDWIDTH_LIMIT_CHANGED', 'CUSTOMER_PLAN_CHANGED', 'CUSTOMER_LOCKED', 'CUSTOMER_UNLOCKED', 'CUSTOMER_RECOVERY', 'RECOVERY_TOKEN_ISSUED', 'RECOVERY_TOKEN_USED', 'RECOVERY_REQUEST_DENIED', 'BACKUP_REQUESTED', 'DATA_RECOVERY_REQUESTED', 'CONTACT_BACKUP_VIEWED', 'MOBILE_DEVICE_REVOKED'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"adminAuditLog_action_check_b4f9cc13\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "adminAuditLog_action_check_b4f9cc13",
+          "public",
+          "\"public\".\"adminAuditLog\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.customerDeviceToken.customerDeviceToken_tokenHash_key",
+    "label": "Add unique constraint on \"customerDeviceToken\" (tokenHash)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "customerDeviceToken_tokenHash_key",
+        "table": "customerDeviceToken"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"customerDeviceToken_tokenHash_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerDeviceToken_tokenHash_key",
+          "public",
+          "\"public\".\"customerDeviceToken\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"customerDeviceToken_tokenHash_key\"",
+        "sql": "ALTER TABLE \"public\".\"customerDeviceToken\" ADD CONSTRAINT \"customerDeviceToken_tokenHash_key\" UNIQUE (\"tokenHash\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"customerDeviceToken_tokenHash_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerDeviceToken_tokenHash_key",
+          "public",
+          "\"public\".\"customerDeviceToken\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.deviceContactMapping.deviceContactMapping_deviceId_localContactId_key",
+    "label": "Add unique constraint on \"deviceContactMapping\" (deviceId, localContactId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "deviceContactMapping_deviceId_localContactId_key",
+        "table": "deviceContactMapping"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"deviceContactMapping_deviceId_localContactId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "deviceContactMapping_deviceId_localContactId_key",
+          "public",
+          "\"public\".\"deviceContactMapping\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"deviceContactMapping_deviceId_localContactId_key\"",
+        "sql": "ALTER TABLE \"public\".\"deviceContactMapping\" ADD CONSTRAINT \"deviceContactMapping_deviceId_localContactId_key\" UNIQUE (\"deviceId\", \"localContactId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"deviceContactMapping_deviceId_localContactId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "deviceContactMapping_deviceId_localContactId_key",
+          "public",
+          "\"public\".\"deviceContactMapping\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.cloudContact.cloudContact_userId_deletedAt_idx_88e5d6f2",
+    "label": "Create index \"cloudContact_userId_deletedAt_idx_88e5d6f2\" on \"cloudContact\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "cloudContact_userId_deletedAt_idx_88e5d6f2",
+        "table": "cloudContact"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"cloudContact_userId_deletedAt_idx_88e5d6f2\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"cloudContact_userId_deletedAt_idx_88e5d6f2\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"cloudContact_userId_deletedAt_idx_88e5d6f2\"",
+        "sql": "CREATE INDEX \"cloudContact_userId_deletedAt_idx_88e5d6f2\" ON \"public\".\"cloudContact\" (\"userId\", \"deletedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"cloudContact_userId_deletedAt_idx_88e5d6f2\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"cloudContact_userId_deletedAt_idx_88e5d6f2\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.cloudContact.cloudContact_userId_idx_a489d58a",
+    "label": "Create index \"cloudContact_userId_idx_a489d58a\" on \"cloudContact\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "cloudContact_userId_idx_a489d58a",
+        "table": "cloudContact"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"cloudContact_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"cloudContact_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"cloudContact_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"cloudContact_userId_idx_a489d58a\" ON \"public\".\"cloudContact\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"cloudContact_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"cloudContact_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.cloudContact.cloudContact_userId_syncVersion_idx_c2466aef",
+    "label": "Create index \"cloudContact_userId_syncVersion_idx_c2466aef\" on \"cloudContact\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "cloudContact_userId_syncVersion_idx_c2466aef",
+        "table": "cloudContact"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"cloudContact_userId_syncVersion_idx_c2466aef\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"cloudContact_userId_syncVersion_idx_c2466aef\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"cloudContact_userId_syncVersion_idx_c2466aef\"",
+        "sql": "CREATE INDEX \"cloudContact_userId_syncVersion_idx_c2466aef\" ON \"public\".\"cloudContact\" (\"userId\", \"syncVersion\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"cloudContact_userId_syncVersion_idx_c2466aef\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"cloudContact_userId_syncVersion_idx_c2466aef\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.contactSyncConflict.contactSyncConflict_cloudContactId_idx_1c3a1cca",
+    "label": "Create index \"contactSyncConflict_cloudContactId_idx_1c3a1cca\" on \"contactSyncConflict\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "contactSyncConflict_cloudContactId_idx_1c3a1cca",
+        "table": "contactSyncConflict"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"contactSyncConflict_cloudContactId_idx_1c3a1cca\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"contactSyncConflict_cloudContactId_idx_1c3a1cca\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"contactSyncConflict_cloudContactId_idx_1c3a1cca\"",
+        "sql": "CREATE INDEX \"contactSyncConflict_cloudContactId_idx_1c3a1cca\" ON \"public\".\"contactSyncConflict\" (\"cloudContactId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"contactSyncConflict_cloudContactId_idx_1c3a1cca\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"contactSyncConflict_cloudContactId_idx_1c3a1cca\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.contactSyncConflict.contactSyncConflict_userId_idx_a489d58a",
+    "label": "Create index \"contactSyncConflict_userId_idx_a489d58a\" on \"contactSyncConflict\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "contactSyncConflict_userId_idx_a489d58a",
+        "table": "contactSyncConflict"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"contactSyncConflict_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"contactSyncConflict_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"contactSyncConflict_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"contactSyncConflict_userId_idx_a489d58a\" ON \"public\".\"contactSyncConflict\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"contactSyncConflict_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"contactSyncConflict_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.contactSyncConflict.contactSyncConflict_userId_resolvedAt_idx_1ad3b991",
+    "label": "Create index \"contactSyncConflict_userId_resolvedAt_idx_1ad3b991\" on \"contactSyncConflict\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "contactSyncConflict_userId_resolvedAt_idx_1ad3b991",
+        "table": "contactSyncConflict"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"contactSyncConflict_userId_resolvedAt_idx_1ad3b991\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"contactSyncConflict_userId_resolvedAt_idx_1ad3b991\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"contactSyncConflict_userId_resolvedAt_idx_1ad3b991\"",
+        "sql": "CREATE INDEX \"contactSyncConflict_userId_resolvedAt_idx_1ad3b991\" ON \"public\".\"contactSyncConflict\" (\"userId\", \"resolvedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"contactSyncConflict_userId_resolvedAt_idx_1ad3b991\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"contactSyncConflict_userId_resolvedAt_idx_1ad3b991\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.customerDevice.customerDevice_userId_idx_a489d58a",
+    "label": "Create index \"customerDevice_userId_idx_a489d58a\" on \"customerDevice\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "customerDevice_userId_idx_a489d58a",
+        "table": "customerDevice"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"customerDevice_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerDevice_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"customerDevice_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"customerDevice_userId_idx_a489d58a\" ON \"public\".\"customerDevice\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"customerDevice_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerDevice_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.customerDevice.customerDevice_userId_revokedAt_idx_eae4cbef",
+    "label": "Create index \"customerDevice_userId_revokedAt_idx_eae4cbef\" on \"customerDevice\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "customerDevice_userId_revokedAt_idx_eae4cbef",
+        "table": "customerDevice"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"customerDevice_userId_revokedAt_idx_eae4cbef\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerDevice_userId_revokedAt_idx_eae4cbef\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"customerDevice_userId_revokedAt_idx_eae4cbef\"",
+        "sql": "CREATE INDEX \"customerDevice_userId_revokedAt_idx_eae4cbef\" ON \"public\".\"customerDevice\" (\"userId\", \"revokedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"customerDevice_userId_revokedAt_idx_eae4cbef\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerDevice_userId_revokedAt_idx_eae4cbef\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.customerDeviceToken.customerDeviceToken_deviceId_idx_a7d461e8",
+    "label": "Create index \"customerDeviceToken_deviceId_idx_a7d461e8\" on \"customerDeviceToken\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "customerDeviceToken_deviceId_idx_a7d461e8",
+        "table": "customerDeviceToken"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"customerDeviceToken_deviceId_idx_a7d461e8\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerDeviceToken_deviceId_idx_a7d461e8\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"customerDeviceToken_deviceId_idx_a7d461e8\"",
+        "sql": "CREATE INDEX \"customerDeviceToken_deviceId_idx_a7d461e8\" ON \"public\".\"customerDeviceToken\" (\"deviceId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"customerDeviceToken_deviceId_idx_a7d461e8\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerDeviceToken_deviceId_idx_a7d461e8\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.customerDeviceToken.customerDeviceToken_expiresAt_idx_6b6b8c10",
+    "label": "Create index \"customerDeviceToken_expiresAt_idx_6b6b8c10\" on \"customerDeviceToken\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "customerDeviceToken_expiresAt_idx_6b6b8c10",
+        "table": "customerDeviceToken"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"customerDeviceToken_expiresAt_idx_6b6b8c10\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerDeviceToken_expiresAt_idx_6b6b8c10\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"customerDeviceToken_expiresAt_idx_6b6b8c10\"",
+        "sql": "CREATE INDEX \"customerDeviceToken_expiresAt_idx_6b6b8c10\" ON \"public\".\"customerDeviceToken\" (\"expiresAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"customerDeviceToken_expiresAt_idx_6b6b8c10\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerDeviceToken_expiresAt_idx_6b6b8c10\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.deviceContactMapping.deviceContactMapping_cloudContactId_idx_1c3a1cca",
+    "label": "Create index \"deviceContactMapping_cloudContactId_idx_1c3a1cca\" on \"deviceContactMapping\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "deviceContactMapping_cloudContactId_idx_1c3a1cca",
+        "table": "deviceContactMapping"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"deviceContactMapping_cloudContactId_idx_1c3a1cca\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"deviceContactMapping_cloudContactId_idx_1c3a1cca\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"deviceContactMapping_cloudContactId_idx_1c3a1cca\"",
+        "sql": "CREATE INDEX \"deviceContactMapping_cloudContactId_idx_1c3a1cca\" ON \"public\".\"deviceContactMapping\" (\"cloudContactId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"deviceContactMapping_cloudContactId_idx_1c3a1cca\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"deviceContactMapping_cloudContactId_idx_1c3a1cca\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.deviceContactMapping.deviceContactMapping_deviceId_idx_a7d461e8",
+    "label": "Create index \"deviceContactMapping_deviceId_idx_a7d461e8\" on \"deviceContactMapping\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "deviceContactMapping_deviceId_idx_a7d461e8",
+        "table": "deviceContactMapping"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"deviceContactMapping_deviceId_idx_a7d461e8\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"deviceContactMapping_deviceId_idx_a7d461e8\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"deviceContactMapping_deviceId_idx_a7d461e8\"",
+        "sql": "CREATE INDEX \"deviceContactMapping_deviceId_idx_a7d461e8\" ON \"public\".\"deviceContactMapping\" (\"deviceId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"deviceContactMapping_deviceId_idx_a7d461e8\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"deviceContactMapping_deviceId_idx_a7d461e8\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.cloudContact.cloudContact_userId_fkey",
+    "label": "Add foreign key \"cloudContact_userId_fkey\" on \"cloudContact\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "cloudContact_userId_fkey",
+        "table": "cloudContact"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"cloudContact_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "cloudContact_userId_fkey",
+          "public",
+          "\"public\".\"cloudContact\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"cloudContact_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"cloudContact\"\nADD CONSTRAINT \"cloudContact_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"cloudContact_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "cloudContact_userId_fkey",
+          "public",
+          "\"public\".\"cloudContact\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.contactBackupSettings.contactBackupSettings_userId_fkey",
+    "label": "Add foreign key \"contactBackupSettings_userId_fkey\" on \"contactBackupSettings\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "contactBackupSettings_userId_fkey",
+        "table": "contactBackupSettings"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"contactBackupSettings_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "contactBackupSettings_userId_fkey",
+          "public",
+          "\"public\".\"contactBackupSettings\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"contactBackupSettings_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"contactBackupSettings\"\nADD CONSTRAINT \"contactBackupSettings_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"contactBackupSettings_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "contactBackupSettings_userId_fkey",
+          "public",
+          "\"public\".\"contactBackupSettings\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.contactSyncConflict.contactSyncConflict_cloudContactId_fkey",
+    "label": "Add foreign key \"contactSyncConflict_cloudContactId_fkey\" on \"contactSyncConflict\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "contactSyncConflict_cloudContactId_fkey",
+        "table": "contactSyncConflict"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"contactSyncConflict_cloudContactId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "contactSyncConflict_cloudContactId_fkey",
+          "public",
+          "\"public\".\"contactSyncConflict\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"contactSyncConflict_cloudContactId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"contactSyncConflict\"\nADD CONSTRAINT \"contactSyncConflict_cloudContactId_fkey\"\nFOREIGN KEY (\"cloudContactId\")\nREFERENCES \"public\".\"cloudContact\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"contactSyncConflict_cloudContactId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "contactSyncConflict_cloudContactId_fkey",
+          "public",
+          "\"public\".\"contactSyncConflict\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.customerDevice.customerDevice_userId_fkey",
+    "label": "Add foreign key \"customerDevice_userId_fkey\" on \"customerDevice\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "customerDevice_userId_fkey",
+        "table": "customerDevice"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"customerDevice_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerDevice_userId_fkey",
+          "public",
+          "\"public\".\"customerDevice\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"customerDevice_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"customerDevice\"\nADD CONSTRAINT \"customerDevice_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"customerDevice_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerDevice_userId_fkey",
+          "public",
+          "\"public\".\"customerDevice\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.customerDeviceToken.customerDeviceToken_deviceId_fkey",
+    "label": "Add foreign key \"customerDeviceToken_deviceId_fkey\" on \"customerDeviceToken\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "customerDeviceToken_deviceId_fkey",
+        "table": "customerDeviceToken"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"customerDeviceToken_deviceId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerDeviceToken_deviceId_fkey",
+          "public",
+          "\"public\".\"customerDeviceToken\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"customerDeviceToken_deviceId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"customerDeviceToken\"\nADD CONSTRAINT \"customerDeviceToken_deviceId_fkey\"\nFOREIGN KEY (\"deviceId\")\nREFERENCES \"public\".\"customerDevice\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"customerDeviceToken_deviceId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerDeviceToken_deviceId_fkey",
+          "public",
+          "\"public\".\"customerDeviceToken\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.deviceContactMapping.deviceContactMapping_deviceId_fkey",
+    "label": "Add foreign key \"deviceContactMapping_deviceId_fkey\" on \"deviceContactMapping\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "deviceContactMapping_deviceId_fkey",
+        "table": "deviceContactMapping"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"deviceContactMapping_deviceId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "deviceContactMapping_deviceId_fkey",
+          "public",
+          "\"public\".\"deviceContactMapping\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"deviceContactMapping_deviceId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"deviceContactMapping\"\nADD CONSTRAINT \"deviceContactMapping_deviceId_fkey\"\nFOREIGN KEY (\"deviceId\")\nREFERENCES \"public\".\"customerDevice\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"deviceContactMapping_deviceId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "deviceContactMapping_deviceId_fkey",
+          "public",
+          "\"public\".\"deviceContactMapping\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.deviceContactMapping.deviceContactMapping_cloudContactId_fkey",
+    "label": "Add foreign key \"deviceContactMapping_cloudContactId_fkey\" on \"deviceContactMapping\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "deviceContactMapping_cloudContactId_fkey",
+        "table": "deviceContactMapping"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"deviceContactMapping_cloudContactId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "deviceContactMapping_cloudContactId_fkey",
+          "public",
+          "\"public\".\"deviceContactMapping\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"deviceContactMapping_cloudContactId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"deviceContactMapping\"\nADD CONSTRAINT \"deviceContactMapping_cloudContactId_fkey\"\nFOREIGN KEY (\"cloudContactId\")\nREFERENCES \"public\".\"cloudContact\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"deviceContactMapping_cloudContactId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "deviceContactMapping_cloudContactId_fkey",
+          "public",
+          "\"public\".\"deviceContactMapping\""
+        ]
+      }
+    ]
+  }
+]

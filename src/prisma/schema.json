@@ -20,6 +20,30 @@
       "model": "AdminUser",
       "namespace": "public"
     },
+    "cloudContact": {
+      "model": "CloudContact",
+      "namespace": "public"
+    },
+    "contactBackupSettings": {
+      "model": "ContactBackupSettings",
+      "namespace": "public"
+    },
+    "contactSyncConflict": {
+      "model": "ContactSyncConflict",
+      "namespace": "public"
+    },
+    "customerDevice": {
+      "model": "CustomerDevice",
+      "namespace": "public"
+    },
+    "customerDeviceToken": {
+      "model": "CustomerDeviceToken",
+      "namespace": "public"
+    },
+    "deviceContactMapping": {
+      "model": "DeviceContactMapping",
+      "namespace": "public"
+    },
     "file": {
       "model": "File",
       "namespace": "public"
@@ -123,6 +147,14 @@
               {
                 "name": "DATA_RECOVERY_REQUESTED",
                 "value": "DATA_RECOVERY_REQUESTED"
+              },
+              {
+                "name": "CONTACT_BACKUP_VIEWED",
+                "value": "CONTACT_BACKUP_VIEWED"
+              },
+              {
+                "name": "MOBILE_DEVICE_REVOKED",
+                "value": "MOBILE_DEVICE_REVOKED"
               }
             ]
           },
@@ -145,6 +177,48 @@
               {
                 "name": "ANNUAL",
                 "value": "ANNUAL"
+              }
+            ]
+          },
+          "ContactConflictResolution": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "KEEP_DEVICE",
+                "value": "KEEP_DEVICE"
+              },
+              {
+                "name": "KEEP_CLOUD",
+                "value": "KEEP_CLOUD"
+              },
+              {
+                "name": "MERGE",
+                "value": "MERGE"
+              },
+              {
+                "name": "DEFER",
+                "value": "DEFER"
+              }
+            ]
+          },
+          "ContactMappingSyncState": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "SYNCED",
+                "value": "SYNCED"
+              },
+              {
+                "name": "PENDING",
+                "value": "PENDING"
+              },
+              {
+                "name": "CONFLICT",
+                "value": "CONFLICT"
+              },
+              {
+                "name": "PAUSED",
+                "value": "PAUSED"
               }
             ]
           },
@@ -196,6 +270,19 @@
               {
                 "name": "READY",
                 "value": "READY"
+              }
+            ]
+          },
+          "MobilePlatform": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "ANDROID",
+                "value": "ANDROID"
+              },
+              {
+                "name": "IOS",
+                "value": "IOS"
               }
             ]
           },
@@ -749,6 +836,837 @@
               },
               "namespaceId": "public",
               "table": "adminUser"
+            }
+          },
+          "CloudContact": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "deletedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "displayName": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "payloadBytes": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "payloadJson": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "securityMode": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "FileSecurityMode",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "syncVersion": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "conflicts": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "cloudContactId"
+                  ]
+                },
+                "to": {
+                  "model": "ContactSyncConflict",
+                  "namespace": "public"
+                }
+              },
+              "mappings": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "cloudContactId"
+                  ]
+                },
+                "to": {
+                  "model": "DeviceContactMapping",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "deletedAt": {
+                  "column": "deletedAt"
+                },
+                "displayName": {
+                  "column": "displayName"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "payloadBytes": {
+                  "column": "payloadBytes"
+                },
+                "payloadJson": {
+                  "column": "payloadJson"
+                },
+                "securityMode": {
+                  "column": "securityMode"
+                },
+                "syncVersion": {
+                  "column": "syncVersion"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "cloudContact"
+            }
+          },
+          "ContactBackupSettings": {
+            "fields": {
+              "automaticBackupEnabled": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "contactCount": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "contactStorageBytes": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastSuccessfulBackupAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastSyncError": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastSyncStatus": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "syncCursor": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "user": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "automaticBackupEnabled": {
+                  "column": "automaticBackupEnabled"
+                },
+                "contactCount": {
+                  "column": "contactCount"
+                },
+                "contactStorageBytes": {
+                  "column": "contactStorageBytes"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "lastSuccessfulBackupAt": {
+                  "column": "lastSuccessfulBackupAt"
+                },
+                "lastSyncError": {
+                  "column": "lastSyncError"
+                },
+                "lastSyncStatus": {
+                  "column": "lastSyncStatus"
+                },
+                "syncCursor": {
+                  "column": "syncCursor"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "contactBackupSettings"
+            }
+          },
+          "ContactSyncConflict": {
+            "fields": {
+              "cloudContactId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "cloudPayloadJson": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "deviceId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "devicePayloadJson": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "resolution": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ContactConflictResolution",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "resolvedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "cloudContact": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "cloudContactId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "CloudContact",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "cloudContactId": {
+                  "column": "cloudContactId"
+                },
+                "cloudPayloadJson": {
+                  "column": "cloudPayloadJson"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "deviceId": {
+                  "column": "deviceId"
+                },
+                "devicePayloadJson": {
+                  "column": "devicePayloadJson"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "resolution": {
+                  "column": "resolution"
+                },
+                "resolvedAt": {
+                  "column": "resolvedAt"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "contactSyncConflict"
+            }
+          },
+          "CustomerDevice": {
+            "fields": {
+              "appVersion": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "automaticBackupEnabled": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "displayName": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastSeenAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastSyncAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastSyncStatus": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "platform": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "MobilePlatform",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "revokedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "mappings": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "deviceId"
+                  ]
+                },
+                "to": {
+                  "model": "DeviceContactMapping",
+                  "namespace": "public"
+                }
+              },
+              "tokens": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "deviceId"
+                  ]
+                },
+                "to": {
+                  "model": "CustomerDeviceToken",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "appVersion": {
+                  "column": "appVersion"
+                },
+                "automaticBackupEnabled": {
+                  "column": "automaticBackupEnabled"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "displayName": {
+                  "column": "displayName"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "lastSeenAt": {
+                  "column": "lastSeenAt"
+                },
+                "lastSyncAt": {
+                  "column": "lastSyncAt"
+                },
+                "lastSyncStatus": {
+                  "column": "lastSyncStatus"
+                },
+                "platform": {
+                  "column": "platform"
+                },
+                "revokedAt": {
+                  "column": "revokedAt"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "customerDevice"
+            }
+          },
+          "CustomerDeviceToken": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "deviceId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "expiresAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "revokedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "tokenHash": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "device": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "deviceId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "CustomerDevice",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "deviceId": {
+                  "column": "deviceId"
+                },
+                "expiresAt": {
+                  "column": "expiresAt"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "revokedAt": {
+                  "column": "revokedAt"
+                },
+                "tokenHash": {
+                  "column": "tokenHash"
+                }
+              },
+              "namespaceId": "public",
+              "table": "customerDeviceToken"
+            }
+          },
+          "DeviceContactMapping": {
+            "fields": {
+              "cloudContactId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "deviceId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastKnownVersion": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int8@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastLocalModified": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "localContactId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "syncState": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ContactMappingSyncState",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "cloudContact": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "cloudContactId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "CloudContact",
+                  "namespace": "public"
+                }
+              },
+              "device": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "deviceId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "CustomerDevice",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "cloudContactId": {
+                  "column": "cloudContactId"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "deviceId": {
+                  "column": "deviceId"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "lastKnownVersion": {
+                  "column": "lastKnownVersion"
+                },
+                "lastLocalModified": {
+                  "column": "lastLocalModified"
+                },
+                "localContactId": {
+                  "column": "localContactId"
+                },
+                "syncState": {
+                  "column": "syncState"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                }
+              },
+              "namespaceId": "public",
+              "table": "deviceContactMapping"
             }
           },
           "File": {
@@ -1567,6 +2485,51 @@
               }
             },
             "relations": {
+              "cloudContacts": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "CloudContact",
+                  "namespace": "public"
+                }
+              },
+              "contactBackupSettings": {
+                "cardinality": "1:1",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "ContactBackupSettings",
+                  "namespace": "public"
+                }
+              },
+              "customerDevices": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "CustomerDevice",
+                  "namespace": "public"
+                }
+              },
               "files": {
                 "cardinality": "1:N",
                 "on": {
@@ -1686,8 +2649,8 @@
             "adminAuditLog": {
               "checks": [
                 {
-                  "expression": "\"action\" IN ('ADMIN_LOGIN_SUCCESS', 'ADMIN_LOGIN_FAILED', 'ADMIN_LOGOUT', 'ADMIN_SESSION_REVOKED', 'ADMIN_PASSWORD_CHANGED', 'CUSTOMER_ACCOUNT_LOCKED', 'CUSTOMER_ACCOUNT_UNLOCKED', 'STORAGE_LIMIT_CHANGED', 'MAX_FILE_SIZE_CHANGED', 'BANDWIDTH_LIMIT_CHANGED', 'CUSTOMER_PLAN_CHANGED', 'CUSTOMER_LOCKED', 'CUSTOMER_UNLOCKED', 'CUSTOMER_RECOVERY', 'RECOVERY_TOKEN_ISSUED', 'RECOVERY_TOKEN_USED', 'RECOVERY_REQUEST_DENIED', 'BACKUP_REQUESTED', 'DATA_RECOVERY_REQUESTED')",
-                  "name": "adminAuditLog_action_check_50774247",
+                  "expression": "\"action\" IN ('ADMIN_LOGIN_SUCCESS', 'ADMIN_LOGIN_FAILED', 'ADMIN_LOGOUT', 'ADMIN_SESSION_REVOKED', 'ADMIN_PASSWORD_CHANGED', 'CUSTOMER_ACCOUNT_LOCKED', 'CUSTOMER_ACCOUNT_UNLOCKED', 'STORAGE_LIMIT_CHANGED', 'MAX_FILE_SIZE_CHANGED', 'BANDWIDTH_LIMIT_CHANGED', 'CUSTOMER_PLAN_CHANGED', 'CUSTOMER_LOCKED', 'CUSTOMER_UNLOCKED', 'CUSTOMER_RECOVERY', 'RECOVERY_TOKEN_ISSUED', 'RECOVERY_TOKEN_USED', 'RECOVERY_REQUEST_DENIED', 'BACKUP_REQUESTED', 'DATA_RECOVERY_REQUESTED', 'CONTACT_BACKUP_VIEWED', 'MOBILE_DEVICE_REVOKED')",
+                  "name": "adminAuditLog_action_check_b4f9cc13",
                   "prefix": "adminAuditLog_action_check"
                 }
               ],
@@ -2093,6 +3056,710 @@
                 {
                   "columns": [
                     "email"
+                  ]
+                }
+              ]
+            },
+            "cloudContact": {
+              "checks": [
+                {
+                  "expression": "\"securityMode\" IN ('NORMAL', 'SECURE')",
+                  "name": "cloudContact_securityMode_check_78f49108",
+                  "prefix": "cloudContact_securityMode_check"
+                }
+              ],
+              "columns": {
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "deletedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "displayName": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "payloadBytes": {
+                  "codecId": "pg/int8@1",
+                  "nativeType": "int8",
+                  "nullable": false
+                },
+                "payloadJson": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "securityMode": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "NORMAL"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "FileSecurityMode",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "syncVersion": {
+                  "codecId": "pg/int8@1",
+                  "nativeType": "int8",
+                  "nullable": false
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "userId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "cloudContact"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "user"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "userId",
+                    "deletedAt"
+                  ],
+                  "name": "cloudContact_userId_deletedAt_idx_88e5d6f2",
+                  "prefix": "cloudContact_userId_deletedAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "cloudContact_userId_idx_a489d58a",
+                  "prefix": "cloudContact_userId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "syncVersion"
+                  ],
+                  "name": "cloudContact_userId_syncVersion_idx_c2466aef",
+                  "prefix": "cloudContact_userId_syncVersion_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "contactBackupSettings": {
+              "columns": {
+                "automaticBackupEnabled": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
+                "contactCount": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "contactStorageBytes": {
+                  "codecId": "pg/int8@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "0"
+                  },
+                  "nativeType": "int8",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "lastSuccessfulBackupAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "lastSyncError": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "lastSyncStatus": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "syncCursor": {
+                  "codecId": "pg/int8@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "0"
+                  },
+                  "nativeType": "int8",
+                  "nullable": false
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "userId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "contactBackupSettings"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "user"
+                  }
+                }
+              ],
+              "indexes": [],
+              "primaryKey": {
+                "columns": [
+                  "userId"
+                ]
+              },
+              "uniques": []
+            },
+            "contactSyncConflict": {
+              "checks": [
+                {
+                  "expression": "\"resolution\" IN ('KEEP_DEVICE', 'KEEP_CLOUD', 'MERGE', 'DEFER')",
+                  "name": "contactSyncConflict_resolution_check_4feb6906",
+                  "prefix": "contactSyncConflict_resolution_check"
+                }
+              ],
+              "columns": {
+                "cloudContactId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "cloudPayloadJson": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "deviceId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": true
+                },
+                "devicePayloadJson": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "resolution": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ContactConflictResolution",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "resolvedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "userId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "cloudContactId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "contactSyncConflict"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "cloudContact"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "cloudContactId"
+                  ],
+                  "name": "contactSyncConflict_cloudContactId_idx_1c3a1cca",
+                  "prefix": "contactSyncConflict_cloudContactId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "contactSyncConflict_userId_idx_a489d58a",
+                  "prefix": "contactSyncConflict_userId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "resolvedAt"
+                  ],
+                  "name": "contactSyncConflict_userId_resolvedAt_idx_1ad3b991",
+                  "prefix": "contactSyncConflict_userId_resolvedAt_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "customerDevice": {
+              "checks": [
+                {
+                  "expression": "\"platform\" IN ('ANDROID', 'IOS')",
+                  "name": "customerDevice_platform_check_fb66222c",
+                  "prefix": "customerDevice_platform_check"
+                }
+              ],
+              "columns": {
+                "appVersion": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "automaticBackupEnabled": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "displayName": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "lastSeenAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "lastSyncAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "lastSyncStatus": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "platform": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "MobilePlatform",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "revokedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "userId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "customerDevice"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "user"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "customerDevice_userId_idx_a489d58a",
+                  "prefix": "customerDevice_userId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "revokedAt"
+                  ],
+                  "name": "customerDevice_userId_revokedAt_idx_eae4cbef",
+                  "prefix": "customerDevice_userId_revokedAt_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "customerDeviceToken": {
+              "columns": {
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "deviceId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "expiresAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "revokedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "tokenHash": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "deviceId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "customerDeviceToken"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "customerDevice"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "deviceId"
+                  ],
+                  "name": "customerDeviceToken_deviceId_idx_a7d461e8",
+                  "prefix": "customerDeviceToken_deviceId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "expiresAt"
+                  ],
+                  "name": "customerDeviceToken_expiresAt_idx_6b6b8c10",
+                  "prefix": "customerDeviceToken_expiresAt_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "tokenHash"
+                  ]
+                }
+              ]
+            },
+            "deviceContactMapping": {
+              "checks": [
+                {
+                  "expression": "\"syncState\" IN ('SYNCED', 'PENDING', 'CONFLICT', 'PAUSED')",
+                  "name": "deviceContactMapping_syncState_check_77a27c68",
+                  "prefix": "deviceContactMapping_syncState_check"
+                }
+              ],
+              "columns": {
+                "cloudContactId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "deviceId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "lastKnownVersion": {
+                  "codecId": "pg/int8@1",
+                  "nativeType": "int8",
+                  "nullable": false
+                },
+                "lastLocalModified": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "localContactId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "syncState": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "PENDING"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ContactMappingSyncState",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "deviceId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "deviceContactMapping"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "customerDevice"
+                  }
+                },
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "cloudContactId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "deviceContactMapping"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "cloudContact"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "cloudContactId"
+                  ],
+                  "name": "deviceContactMapping_cloudContactId_idx_1c3a1cca",
+                  "prefix": "deviceContactMapping_cloudContactId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "deviceId"
+                  ],
+                  "name": "deviceContactMapping_deviceId_idx_a7d461e8",
+                  "prefix": "deviceContactMapping_deviceId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "deviceId",
+                    "localContactId"
                   ]
                 }
               ]
@@ -2855,7 +4522,9 @@
                 "RECOVERY_TOKEN_USED",
                 "RECOVERY_REQUEST_DENIED",
                 "BACKUP_REQUESTED",
-                "DATA_RECOVERY_REQUESTED"
+                "DATA_RECOVERY_REQUESTED",
+                "CONTACT_BACKUP_VIEWED",
+                "MOBILE_DEVICE_REVOKED"
               ]
             },
             "AdminRole": {
@@ -2869,6 +4538,24 @@
               "values": [
                 "MONTHLY",
                 "ANNUAL"
+              ]
+            },
+            "ContactConflictResolution": {
+              "kind": "valueSet",
+              "values": [
+                "KEEP_DEVICE",
+                "KEEP_CLOUD",
+                "MERGE",
+                "DEFER"
+              ]
+            },
+            "ContactMappingSyncState": {
+              "kind": "valueSet",
+              "values": [
+                "SYNCED",
+                "PENDING",
+                "CONFLICT",
+                "PAUSED"
               ]
             },
             "FileCategory": {
@@ -2893,6 +4580,13 @@
               "values": [
                 "PENDING",
                 "READY"
+              ]
+            },
+            "MobilePlatform": {
+              "kind": "valueSet",
+              "values": [
+                "ANDROID",
+                "IOS"
               ]
             },
             "Plan": {
@@ -2925,10 +4619,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "7f68a8f9545e91ec88f435a1f29f2322cf5b108b8ff775f14ed8aac73f7e15b1"
+    "storageHash": "b354bca5f9be38e21931f11e3abbb89563de94cc3498ce519d0792286a79ff7a"
   },
   "execution": {
-    "executionHash": "f7b71bf2c07387f40766dec5b07707f6820a7732594084ba0205cbd7e8165ac5",
+    "executionHash": "0f765720e7994aa1c6c654cfec398d156d8b8e39c6a26ac4f1fe931797373f44",
     "mutations": {
       "defaults": [
         {
@@ -2988,6 +4682,136 @@
             "column": "updatedAt",
             "namespace": "public",
             "table": "adminUser"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "cloudContact"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "updatedAt",
+            "namespace": "public",
+            "table": "cloudContact"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "updatedAt",
+            "namespace": "public",
+            "table": "contactBackupSettings"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "contactSyncConflict"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "updatedAt",
+            "namespace": "public",
+            "table": "contactSyncConflict"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "customerDevice"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "updatedAt",
+            "namespace": "public",
+            "table": "customerDevice"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "customerDeviceToken"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "deviceContactMapping"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "updatedAt",
+            "namespace": "public",
+            "table": "deviceContactMapping"
           }
         },
         {

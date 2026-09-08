@@ -3,7 +3,89 @@
 import { signOut } from "next-auth/react";
 import { FormEvent, useState } from "react";
 
-export function SecurityClient() {
+function ConnectedDevicesPanel({
+  initialDevices,
+}: {
+  initialDevices: Array<{
+    id: string;
+    displayName: string;
+    platform: "ANDROID" | "IOS";
+    lastSyncAt: string | null;
+    revokedAt: string | null;
+  }>;
+}) {
+  const [devices, setDevices] = useState(initialDevices);
+  const [error, setError] = useState<string | null>(null);
+
+  async function revokeDevice(deviceId: string) {
+    const response = await fetch(`/api/contacts/devices/${deviceId}`, { method: "DELETE" });
+    if (!response.ok) {
+      setError("Unable to revoke device");
+      return;
+    }
+    setDevices((current) =>
+      current.map((device) =>
+        device.id === deviceId
+          ? { ...device, revokedAt: new Date().toISOString() }
+          : device,
+      ),
+    );
+  }
+
+  if (error) {
+    return <p className="portal-alert-error mt-4">{error}</p>;
+  }
+
+  if (devices.length === 0) {
+    return (
+      <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
+        No connected mobile devices yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-4 space-y-3">
+      {devices.map((device) => (
+        <div
+          key={device.id}
+          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-700"
+        >
+          <div>
+            <p className="font-medium">{device.displayName}</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              {device.platform === "ANDROID" ? "Android" : "iPhone"} · Last sync{" "}
+              {device.lastSyncAt ? new Date(device.lastSyncAt).toLocaleString() : "never"}
+            </p>
+          </div>
+          {!device.revokedAt ? (
+            <button
+              type="button"
+              className="portal-danger-button"
+              onClick={() => void revokeDevice(device.id)}
+            >
+              Revoke
+            </button>
+          ) : (
+            <span className="text-sm text-zinc-500">Revoked</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function SecurityClient({
+  initialDevices,
+}: {
+  initialDevices: Array<{
+    id: string;
+    displayName: string;
+    platform: "ANDROID" | "IOS";
+    lastSyncAt: string | null;
+    revokedAt: string | null;
+  }>;
+}) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -116,9 +198,17 @@ export function SecurityClient() {
       </section>
 
       <section className="portal-card">
+        <h2 className="text-lg font-semibold">Connected mobile devices</h2>
+        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+          CloudStoreNow Android and iPhone apps appear here after sign-in. Revoke a device to stop contact synchronization.
+        </p>
+        <ConnectedDevicesPanel initialDevices={initialDevices} />
+      </section>
+
+      <section className="portal-card">
         <h2 className="text-lg font-semibold">Current session</h2>
         <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          You are signed in on this device. Session revocation for other devices is not available yet.
+          You are signed in on this browser session.
         </p>
         <button
           type="button"
