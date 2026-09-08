@@ -11,10 +11,10 @@ describe('storage keys', () => {
   const userId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   const objectId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
-  it('generates isolated keys scoped to customer and category', () => {
+  it('generates IAM-scoped keys under users/* with generated object ids', () => {
     assert.equal(
       buildStorageKey({ userId, objectId, category: 'IMAGES' }),
-      `customers/${userId}/images/${objectId}`,
+      `users/${userId}/files/${objectId}`,
     );
   });
 

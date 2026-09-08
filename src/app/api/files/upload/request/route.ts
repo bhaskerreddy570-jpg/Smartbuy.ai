@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
+import { requireAuthUser } from '@/lib/api/auth';
 import { normalizeMaxFileSizeBytes } from '@/lib/customer-limits';
 import { orm } from '@/lib/db';
 import { resolveFileCategory } from '@/lib/storage/categories';
 import { FILE_CATEGORIES } from '@/lib/storage/types';
+import { uploadFailureResponse } from '@/lib/storage/upload-api-errors';
 import { createPendingUpload } from '@/lib/storage/upload-lifecycle';
 import {
   normalizeStoredMimeType,
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
       .first();
 
     if (!userLimits) {
-      return notFoundResponse();
+      return NextResponse.json({ error: 'USER_NOT_FOUND' }, { status: 404 });
     }
 
     const maxFileSizeBytes = normalizeMaxFileSizeBytes(userLimits.maxFileSizeBytes);
@@ -79,11 +80,7 @@ export async function POST(request: Request) {
     });
 
     if (!pendingUpload.ok) {
-      if (pendingUpload.reason === 'quota_exceeded') {
-        return NextResponse.json({ error: 'STORAGE_QUOTA_EXCEEDED' }, { status: 413 });
-      }
-
-      return notFoundResponse();
+      return uploadFailureResponse(pendingUpload.reason);
     }
 
     return NextResponse.json({

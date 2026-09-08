@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
+import { requireAuthUser } from '@/lib/api/auth';
 import { orm } from '@/lib/db';
 import { runAntivirusScanHook } from '@/lib/storage/antivirus';
 import { assertStorageKeyOwnership } from '@/lib/storage/keys';
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
         category: file.category,
       })
     ) {
-      return notFoundResponse();
+      return NextResponse.json({ error: 'FILE_NOT_FOUND' }, { status: 404 });
     }
 
     const filenameValidation = validateUploadFilename(file.name);
@@ -138,10 +138,10 @@ export async function POST(request: Request) {
           storageNamespace: file.storageNamespace,
           reservedBytes,
         });
-        return NextResponse.json({ error: 'Storage quota exceeded' }, { status: 403 });
+        return NextResponse.json({ error: 'STORAGE_QUOTA_EXCEEDED' }, { status: 403 });
       }
 
-      return notFoundResponse();
+      return NextResponse.json({ error: 'FILE_NOT_FOUND' }, { status: 404 });
     }
 
     return NextResponse.json({ fileId: file.id, status: 'READY' });

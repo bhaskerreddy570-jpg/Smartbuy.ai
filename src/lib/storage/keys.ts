@@ -1,4 +1,3 @@
-import { categoryPathSegment } from '@/lib/storage/categories';
 import type { FileCategory } from '@/lib/storage/types';
 
 export const LEGACY_STORAGE_KEY_PREFIX = 'users/';
@@ -27,7 +26,9 @@ export function buildStorageKey(params: {
   objectId: string;
   category: FileCategory;
 }): string {
-  return `customers/${params.userId}/${categoryPathSegment(params.category)}/${params.objectId}`;
+  // IAM grants object access under users/* — category is stored in database metadata.
+  void params.category;
+  return buildLegacyStorageKey(params.userId, params.objectId);
 }
 
 export function buildLegacyStorageKey(userId: string, objectId: string): string {

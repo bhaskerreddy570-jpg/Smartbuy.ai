@@ -29,6 +29,18 @@ export function readInitialAdminCredentials(): {
   return { email, password, displayName };
 }
 
+function validateInitialAdminPassword(password: string): string | null {
+  if (password.length < 12) {
+    return 'Initial admin password must be at least 12 characters.';
+  }
+
+  if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+    return 'Initial admin password must contain at least one letter and one number.';
+  }
+
+  return null;
+}
+
 export async function countAdminUsers(): Promise<number> {
   const admins = await orm.AdminUser.select('id').all();
   return admins.length;
@@ -37,43 +49,47 @@ export async function countAdminUsers(): Promise<number> {
 export async function provisionInitialAdmin(): Promise<ProvisionInitialAdminResult> {
   const { email, password, displayName } = readInitialAdminCredentials();
 
-  if (!email || !password) {
+  if (!email) {
     return { status: 'missing_credentials' };
   }
 
-  if (password.length < 12) {
-    return {
-      status: 'invalid_credentials',
-      reason: 'Initial admin password must be at least 12 characters.',
-    };
-  }
+  const normalizedEmail = email.toLowerCase();
+  const existingAdmin = await orm.AdminUser.where({ email: normalizedEmail }).first();
 
-  if (
-    !/[A-Za-z]/.test(password) ||
-    !/[0-9]/.test(password)
-  ) {
-    return {
-      status: 'invalid_credentials',
-      reason: 'Initial admin password must contain at least one letter and one number.',
-    };
-  }
+  if (existingAdmin) {
+    if (existingAdmin.role !== 'ADMIN') {
+      await orm.AdminUser.where({ id: existingAdmin.id }).update({ role: 'ADMIN' });
+    }
 
-  const existingAdmins = await orm.AdminUser.select('id', 'email', 'role').all();
-  if (existingAdmins.length > 0) {
     return {
       status: 'already_exists',
-      email: existingAdmins[0].email,
+      email: normalizedEmail,
     };
   }
 
-  const normalizedEmail = email.toLowerCase();
+  if (!password) {
+    return { status: 'missing_credentials' };
+  }
+
+  const passwordError = validateInitialAdminPassword(password);
+  if (passwordError) {
+    return {
+      status: 'invalid_credentials',
+      reason: passwordError,
+    };
+  }
+
+  const customerAccount = await orm.User.where({ email: normalizedEmail })
+    .select('id', 'name')
+    .first();
+
   const passwordHash = await hashAdminPassword(password);
 
   await orm.AdminUser.create({
     id: randomUUID(),
     email: normalizedEmail,
     passwordHash,
-    displayName,
+    displayName: displayName ?? customerAccount?.name ?? null,
     role: 'ADMIN',
     mfaEnabled: false,
   });

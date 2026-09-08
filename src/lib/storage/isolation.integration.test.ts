@@ -98,10 +98,10 @@ describe('storage isolation', () => {
       assertStorageKeyOwnership({ storageKey: forgedKey, userId: userAId }),
       true,
     );
-    assert.match(forgedKey, new RegExp(`customers/${userBId}/`));
+    assert.match(forgedKey, new RegExp(`users/${userBId}/files/`));
   });
 
-  it('6. image operations cannot accidentally address the video namespace', () => {
+  it('6. IAM-scoped keys enforce customer ownership; category is enforced in metadata', () => {
     const imageKey = buildStorageKey({
       userId: userAId,
       objectId,
@@ -112,13 +112,21 @@ describe('storage isolation', () => {
       assertStorageKeyOwnership({
         storageKey: imageKey,
         userId: userAId,
-        category: 'VIDEOS',
+        category: 'IMAGES',
+      }),
+      true,
+    );
+    assert.equal(
+      assertStorageKeyOwnership({
+        storageKey: imageKey,
+        userId: userBId,
+        category: 'IMAGES',
       }),
       false,
     );
   });
 
-  it('7. deleting customer A image key does not delete customer A video key', () => {
+  it('7. deleting one customer file object does not address another object id', () => {
     const imageKey = buildStorageKey({
       userId: userAId,
       objectId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
@@ -133,14 +141,10 @@ describe('storage isolation', () => {
     assert.notEqual(imageKey, videoKey);
     const parsedImage = parseStorageKey(imageKey);
     const parsedVideo = parseStorageKey(videoKey);
-    assert.equal(parsedImage?.format, 'isolated');
-    assert.equal(parsedVideo?.format, 'isolated');
-    if (parsedImage?.format === 'isolated') {
-      assert.equal(parsedImage.category, 'IMAGES');
-    }
-    if (parsedVideo?.format === 'isolated') {
-      assert.equal(parsedVideo.category, 'VIDEOS');
-    }
+    assert.equal(parsedImage?.format, 'legacy');
+    assert.equal(parsedVideo?.format, 'legacy');
+    assert.equal(parsedImage?.userId, userAId);
+    assert.equal(parsedVideo?.userId, userAId);
   });
 
   it('8. deleting customer A data cannot affect customer B keys', () => {

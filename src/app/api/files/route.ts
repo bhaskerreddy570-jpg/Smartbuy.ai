@@ -19,11 +19,19 @@ export async function GET(request: Request) {
   const starred = url.searchParams.get('starred') === 'true';
   const trash = url.searchParams.get('trash') === 'true';
 
-  const data = await getDashboardData(user.id, { category, starred, trash });
+  try {
+    const data = await getDashboardData(user.id, { category, starred, trash });
 
-  if (!data) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!data) {
+      return NextResponse.json({ error: 'USER_NOT_FOUND' }, { status: 404 });
+    }
+
+    return NextResponse.json(data);
+  } catch (loadError) {
+    console.error('Unable to load customer files', loadError);
+    return NextResponse.json(
+      { error: 'FILES_LOAD_FAILED' },
+      { status: 500 },
+    );
   }
-
-  return NextResponse.json(data);
 }

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ChangeEvent, useMemo, useState } from "react";
 import type { DashboardData } from "@/lib/dashboard";
+import { mapUploadClientError } from "@/lib/storage/upload-api-errors";
 import type { FileCategory } from "@/lib/storage/types";
 import { FileTypeIcon } from "@/components/portal/file-type-icon";
 
@@ -67,7 +68,16 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
     }
 
     if (!response.ok) {
-      setError("Unable to load your files");
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      setError(
+        payload?.error === "FILES_LOAD_FAILED"
+          ? "Unable to load files. Please try again."
+          : payload?.error === "USER_NOT_FOUND"
+            ? "Account not found. Please sign in again."
+            : "Unable to load files. Please try again.",
+      );
       return;
     }
 
@@ -89,7 +99,16 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
     }
 
     if (!response.ok) {
-      setError("Unable to load your files");
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      setError(
+        payload?.error === "FILES_LOAD_FAILED"
+          ? "Unable to load files. Please try again."
+          : payload?.error === "USER_NOT_FOUND"
+            ? "Account not found. Please sign in again."
+            : "Unable to load files. Please try again.",
+      );
       return;
     }
 
@@ -117,13 +136,7 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
         const payload = (await requestResponse.json().catch(() => null)) as {
           error?: string;
         } | null;
-        throw new Error(
-          payload?.error === "STORAGE_QUOTA_EXCEEDED"
-            ? "Storage limit reached"
-            : payload?.error === "FILE_SIZE_LIMIT_EXCEEDED"
-              ? "File exceeds your maximum upload size"
-              : payload?.error ?? "Upload request failed",
-        );
+        throw new Error(mapUploadClientError(payload?.error));
       }
 
       const { fileId, uploadUrl, contentType } = (await requestResponse.json()) as {
@@ -154,7 +167,7 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
         const payload = (await completeResponse.json().catch(() => null)) as {
           error?: string;
         } | null;
-        throw new Error(payload?.error ?? "Upload completion failed");
+        throw new Error(mapUploadClientError(payload?.error));
       }
 
       setActionMessage(`${file.name} uploaded successfully`);

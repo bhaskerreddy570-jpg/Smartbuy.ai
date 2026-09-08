@@ -31,6 +31,38 @@ export type CreatedPendingUpload = {
   category: FileCategory;
 };
 
+export type UploadFailureReason =
+  | 'quota_exceeded'
+  | 'not_found'
+  | 'storage_unavailable'
+  | 'database_unavailable';
+
+function classifyUploadFailure(error: unknown): UploadFailureReason {
+  if (error instanceof Error) {
+    if (error.message === 'User not found') {
+      return 'not_found';
+    }
+
+    if (
+      error.message.includes('DATABASE_URL is not configured') ||
+      error.message.includes('connection') ||
+      error.message.includes('timeout')
+    ) {
+      return 'database_unavailable';
+    }
+
+    if (
+      error.message.includes('AWS_S3_BUCKET') ||
+      error.message.includes('S3') ||
+      error.message.includes('storage')
+    ) {
+      return 'storage_unavailable';
+    }
+  }
+
+  return 'storage_unavailable';
+}
+
 export async function createPendingUpload(params: {
   userId: string;
   fileName: string;
@@ -40,7 +72,7 @@ export async function createPendingUpload(params: {
   category: FileCategory;
 }): Promise<
   | { ok: true; file: CreatedPendingUpload }
-  | { ok: false; reason: 'quota_exceeded' | 'not_found' }
+  | { ok: false; reason: UploadFailureReason }
 > {
   try {
     return await withLockedUser(params.userId, async (user, client) => {
@@ -89,8 +121,13 @@ export async function createPendingUpload(params: {
         },
       };
     });
-  } catch {
-    return { ok: false, reason: 'not_found' };
+  } catch (error) {
+    console.error('createPendingUpload failed', {
+      userId: params.userId,
+      fileName: params.fileName,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return { ok: false, reason: classifyUploadFailure(error) };
   }
 }
 

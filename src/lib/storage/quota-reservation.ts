@@ -1,5 +1,5 @@
 import { Pool, type PoolClient } from 'pg';
-import { resolveDatabaseUrl } from '@/lib/server-env';
+import { requireDatabaseUrl } from '@/lib/server-env';
 import {
   currentBandwidthPeriodStart,
   resolveCustomerLimits,
@@ -13,10 +13,8 @@ export type LockedCustomerRow = CustomerLimitFields;
 let pool: Pool | null = null;
 
 function getPool(): Pool {
-  const connectionString = resolveDatabaseUrl();
-  if (!connectionString) {
-    throw new Error('DATABASE_URL is not configured');
-  }
+  // Neon/Vercel poolers reject interactive transactions (BEGIN … FOR UPDATE).
+  const connectionString = requireDatabaseUrl({ preferDirect: true });
 
   if (!pool) {
     pool = new Pool({ connectionString });

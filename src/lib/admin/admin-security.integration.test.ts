@@ -310,21 +310,36 @@ describeIntegration('admin security integration', () => {
     await cleanupAdmin(admin.id);
   });
 
-  it('10. creates initial ADMIN only once and never overwrites existing password', async () => {
+  it('10. ensures configured ADMIN without overwriting an existing password', async () => {
     const existing = await createTestAdmin();
     const beforeHash = (await orm.AdminUser.where({ id: existing.id }).first())!.passwordHash;
 
-    process.env.ADMIN_INITIAL_EMAIL = `new-${randomUUID()}@example.com`;
+    process.env.ADMIN_INITIAL_EMAIL = existing.email;
     process.env.ADMIN_INITIAL_PASSWORD = 'DifferentPassword123!';
 
     const result = await provisionInitialAdmin();
     assert.equal(result.status, 'already_exists');
-    assert.equal(result.email, existing.email);
+    assert.equal(result.email, existing.email.toLowerCase());
 
     const afterHash = (await orm.AdminUser.where({ id: existing.id }).first())!.passwordHash;
     assert.equal(afterHash, beforeHash);
 
+    const additionalEmail = `new-${randomUUID()}@example.com`;
+    process.env.ADMIN_INITIAL_EMAIL = additionalEmail;
+    process.env.ADMIN_INITIAL_PASSWORD = 'DifferentPassword123!';
+
+    const created = await provisionInitialAdmin();
+    assert.equal(created.status, 'created');
+    assert.equal(created.email, additionalEmail.toLowerCase());
+
+    const additionalAdmin = await orm.AdminUser.where({
+      email: additionalEmail.toLowerCase(),
+    }).first();
+    assert.ok(additionalAdmin);
+    createdAdminIds.add(additionalAdmin!.id);
+
     await cleanupAdmin(existing.id);
+    await cleanupAdmin(additionalAdmin!.id);
   });
 
   it('11. authenticates ADMIN login and rejects wrong password', async () => {

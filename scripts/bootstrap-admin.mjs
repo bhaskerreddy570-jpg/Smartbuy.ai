@@ -32,6 +32,9 @@ async function main() {
       console.error(
         'Missing ADMIN_INITIAL_EMAIL or ADMIN_INITIAL_PASSWORD in environment.',
       );
+      console.error(
+        'Set ADMIN_INITIAL_EMAIL=bhaskerreddy570@gmail.com and a 12+ character password, then rerun.',
+      );
       process.exit(2);
       return;
     case 'invalid_credentials':
