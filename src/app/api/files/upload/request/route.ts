@@ -12,12 +12,14 @@ import {
   validateUploadRequest,
 } from '@/lib/storage/validation';
 
-const uploadRequestSchema = z.object({
-  fileName: z.string().min(1).max(512),
-  mimeType: z.string().max(255).optional().default('application/octet-stream'),
-  size: z.number().int().positive(),
-  category: z.enum(FILE_CATEGORIES).optional(),
-});
+const uploadRequestSchema = z
+  .object({
+    fileName: z.string().min(1).max(512),
+    mimeType: z.string().max(255).optional().default('application/octet-stream'),
+    size: z.number().int().positive(),
+    category: z.enum(FILE_CATEGORIES).optional(),
+  })
+  .strict();
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -88,7 +90,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       fileId: pendingUpload.file.fileId,
-      uploadUrl: pendingUpload.file.uploadUrl,
       category: pendingUpload.file.category,
       contentType: 'application/octet-stream',
     });

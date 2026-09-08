@@ -102,6 +102,43 @@ describe('security scenarios (logic-level)', () => {
     assert.doesNotMatch(landingSource, /AWS|S3 bucket|Neon|Vercel|PostgreSQL/i);
   });
 
+  it('upload request never accepts or returns client-controlled storage keys', () => {
+    const uploadRequestSource = readFileSync(
+      join(projectRoot, 'app/api/files/upload/request/route.ts'),
+      'utf8',
+    );
+    const transferSource = readFileSync(
+      join(projectRoot, 'app/api/files/upload/transfer/route.ts'),
+      'utf8',
+    );
+    const completeSource = readFileSync(
+      join(projectRoot, 'app/api/files/upload/complete/route.ts'),
+      'utf8',
+    );
+    const dashboardSource = readFileSync(join(projectRoot, 'lib/dashboard.ts'), 'utf8');
+
+    assert.match(uploadRequestSource, /\.strict\(\)/);
+    assert.doesNotMatch(uploadRequestSource, /storageKey/);
+    assert.doesNotMatch(uploadRequestSource, /uploadUrl/);
+    assert.match(transferSource, /resolveOwnedFileStorage/);
+    assert.match(transferSource, /formData\.get\('storageKey'\)/);
+    assert.match(completeSource, /\.strict\(\)/);
+    assert.match(completeSource, /resolveOwnedFileStorage/);
+    assert.doesNotMatch(dashboardSource, /storageKey/);
+  });
+
+  it('upload lifecycle generates and persists storage keys server-side only', () => {
+    const lifecycleSource = readFileSync(
+      join(projectRoot, 'lib/storage/upload-lifecycle.ts'),
+      'utf8',
+    );
+
+    assert.match(lifecycleSource, /const fileId = randomUUID\(\)/);
+    assert.match(lifecycleSource, /const storageObjectId = randomUUID\(\)/);
+    assert.match(lifecycleSource, /objectId: storageObjectId/);
+    assert.match(lifecycleSource, /prepared\.objectRef\.key/);
+  });
+
   it('AWS credentials and bucket config stay server-side only', () => {
     const s3Source = readFileSync(join(projectRoot, 'lib/storage/s3.ts'), 'utf8');
     const dashboardSource = readFileSync(

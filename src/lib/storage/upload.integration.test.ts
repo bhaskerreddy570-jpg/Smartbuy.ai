@@ -4,12 +4,66 @@ import bcrypt from 'bcryptjs';
 import { describe, it } from 'node:test';
 import { orm } from '@/lib/db';
 import { createDefaultCustomerLimits } from '@/lib/customer-limits';
+import { parseStorageKey } from '@/lib/storage/keys';
 import { getStorageService, toStorageObjectRef } from '@/lib/storage/storage-service';
 import { createPendingUpload, finalizePendingUpload } from '@/lib/storage/upload-lifecycle';
 import { mapUploadClientError } from '@/lib/storage/upload-api-errors';
 
 describe('customer upload flow', () => {
-  it('uploads through presigned URL and finalizes metadata', async () => {
+  it('persists a server-generated storage key separate from the application file id', async () => {
+    const email = `storage-key-${randomUUID()}@example.com`;
+    const defaults = createDefaultCustomerLimits();
+    const passwordHash = await bcrypt.hash('UploadTest123!', 12);
+
+    const user = await orm.User.create({
+      email,
+      name: 'Storage Key Test',
+      passwordHash,
+      storageQuota: defaults.storageQuota,
+      storageUsed: BigInt(0),
+      maxFileSizeBytes: defaults.maxFileSizeBytes,
+      monthlyBandwidthLimitBytes: defaults.monthlyBandwidthLimitBytes,
+      monthlyBandwidthUsedBytes: defaults.monthlyBandwidthUsedBytes,
+      bandwidthPeriodStart: defaults.bandwidthPeriodStart,
+    });
+
+    let pendingFileId: string | null = null;
+
+    try {
+      const pending = await createPendingUpload({
+        userId: user.id,
+        fileName: 'sample.jpg',
+        originalName: 'sample.jpg',
+        mimeType: 'image/jpeg',
+        uploadSize: 2048n,
+        category: 'IMAGES',
+      });
+
+      assert.equal(pending.ok, true);
+      if (!pending.ok) {
+        return;
+      }
+
+      pendingFileId = pending.file.fileId;
+      const stored = await orm.File.where({ id: pending.file.fileId }).first();
+      assert.ok(stored);
+      assert.equal(stored.status, 'PENDING');
+      assert.equal(stored.storageKey, pending.file.storageKey);
+
+      const parsed = parseStorageKey(stored.storageKey);
+      assert.equal(parsed?.format, 'legacy');
+      assert.equal(parsed?.userId, user.id);
+      assert.notEqual(parsed?.objectId, stored.id);
+      assert.match(stored.storageKey, new RegExp(`users/${user.id}/files/`));
+    } finally {
+      if (pendingFileId) {
+        await orm.File.where({ id: pendingFileId }).delete();
+      }
+      await orm.User.where({ id: user.id }).delete();
+    }
+  });
+
+  it('uploads through optional presigned URL and finalizes metadata', async () => {
     const email = `upload-${randomUUID()}@example.com`;
     const defaults = createDefaultCustomerLimits();
     const passwordHash = await bcrypt.hash('UploadTest123!', 12);
@@ -44,10 +98,20 @@ describe('customer upload flow', () => {
       }
 
       pendingFileId = pending.file.fileId;
-      assert.match(pending.file.storageKey, new RegExp(`users/${user.id}/files/`));
-      assert.ok(pending.file.uploadUrl.startsWith('https://'));
+      const stored = await orm.File.where({ id: pending.file.fileId }).first();
+      assert.ok(stored);
 
-      const uploadResponse = await fetch(pending.file.uploadUrl, {
+      const prepared = await getStorageService().prepareUpload({
+        userId: user.id,
+        objectId: parseStorageKey(stored.storageKey)!.objectId,
+        category: stored.category,
+        size: 2048n,
+        includePresignedUploadUrl: true,
+      });
+
+      assert.ok(prepared.uploadUrl?.startsWith('https://'));
+
+      const uploadResponse = await fetch(prepared.uploadUrl!, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/octet-stream' },
         body: Buffer.alloc(2048),
@@ -62,9 +126,9 @@ describe('customer upload flow', () => {
 
       assert.equal(finalize.ok, true);
 
-      const stored = await orm.File.where({ id: pending.file.fileId }).first();
-      assert.equal(stored?.status, 'READY');
-      assert.equal(stored?.name, 'sample.jpg');
+      const ready = await orm.File.where({ id: pending.file.fileId }).first();
+      assert.equal(ready?.status, 'READY');
+      assert.equal(ready?.name, 'sample.jpg');
     } finally {
       if (pendingFileId) {
         const stored = await orm.File.where({ id: pendingFileId }).first();
@@ -134,6 +198,84 @@ describe('customer upload flow', () => {
 
       const ready = await orm.File.where({ id: pending.file.fileId }).first();
       assert.equal(ready?.status, 'READY');
+    } finally {
+      if (pendingFileId) {
+        const stored = await orm.File.where({ id: pendingFileId }).first();
+        if (stored) {
+          await getStorageService()
+            .deleteObject(toStorageObjectRef(stored))
+            .catch(() => undefined);
+        }
+      }
+
+      await orm.File.where({ userId: user.id }).delete();
+      await orm.User.where({ id: user.id }).delete();
+    }
+  });
+
+  it('finalizes pending uploads idempotently', async () => {
+    const email = `idempotent-${randomUUID()}@example.com`;
+    const defaults = createDefaultCustomerLimits();
+    const passwordHash = await bcrypt.hash('UploadTest123!', 12);
+
+    const user = await orm.User.create({
+      email,
+      name: 'Idempotent Test',
+      passwordHash,
+      storageQuota: defaults.storageQuota,
+      storageUsed: BigInt(0),
+      maxFileSizeBytes: defaults.maxFileSizeBytes,
+      monthlyBandwidthLimitBytes: defaults.monthlyBandwidthLimitBytes,
+      monthlyBandwidthUsedBytes: defaults.monthlyBandwidthUsedBytes,
+      bandwidthPeriodStart: defaults.bandwidthPeriodStart,
+    });
+
+    let pendingFileId: string | null = null;
+
+    try {
+      const pending = await createPendingUpload({
+        userId: user.id,
+        fileName: 'once.txt',
+        originalName: 'once.txt',
+        mimeType: 'text/plain',
+        uploadSize: 64n,
+        category: 'DOCUMENTS',
+      });
+
+      assert.equal(pending.ok, true);
+      if (!pending.ok) {
+        return;
+      }
+
+      pendingFileId = pending.file.fileId;
+      const stored = await orm.File.where({ id: pending.file.fileId }).first();
+      assert.ok(stored);
+
+      await getStorageService().putObject({
+        objectRef: toStorageObjectRef(stored),
+        body: Buffer.alloc(64),
+        size: 64n,
+      });
+
+      const first = await finalizePendingUpload({
+        userId: user.id,
+        fileId: pending.file.fileId,
+        actualSize: 64n,
+      });
+      const second = await finalizePendingUpload({
+        userId: user.id,
+        fileId: pending.file.fileId,
+        actualSize: 64n,
+      });
+
+      assert.equal(first.ok, true);
+      assert.equal(second.ok, true);
+      if (first.ok) {
+        assert.equal(first.alreadyComplete, false);
+      }
+      if (second.ok) {
+        assert.equal(second.alreadyComplete, true);
+      }
     } finally {
       if (pendingFileId) {
         const stored = await orm.File.where({ id: pendingFileId }).first();

@@ -151,8 +151,6 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
 
       const { fileId } = (await requestResponse.json()) as {
         fileId: string;
-        uploadUrl?: string;
-        contentType?: string;
       };
 
       const transferForm = new FormData();

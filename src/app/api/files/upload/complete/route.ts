@@ -3,8 +3,7 @@ import { z } from 'zod';
 import { requireAuthUser } from '@/lib/api/auth';
 import { orm } from '@/lib/db';
 import { runAntivirusScanHook } from '@/lib/storage/antivirus';
-import { assertStorageKeyOwnership } from '@/lib/storage/keys';
-import { getOwnedFileIncludingPending } from '@/lib/storage/files';
+import { resolveOwnedFileStorage } from '@/lib/storage/owned-file-storage';
 import {
   getStorageService,
   toStorageObjectRef,
@@ -15,9 +14,11 @@ import {
 } from '@/lib/storage/upload-lifecycle';
 import { validateUploadFilename } from '@/lib/storage/validation';
 
-const completeSchema = z.object({
-  fileId: z.string().uuid(),
-});
+const completeSchema = z
+  .object({
+    fileId: z.string().uuid(),
+  })
+  .strict();
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -62,18 +63,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    const file = await getOwnedFileIncludingPending(user.id, parsed.data.fileId);
+    const owned = await resolveOwnedFileStorage({
+      userId: user.id,
+      fileId: parsed.data.fileId,
+      mode: 'pending',
+    });
 
-    if (
-      !file ||
-      !assertStorageKeyOwnership({
-        storageKey: file.storageKey,
-        userId: user.id,
-        category: file.category,
-      })
-    ) {
+    if (!owned) {
       return NextResponse.json({ error: 'FILE_NOT_FOUND' }, { status: 404 });
     }
+
+    const file = owned.file;
 
     const filenameValidation = validateUploadFilename(file.name);
     if (!filenameValidation.ok) {
@@ -92,8 +92,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ fileId: file.id, status: file.status });
     }
 
-    const objectRef = toStorageObjectRef(file);
-    const metadata = await getStorageService().headObject(objectRef);
+    const objectExists = await getStorageService().objectExists(owned.objectRef);
+    if (!objectExists) {
+      return NextResponse.json({ error: 'FILE_NOT_FOUND' }, { status: 404 });
+    }
+
+    const metadata = await getStorageService().headObject(owned.objectRef);
     const reservedBytes = BigInt(file.size);
 
     const scanResult = await runAntivirusScanHook({

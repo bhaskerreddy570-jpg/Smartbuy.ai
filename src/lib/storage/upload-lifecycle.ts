@@ -26,7 +26,6 @@ type PendingUploadRow = {
 export type CreatedPendingUpload = {
   fileId: string;
   storageKey: string;
-  uploadUrl: string;
   reservedBytes: bigint;
   category: FileCategory;
 };
@@ -82,9 +81,10 @@ export async function createPendingUpload(params: {
       }
 
       const fileId = randomUUID();
+      const storageObjectId = randomUUID();
       const prepared = await getStorageService().prepareUpload({
         userId: params.userId,
-        objectId: fileId,
+        objectId: storageObjectId,
         category: params.category,
         size: params.uploadSize,
         namespace: DEFAULT_STORAGE_NAMESPACE,
@@ -115,7 +115,6 @@ export async function createPendingUpload(params: {
         file: {
           fileId,
           storageKey: prepared.objectRef.key,
-          uploadUrl: prepared.uploadUrl,
           reservedBytes: params.uploadSize,
           category: params.category,
         },

@@ -31,11 +31,13 @@ export type PrepareUploadParams = {
   objectId: string;
   size: bigint;
   namespace?: string;
+  /** Server-side direct upload does not need a browser-facing presigned URL. */
+  includePresignedUploadUrl?: boolean;
 };
 
 export type PrepareUploadResult = {
-  uploadUrl: string;
   objectRef: StorageObjectRef;
+  uploadUrl?: string;
 };
 
 export type CreateDownloadParams = {

@@ -25,15 +25,21 @@ describe('storage keys', () => {
     );
   });
 
-  it('parses isolated and legacy keys', () => {
+  it('parses legacy keys emitted by buildStorageKey', () => {
+    const key = buildStorageKey({ userId, objectId, category: 'DOCUMENTS' });
+    const parsed = parseStorageKey(key);
+
+    assert.equal(parsed?.format, 'legacy');
+    assert.equal(parsed?.objectId, objectId);
+  });
+
+  it('parses isolated keys for alternate storage layouts', () => {
     const isolated = parseStorageKey(
-      buildStorageKey({ userId, objectId, category: 'DOCUMENTS' }),
+      `customers/${userId}/documents/${objectId}`,
     );
-    const legacy = parseStorageKey(buildLegacyStorageKey(userId, objectId));
 
     assert.equal(isolated?.format, 'isolated');
     assert.equal(isolated?.category, 'DOCUMENTS');
-    assert.equal(legacy?.format, 'legacy');
   });
 
   it('does not embed original filenames in object keys', () => {

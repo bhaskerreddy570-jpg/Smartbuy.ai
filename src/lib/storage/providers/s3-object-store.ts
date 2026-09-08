@@ -34,6 +34,16 @@ export class S3ObjectStoreProvider implements ObjectStoreProvider {
       category: params.category,
     });
 
+    const objectRef = {
+      provider: this.providerId,
+      namespace: params.namespace ?? 'default',
+      key,
+    };
+
+    if (!params.includePresignedUploadUrl) {
+      return { objectRef };
+    }
+
     const uploadUrl = await createUploadUrl({
       storageKey: key,
       size: params.size,
@@ -41,11 +51,7 @@ export class S3ObjectStoreProvider implements ObjectStoreProvider {
 
     return {
       uploadUrl,
-      objectRef: {
-        provider: this.providerId,
-        namespace: params.namespace ?? 'default',
-        key,
-      },
+      objectRef,
     };
   }
 

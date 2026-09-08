@@ -3,39 +3,17 @@ import { z } from 'zod';
 import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
 import { db } from '@/lib/db';
 import { reserveDownloadBandwidth } from '@/lib/storage/bandwidth-reservation';
-import { assertStorageKeyOwnership } from '@/lib/storage/keys';
 import {
-  getOwnedDeletedFile,
-  getOwnedFile,
   restoreOwnedFile,
   setOwnedFileStarred,
   softDeleteOwnedFile,
 } from '@/lib/storage/files';
-import {
-  getStorageService,
-  toStorageObjectRef,
-} from '@/lib/storage/storage-service';
+import { resolveOwnedFileStorage } from '@/lib/storage/owned-file-storage';
+import { getStorageService } from '@/lib/storage/storage-service';
 
 type RouteParams = {
   params: Promise<{ fileId: string }>;
 };
-
-function verifyOwnedStorageObject(
-  file: NonNullable<Awaited<ReturnType<typeof getOwnedFile>>>,
-  userId: string,
-) {
-  if (
-    !assertStorageKeyOwnership({
-      storageKey: file.storageKey,
-      userId,
-      category: file.category,
-    })
-  ) {
-    return false;
-  }
-
-  return true;
-}
 
 export async function GET(_request: Request, { params }: RouteParams) {
   const { error, user } = await requireAuthUser();
@@ -47,15 +25,19 @@ export async function GET(_request: Request, { params }: RouteParams) {
   }
 
   const { fileId } = await params;
-  const file = await getOwnedFile(user.id, fileId);
+  const owned = await resolveOwnedFileStorage({
+    userId: user.id,
+    fileId,
+    mode: 'ready',
+  });
 
-  if (!file || !verifyOwnedStorageObject(file, user.id)) {
+  if (!owned) {
     return notFoundResponse();
   }
 
   const bandwidthReservation = await reserveDownloadBandwidth({
     userId: user.id,
-    bytes: BigInt(file.size),
+    bytes: BigInt(owned.file.size),
   });
 
   if (!bandwidthReservation.ok) {
@@ -71,13 +53,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
   try {
     const downloadUrl = await getStorageService().createDownloadUrl({
-      objectRef: toStorageObjectRef(file),
-      fileName: file.name,
+      objectRef: owned.objectRef,
+      fileName: owned.file.name,
     });
     return NextResponse.json({
       downloadUrl,
-      fileName: file.name,
-      category: file.category,
+      fileName: owned.file.name,
+      category: owned.file.category,
     });
   } catch (downloadError) {
     console.error('Download URL generation failed', downloadError);
@@ -127,20 +109,20 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ success: true });
   }
 
-  const deletedFile = await getOwnedDeletedFile(user.id, fileId);
-  if (
-    !deletedFile ||
-    !assertStorageKeyOwnership({
-      storageKey: deletedFile.storageKey,
-      userId: user.id,
-      category: deletedFile.category,
-    })
-  ) {
+  const ownedDeleted = await resolveOwnedFileStorage({
+    userId: user.id,
+    fileId,
+    mode: 'deleted',
+  });
+
+  if (!ownedDeleted) {
     return notFoundResponse();
   }
 
+  const deletedFile = ownedDeleted.file;
+
   try {
-    await getStorageService().deleteObject(toStorageObjectRef(deletedFile));
+    await getStorageService().deleteObject(ownedDeleted.objectRef);
 
     await db.transaction(async (tx) => {
       const userRecord = await tx.orm.public.User.where({ id: user.id })
@@ -178,9 +160,18 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   }
 
   const { fileId } = await params;
-  const file = await softDeleteOwnedFile(user.id, fileId);
+  const owned = await resolveOwnedFileStorage({
+    userId: user.id,
+    fileId,
+    mode: 'ready',
+  });
 
-  if (!file || !verifyOwnedStorageObject(file, user.id)) {
+  if (!owned) {
+    return notFoundResponse();
+  }
+
+  const file = await softDeleteOwnedFile(user.id, fileId);
+  if (!file) {
     return notFoundResponse();
   }
 
