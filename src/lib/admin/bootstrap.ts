@@ -3,21 +3,37 @@ import { orm } from '@/lib/db';
 import { hashAdminPassword } from '@/lib/admin/password';
 import { revokeAllAdminSessions } from '@/lib/admin/session';
 
+export const DESIGNATED_APPLICATION_ADMIN_EMAIL = 'bhaskerreddy570@gmail.com';
+
 export type ProvisionInitialAdminResult =
   | { status: 'created'; email: string; removedOtherAdmins: number }
   | { status: 'already_exists'; email: string; removedOtherAdmins: number }
   | { status: 'missing_credentials' }
   | { status: 'invalid_credentials'; reason: string };
 
+export type EnsureApplicationAdminResult =
+  | ProvisionInitialAdminResult
+  | {
+      status: 'linked_from_customer';
+      email: string;
+      removedOtherAdmins: number;
+    }
+  | { status: 'customer_missing'; email: string };
+
+export function resolveDesignatedAdminEmail(): string {
+  return (
+    process.env.ADMIN_INITIAL_EMAIL?.trim() ||
+    process.env.ADMIN_BOOTSTRAP_EMAIL?.trim() ||
+    DESIGNATED_APPLICATION_ADMIN_EMAIL
+  ).toLowerCase();
+}
+
 export function readInitialAdminCredentials(): {
-  email: string | null;
+  email: string;
   password: string | null;
   displayName: string | null;
 } {
-  const email =
-    process.env.ADMIN_INITIAL_EMAIL?.trim() ||
-    process.env.ADMIN_BOOTSTRAP_EMAIL?.trim() ||
-    null;
+  const email = resolveDesignatedAdminEmail();
   const password =
     process.env.ADMIN_INITIAL_PASSWORD?.trim() ||
     process.env.ADMIN_BOOTSTRAP_PASSWORD?.trim() ||
@@ -96,11 +112,6 @@ export async function consolidateSingleApplicationAdmin(
 
 export async function provisionInitialAdmin(): Promise<ProvisionInitialAdminResult> {
   const { email, password, displayName } = readInitialAdminCredentials();
-
-  if (!email) {
-    return { status: 'missing_credentials' };
-  }
-
   const normalizedEmail = email.toLowerCase();
   const existingAdmin = await orm.AdminUser.where({ email: normalizedEmail }).first();
 
@@ -144,6 +155,75 @@ export async function provisionInitialAdmin(): Promise<ProvisionInitialAdminResu
   const removedOtherAdmins = await consolidateSingleApplicationAdmin(normalizedEmail);
 
   return { status: 'created', email: normalizedEmail, removedOtherAdmins };
+}
+
+async function linkDesignatedAdminFromCustomerAccount(
+  normalizedEmail: string,
+): Promise<EnsureApplicationAdminResult> {
+  if (normalizedEmail !== resolveDesignatedAdminEmail()) {
+    return { status: 'customer_missing', email: normalizedEmail };
+  }
+
+  const customerAccount = await orm.User.where({ email: normalizedEmail })
+    .select('id', 'name', 'passwordHash')
+    .first();
+
+  if (!customerAccount) {
+    return { status: 'customer_missing', email: normalizedEmail };
+  }
+
+  await orm.AdminUser.create({
+    id: randomUUID(),
+    email: normalizedEmail,
+    passwordHash: customerAccount.passwordHash,
+    displayName: customerAccount.name,
+    role: 'ADMIN',
+    mfaEnabled: false,
+  });
+
+  const removedOtherAdmins = await consolidateSingleApplicationAdmin(normalizedEmail);
+
+  return {
+    status: 'linked_from_customer',
+    email: normalizedEmail,
+    removedOtherAdmins,
+  };
+}
+
+let ensureApplicationAdminPromise: Promise<EnsureApplicationAdminResult> | null = null;
+
+export async function ensureApplicationAdminProvisioned(): Promise<EnsureApplicationAdminResult> {
+  if (!ensureApplicationAdminPromise) {
+    ensureApplicationAdminPromise = runEnsureApplicationAdminProvisioned().finally(() => {
+      ensureApplicationAdminPromise = null;
+    });
+  }
+
+  return ensureApplicationAdminPromise;
+}
+
+async function runEnsureApplicationAdminProvisioned(): Promise<EnsureApplicationAdminResult> {
+  const normalizedEmail = resolveDesignatedAdminEmail();
+  const existingAdmin = await getAdminUserByEmail(normalizedEmail);
+
+  if (existingAdmin) {
+    const removedOtherAdmins = await consolidateSingleApplicationAdmin(normalizedEmail);
+    return {
+      status: 'already_exists',
+      email: normalizedEmail,
+      removedOtherAdmins,
+    };
+  }
+
+  const envProvisioned = await provisionInitialAdmin();
+  if (
+    envProvisioned.status === 'created' ||
+    envProvisioned.status === 'already_exists'
+  ) {
+    return envProvisioned;
+  }
+
+  return linkDesignatedAdminFromCustomerAccount(normalizedEmail);
 }
 
 export async function resolvePortalUserRole(

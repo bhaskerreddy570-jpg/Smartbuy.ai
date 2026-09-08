@@ -8,7 +8,11 @@ import {
   resolveAuthUrl,
   resolveDatabaseUrl,
 } from '@/lib/server-env';
-import { readInitialAdminCredentials } from '@/lib/admin/bootstrap';
+import {
+  ensureApplicationAdminProvisioned,
+  resolveDesignatedAdminEmail,
+  resolvePortalUserRole,
+} from '@/lib/admin/bootstrap';
 import { resolveAwsCredentials, resolveS3Bucket } from '@/lib/config';
 
 function awsEnvPresence() {
@@ -116,8 +120,9 @@ export async function GET() {
     let adminTableExists = false;
     let adminCount = 0;
     let designatedAdminPresent = false;
-    const designatedAdminEmail =
-      readInitialAdminCredentials().email?.toLowerCase() ?? null;
+    let designatedAdminPortalRole: 'USER' | 'ADMIN' | null = null;
+    let adminBootstrapStatus: string | null = null;
+    const designatedAdminEmail = resolveDesignatedAdminEmail();
 
     const adminTableResult = await pool.query<{ exists: boolean }>(
       `SELECT EXISTS (
@@ -134,12 +139,30 @@ export async function GET() {
       );
       adminCount = Number(adminCountResult.rows[0]?.count ?? '0');
 
-      if (designatedAdminEmail) {
-        const designatedResult = await pool.query<{ exists: boolean }>(
+      const designatedResult = await pool.query<{ exists: boolean }>(
+        'SELECT EXISTS (SELECT 1 FROM "adminUser" WHERE email = $1) AS exists',
+        [designatedAdminEmail],
+      );
+      designatedAdminPresent = designatedResult.rows[0]?.exists === true;
+
+      if (!designatedAdminPresent || adminCount !== 1) {
+        const bootstrapResult = await ensureApplicationAdminProvisioned();
+        adminBootstrapStatus = bootstrapResult.status;
+
+        const refreshedCount = await pool.query<{ count: string }>(
+          'SELECT COUNT(*)::text AS count FROM "adminUser"',
+        );
+        adminCount = Number(refreshedCount.rows[0]?.count ?? '0');
+
+        const refreshedDesignated = await pool.query<{ exists: boolean }>(
           'SELECT EXISTS (SELECT 1 FROM "adminUser" WHERE email = $1) AS exists',
           [designatedAdminEmail],
         );
-        designatedAdminPresent = designatedResult.rows[0]?.exists === true;
+        designatedAdminPresent = refreshedDesignated.rows[0]?.exists === true;
+      }
+
+      if (designatedAdminPresent) {
+        designatedAdminPortalRole = await resolvePortalUserRole(designatedAdminEmail);
       }
     }
 
@@ -175,8 +198,10 @@ export async function GET() {
         adminTableExists,
         adminCount,
         adminConfigured: adminCount === 1,
-        designatedAdminEmailConfigured: Boolean(designatedAdminEmail),
+        designatedAdminEmail,
         designatedAdminPresent,
+        designatedAdminPortalRole,
+        adminBootstrapStatus,
         awsEnv,
         authRelatedEnvKeys,
         envPresence,

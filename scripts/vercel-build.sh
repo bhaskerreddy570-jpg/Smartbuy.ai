@@ -100,11 +100,9 @@ else
   echo "Runtime database configuration is validated by /api/health/db."
 fi
 
-if [[ -n "${ADMIN_INITIAL_EMAIL:-${ADMIN_BOOTSTRAP_EMAIL:-}}" && -n "${ADMIN_INITIAL_PASSWORD:-${ADMIN_BOOTSTRAP_PASSWORD:-}}" ]]; then
-  echo "Ensuring configured application ADMIN exists (idempotent bootstrap)..."
-  npm run admin:bootstrap
-else
-  echo "Skipping admin bootstrap: ADMIN_INITIAL_EMAIL and ADMIN_INITIAL_PASSWORD are not both set."
-fi
+echo "Ensuring single application ADMIN exists (idempotent runtime bootstrap)..."
+npm run admin:bootstrap || {
+  echo "Admin bootstrap did not complete; runtime health check will retry on first request." >&2
+}
 
 npm run build
