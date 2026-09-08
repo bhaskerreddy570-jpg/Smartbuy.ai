@@ -102,11 +102,15 @@ export async function GET() {
     const authRelatedEnvKeys = Object.keys(process.env)
       .filter((key) => /AUTH|SECRET|NEXTAUTH/i.test(key))
       .sort();
+    const authSecretKeyPresent = 'AUTH_SECRET' in process.env;
+    const authSecretValuePresent = Boolean(process.env.AUTH_SECRET?.trim());
 
     return NextResponse.json(
       {
         ok,
         authSecretConfigured,
+        authSecretKeyPresent,
+        authSecretValuePresent,
         authUrlConfigured,
         databaseUrlConfigured: true,
         connected: true,
