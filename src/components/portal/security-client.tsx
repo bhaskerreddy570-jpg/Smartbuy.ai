@@ -200,7 +200,8 @@ export function SecurityClient({
       <section className="portal-card">
         <h2 className="text-lg font-semibold">Connected mobile devices</h2>
         <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          CloudStoreNow Android and iPhone apps appear here after sign-in. Revoke a device to stop contact synchronization.
+          Connect new phones from My Files → Contacts. Revoke a device here to stop contact
+          synchronization without deleting backed-up contacts.
         </p>
         <ConnectedDevicesPanel initialDevices={initialDevices} />
       </section>

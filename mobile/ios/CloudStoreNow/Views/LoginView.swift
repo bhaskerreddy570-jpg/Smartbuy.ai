@@ -52,6 +52,10 @@ struct LoginView: View {
                         }
                     }
                     .disabled(authViewModel.isLoading)
+
+                    NavigationLink("Connect with pairing code") {
+                        PairDeviceView(authViewModel: authViewModel)
+                    }
                 }
             }
             .navigationTitle("Sign In")

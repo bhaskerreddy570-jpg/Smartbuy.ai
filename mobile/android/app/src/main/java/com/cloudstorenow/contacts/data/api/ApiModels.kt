@@ -133,3 +133,15 @@ data class BackupSettingsRequest(
 data class ApiErrorResponse(
     val error: String? = null,
 )
+
+@JsonClass(generateAdapter = true)
+data class PairingCompleteRequest(
+    val sessionId: String? = null,
+    val pairingCode: String,
+    val platform: String = "ANDROID",
+    val appVersion: String? = null,
+    val displayName: String? = null,
+    val installationId: String? = null,
+    val email: String,
+    val password: String,
+)

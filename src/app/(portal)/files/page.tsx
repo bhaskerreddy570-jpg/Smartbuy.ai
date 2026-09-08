@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { FilesClient } from "@/components/portal/files-client";
+import { loadContactsPortalData } from "@/lib/contacts/portal-data";
 import { getDashboardData } from "@/lib/dashboard";
 import { isFileCategory } from "@/lib/storage/categories";
 
@@ -25,5 +26,16 @@ export default async function FilesPage({ searchParams }: FilesPageProps) {
     redirect("/login");
   }
 
-  return <FilesClient initialData={data} initialQuery={params.q ?? ""} />;
+  const contactsData =
+    category === "CONTACTS"
+      ? await loadContactsPortalData(session.user.id)
+      : undefined;
+
+  return (
+    <FilesClient
+      initialData={data}
+      initialQuery={params.q ?? ""}
+      contactsData={contactsData}
+    />
+  );
 }

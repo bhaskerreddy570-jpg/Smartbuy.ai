@@ -1,4 +1,4 @@
-package com.cloudstorenow.contacts.ui.login
+package com.cloudstorenow.contacts.ui.pair
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,16 +19,17 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.cloudstorenow.contacts.R
 
 @Composable
-fun LoginScreen(
-    viewModel: LoginViewModel,
-    onLoggedIn: () -> Unit,
-    onConnectWithPairingCode: () -> Unit,
+fun PairDeviceScreen(
+    viewModel: PairDeviceViewModel,
+    onPaired: () -> Unit,
+    onBackToLogin: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -39,12 +40,12 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = stringResource(R.string.login_title),
+            text = stringResource(R.string.pair_device_title),
             style = MaterialTheme.typography.headlineMedium,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = stringResource(R.string.login_subtitle),
+            text = stringResource(R.string.pair_device_subtitle),
             style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(modifier = Modifier.height(24.dp))
@@ -67,6 +68,18 @@ fun LoginScreen(
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = state.pairingCode,
+            onValueChange = viewModel::updatePairingCode,
+            label = { Text(stringResource(R.string.pairing_code_label)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Characters,
+                keyboardType = KeyboardType.Ascii,
+            ),
+        )
 
         if (state.errorMessage != null) {
             Spacer(modifier = Modifier.height(12.dp))
@@ -79,18 +92,18 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
         Button(
-            onClick = { viewModel.login(onLoggedIn) },
+            onClick = { viewModel.completePairing(onPaired) },
             enabled = !state.isLoading,
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (state.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.height(20.dp))
             } else {
-                Text(stringResource(R.string.sign_in))
+                Text(stringResource(R.string.connect_device))
             }
         }
-        TextButton(onClick = onConnectWithPairingCode, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.connect_with_pairing_code))
+        TextButton(onClick = onBackToLogin, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.back_to_sign_in))
         }
     }
 }

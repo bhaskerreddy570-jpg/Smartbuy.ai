@@ -17,10 +17,13 @@ import {
   handleSecureFileDownload,
   type SecureDownloadPayload,
 } from "@/lib/client/secure-file-access";
+import { ContactsClient } from "@/components/portal/contacts-client";
+import type { ContactsPortalData } from "@/lib/contacts/portal-data";
 
 type FilesClientProps = {
   initialData: DashboardData;
   initialQuery?: string;
+  contactsData?: ContactsPortalData;
 };
 
 type ViewMode = "grid" | "list";
@@ -40,7 +43,11 @@ function sortFiles(
   });
 }
 
-export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps) {
+export function FilesClient({
+  initialData,
+  initialQuery = "",
+  contactsData,
+}: FilesClientProps) {
   const router = useRouter();
   const [data, setData] = useState(initialData);
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +66,7 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
     usesPassphrase: boolean;
     payload: SecureDownloadPayload;
   } | null>(null);
+  const [contactsViewData, setContactsViewData] = useState(contactsData ?? null);
 
   const filteredFiles = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -139,6 +147,17 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
 
       const payload = (await response.json()) as DashboardData;
       setData(payload);
+
+      if (category === "CONTACTS") {
+        const contactsResponse = await fetch("/api/contacts", { cache: "no-store" });
+        if (contactsResponse.ok) {
+          setContactsViewData((await contactsResponse.json()) as ContactsPortalData);
+        } else {
+          setContactsViewData(null);
+        }
+      } else {
+        setContactsViewData(null);
+      }
     } catch (loadError) {
       setError(mapFilesLoadClientError(loadError));
     }
@@ -274,6 +293,8 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
     await refreshFiles(data.activeCategory);
   }
 
+  const isContactsCategory = data.activeCategory === "CONTACTS";
+
   return (
     <div className="space-y-6 pb-24 lg:pb-6">
       <div className="portal-page-header">
@@ -283,54 +304,58 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
             Upload, organize, and manage your private cloud storage.
           </p>
         </div>
-        <div className="flex flex-col items-stretch gap-3 sm:items-end">
-          <label className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950">
-            <input
-              type="checkbox"
-              checked={secureUploadEnabled}
-              onChange={(event) => setSecureUploadEnabled(event.target.checked)}
-            />
-            Secure this file 🔐
-          </label>
-          <label className="portal-primary-button cursor-pointer">
-            {uploading ? "Uploading..." : secureUploadEnabled ? "Upload securely" : "Upload file"}
-            <input type="file" className="hidden" disabled={uploading} onChange={handleUpload} />
-          </label>
-        </div>
+        {!isContactsCategory ? (
+          <div className="flex flex-col items-stretch gap-3 sm:items-end">
+            <label className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950">
+              <input
+                type="checkbox"
+                checked={secureUploadEnabled}
+                onChange={(event) => setSecureUploadEnabled(event.target.checked)}
+              />
+              Secure this file 🔐
+            </label>
+            <label className="portal-primary-button cursor-pointer">
+              {uploading ? "Uploading..." : secureUploadEnabled ? "Upload securely" : "Upload file"}
+              <input type="file" className="hidden" disabled={uploading} onChange={handleUpload} />
+            </label>
+          </div>
+        ) : null}
       </div>
 
-      <div
-        className={`portal-upload-zone rounded-3xl border-2 border-dashed p-8 text-center transition ${
-          dragActive
-            ? "border-sky-400 bg-sky-50/80 dark:border-sky-500 dark:bg-sky-950/30"
-            : "border-zinc-200 bg-white/70 dark:border-zinc-700 dark:bg-zinc-950/50"
-        }`}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDragActive(true);
-        }}
-        onDragLeave={() => setDragActive(false)}
-        onDrop={async (event) => {
-          event.preventDefault();
-          setDragActive(false);
-          const file = event.dataTransfer.files?.[0];
-          if (file) {
-            await uploadFile(file);
-          }
-        }}
-      >
-        <div className="mx-auto flex max-w-md flex-col items-center gap-3">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/20">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-7 w-7">
-              <path d="M12 16V6M8 10l4-4 4 4M5 20h14" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-          <p className="text-sm font-medium">Drag and drop a file here, or use the upload button</p>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Max file size: {data.maxFileSize.label}
-          </p>
+      {!isContactsCategory ? (
+        <div
+          className={`portal-upload-zone rounded-3xl border-2 border-dashed p-8 text-center transition ${
+            dragActive
+              ? "border-sky-400 bg-sky-50/80 dark:border-sky-500 dark:bg-sky-950/30"
+              : "border-zinc-200 bg-white/70 dark:border-zinc-700 dark:bg-zinc-950/50"
+          }`}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragActive(true);
+          }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={async (event) => {
+            event.preventDefault();
+            setDragActive(false);
+            const file = event.dataTransfer.files?.[0];
+            if (file) {
+              await uploadFile(file);
+            }
+          }}
+        >
+          <div className="mx-auto flex max-w-md flex-col items-center gap-3">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/20">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-7 w-7">
+                <path d="M12 16V6M8 10l4-4 4 4M5 20h14" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <p className="text-sm font-medium">Drag and drop a file here, or use the upload button</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Max file size: {data.maxFileSize.label}
+            </p>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <section className="portal-card">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -357,177 +382,189 @@ export function FilesClient({ initialData, initialQuery = "" }: FilesClientProps
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search files..."
-              className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none ring-sky-500/30 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950"
-            />
-            <select
-              value={sortBy}
-              onChange={(event) =>
-                setSortBy(event.target.value as "name" | "size" | "date")
-              }
-              className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-            >
-              <option value="date">Newest first</option>
-              <option value="name">Name</option>
-              <option value="size">Size</option>
-            </select>
-            <div className="flex rounded-xl border border-zinc-200 p-1 dark:border-zinc-700">
-              <button
-                type="button"
-                onClick={() => setViewMode("list")}
-                className={viewMode === "list" ? "portal-chip-active !rounded-lg" : "portal-chip !rounded-lg !border-0"}
+          {!isContactsCategory ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search files..."
+                className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none ring-sky-500/30 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950"
+              />
+              <select
+                value={sortBy}
+                onChange={(event) =>
+                  setSortBy(event.target.value as "name" | "size" | "date")
+                }
+                className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
               >
-                List
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("grid")}
-                className={viewMode === "grid" ? "portal-chip-active !rounded-lg" : "portal-chip !rounded-lg !border-0"}
-              >
-                Grid
-              </button>
+                <option value="date">Newest first</option>
+                <option value="name">Name</option>
+                <option value="size">Size</option>
+              </select>
+              <div className="flex rounded-xl border border-zinc-200 p-1 dark:border-zinc-700">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("list")}
+                  className={viewMode === "list" ? "portal-chip-active !rounded-lg" : "portal-chip !rounded-lg !border-0"}
+                >
+                  List
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("grid")}
+                  className={viewMode === "grid" ? "portal-chip-active !rounded-lg" : "portal-chip !rounded-lg !border-0"}
+                >
+                  Grid
+                </button>
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
 
-        {actionMessage ? (
-          <p className="portal-alert-success mt-4">{actionMessage}</p>
-        ) : null}
-        {error ? <p className="portal-alert-error mt-4">{error}</p> : null}
+        {!isContactsCategory ? (
+          <>
+            {actionMessage ? (
+              <p className="portal-alert-success mt-4">{actionMessage}</p>
+            ) : null}
+            {error ? <p className="portal-alert-error mt-4">{error}</p> : null}
 
-        {filteredFiles.length === 0 ? (
-          <div className="portal-empty-state mt-8">
-            <p className="text-lg font-medium">No files here yet</p>
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              Upload your first file to get started.
-            </p>
-          </div>
-        ) : viewMode === "grid" ? (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filteredFiles.map((file) => (
-              <article key={file.id} className="portal-file-card">
-                <div className="flex items-start gap-3">
-                  <FileTypeIcon category={file.category} mimeType={file.mimeType} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">
-                      {file.isSecure ? "🔐 " : ""}
-                      {file.name}
-                    </p>
-                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                      {file.categoryLabel} · {file.sizeLabel}
-                      {file.isSecure ? " · Secure / Zero-Knowledge" : ""}
-                    </p>
-                    <p className="mt-1 text-xs text-zinc-400">
-                      {new Date(file.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button type="button" className="portal-secondary-button" onClick={() => handleDownload(file.id)}>
-                    Download
-                  </button>
-                  <button
-                    type="button"
-                    className="portal-secondary-button"
-                    onClick={() => void handleStar(file.id, !file.starred, file.name)}
-                  >
-                    {file.starred ? "Unstar" : "Star"}
-                  </button>
-                  <button
-                    type="button"
-                    className="portal-danger-button"
-                    onClick={() => handleDelete(file.id, file.name)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-6 overflow-x-auto">
-            <table className="portal-table min-w-full">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Category</th>
-                  <th>Size</th>
-                  <th>Uploaded</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+            {filteredFiles.length === 0 ? (
+              <div className="portal-empty-state mt-8">
+                <p className="text-lg font-medium">No files here yet</p>
+                <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                  Upload your first file to get started.
+                </p>
+              </div>
+            ) : viewMode === "grid" ? (
+              <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredFiles.map((file) => (
-                  <tr key={file.id}>
-                    <td>
-                      <div className="flex items-center gap-3">
-                        <FileTypeIcon category={file.category} mimeType={file.mimeType} compact />
-                        <span className="font-medium">
+                  <article key={file.id} className="portal-file-card">
+                    <div className="flex items-start gap-3">
+                      <FileTypeIcon category={file.category} mimeType={file.mimeType} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">
                           {file.isSecure ? "🔐 " : ""}
                           {file.name}
-                        </span>
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                          {file.categoryLabel} · {file.sizeLabel}
+                          {file.isSecure ? " · Secure / Zero-Knowledge" : ""}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-400">
+                          {new Date(file.createdAt).toLocaleDateString()}
+                        </p>
                       </div>
-                    </td>
-                    <td>{file.categoryLabel}</td>
-                    <td>{file.sizeLabel}</td>
-                    <td>{new Date(file.createdAt).toLocaleString()}</td>
-                    <td>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          className="portal-secondary-button"
-                          onClick={() =>
-                            setOpenMenuId(openMenuId === file.id ? null : file.id)
-                          }
-                        >
-                          Actions
-                        </button>
-                        {openMenuId === file.id ? (
-                          <div className="absolute right-0 z-10 mt-2 w-40 rounded-xl border border-zinc-200 bg-white p-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-950">
-                            <button
-                              type="button"
-                              className="portal-menu-item w-full text-left"
-                              onClick={() => {
-                                setOpenMenuId(null);
-                                void handleDownload(file.id);
-                              }}
-                            >
-                              Download
-                            </button>
-                            <button
-                              type="button"
-                              className="portal-menu-item w-full text-left"
-                              onClick={() => {
-                                setOpenMenuId(null);
-                                void handleStar(file.id, !file.starred, file.name);
-                              }}
-                            >
-                              {file.starred ? "Unstar" : "Star"}
-                            </button>
-                            <button
-                              type="button"
-                              className="portal-menu-item w-full text-left text-red-600 dark:text-red-400"
-                              onClick={() => {
-                                setOpenMenuId(null);
-                                void handleDelete(file.id, file.name);
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button type="button" className="portal-secondary-button" onClick={() => handleDownload(file.id)}>
+                        Download
+                      </button>
+                      <button
+                        type="button"
+                        className="portal-secondary-button"
+                        onClick={() => void handleStar(file.id, !file.starred, file.name)}
+                      >
+                        {file.starred ? "Unstar" : "Star"}
+                      </button>
+                      <button
+                        type="button"
+                        className="portal-danger-button"
+                        onClick={() => handleDelete(file.id, file.name)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </article>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            ) : (
+              <div className="mt-6 overflow-x-auto">
+                <table className="portal-table min-w-full">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Category</th>
+                      <th>Size</th>
+                      <th>Uploaded</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredFiles.map((file) => (
+                      <tr key={file.id}>
+                        <td>
+                          <div className="flex items-center gap-3">
+                            <FileTypeIcon category={file.category} mimeType={file.mimeType} compact />
+                            <span className="font-medium">
+                              {file.isSecure ? "🔐 " : ""}
+                              {file.name}
+                            </span>
+                          </div>
+                        </td>
+                        <td>{file.categoryLabel}</td>
+                        <td>{file.sizeLabel}</td>
+                        <td>{new Date(file.createdAt).toLocaleString()}</td>
+                        <td>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              className="portal-secondary-button"
+                              onClick={() =>
+                                setOpenMenuId(openMenuId === file.id ? null : file.id)
+                              }
+                            >
+                              Actions
+                            </button>
+                            {openMenuId === file.id ? (
+                              <div className="absolute right-0 z-10 mt-2 w-40 rounded-xl border border-zinc-200 bg-white p-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-950">
+                                <button
+                                  type="button"
+                                  className="portal-menu-item w-full text-left"
+                                  onClick={() => {
+                                    setOpenMenuId(null);
+                                    void handleDownload(file.id);
+                                  }}
+                                >
+                                  Download
+                                </button>
+                                <button
+                                  type="button"
+                                  className="portal-menu-item w-full text-left"
+                                  onClick={() => {
+                                    setOpenMenuId(null);
+                                    void handleStar(file.id, !file.starred, file.name);
+                                  }}
+                                >
+                                  {file.starred ? "Unstar" : "Star"}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="portal-menu-item w-full text-left text-red-600 dark:text-red-400"
+                                  onClick={() => {
+                                    setOpenMenuId(null);
+                                    void handleDelete(file.id, file.name);
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        ) : contactsViewData ? (
+          <div className="mt-6">
+            <ContactsClient initialData={contactsViewData} embedded />
           </div>
+        ) : (
+          <p className="portal-alert-error mt-4">Unable to load contacts backup.</p>
         )}
       </section>
 

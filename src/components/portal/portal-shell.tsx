@@ -16,7 +16,6 @@ type PortalShellProps = {
 const navItems = [
   { href: "/overview", label: "Overview", icon: "overview" },
   { href: "/files", label: "My Files", icon: "files" },
-  { href: "/contacts", label: "Contacts", icon: "contacts" },
   { href: "/starred", label: "Starred", icon: "starred" },
   { href: "/trash", label: "Trash", icon: "trash" },
 ] as const;
@@ -470,7 +469,7 @@ export function PortalShell({
         }`}
       >
         <div className="mx-auto grid max-w-lg grid-cols-5 gap-1 px-2 py-2">
-          {[...navItems.slice(0, 4), { href: "/profile", label: "Account", icon: "profile" as const }].map((item) => {
+          {[...navItems, { href: "/profile", label: "Account", icon: "profile" as const }].map((item) => {
             const active = pathname === item.href;
             return (
               <Link

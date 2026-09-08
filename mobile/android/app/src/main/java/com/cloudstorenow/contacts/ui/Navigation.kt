@@ -11,11 +11,14 @@ import com.cloudstorenow.contacts.ui.enable.EnableBackupScreen
 import com.cloudstorenow.contacts.ui.enable.EnableBackupViewModel
 import com.cloudstorenow.contacts.ui.login.LoginScreen
 import com.cloudstorenow.contacts.ui.login.LoginViewModel
+import com.cloudstorenow.contacts.ui.pair.PairDeviceScreen
+import com.cloudstorenow.contacts.ui.pair.PairDeviceViewModel
 import com.cloudstorenow.contacts.ui.settings.BackupSettingsScreen
 import com.cloudstorenow.contacts.ui.settings.BackupSettingsViewModel
 
 object Routes {
     const val LOGIN = "login"
+    const val PAIR_DEVICE = "pair_device"
     const val ENABLE_BACKUP = "enable_backup"
     const val SETTINGS = "settings"
 }
@@ -44,6 +47,29 @@ fun CloudStoreNowNavHost(
                     navController.navigate(destination) {
                         popUpTo(Routes.LOGIN) { inclusive = true }
                     }
+                },
+                onConnectWithPairingCode = {
+                    navController.navigate(Routes.PAIR_DEVICE)
+                },
+            )
+        }
+
+        composable(Routes.PAIR_DEVICE) {
+            val viewModel: PairDeviceViewModel = viewModel()
+            PairDeviceScreen(
+                viewModel = viewModel,
+                onPaired = {
+                    val destination = if (viewModel.needsOnboarding()) {
+                        Routes.ENABLE_BACKUP
+                    } else {
+                        Routes.SETTINGS
+                    }
+                    navController.navigate(destination) {
+                        popUpTo(Routes.LOGIN) { inclusive = true }
+                    }
+                },
+                onBackToLogin = {
+                    navController.popBackStack()
                 },
             )
         }

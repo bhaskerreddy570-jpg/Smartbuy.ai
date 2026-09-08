@@ -44,6 +44,10 @@
       "model": "DeviceContactMapping",
       "namespace": "public"
     },
+    "devicePairingSession": {
+      "model": "DevicePairingSession",
+      "namespace": "public"
+    },
     "file": {
       "model": "File",
       "namespace": "public"
@@ -1370,6 +1374,21 @@
                   "namespace": "public"
                 }
               },
+              "pairingSessions": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "deviceId"
+                  ]
+                },
+                "to": {
+                  "model": "DevicePairingSession",
+                  "namespace": "public"
+                }
+              },
               "tokens": {
                 "cardinality": "1:N",
                 "on": {
@@ -1667,6 +1686,118 @@
               },
               "namespaceId": "public",
               "table": "deviceContactMapping"
+            }
+          },
+          "DevicePairingSession": {
+            "fields": {
+              "codeHash": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "consumedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "deviceId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "expiresAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "device": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "deviceId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "CustomerDevice",
+                  "namespace": "public"
+                }
+              },
+              "user": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "codeHash": {
+                  "column": "codeHash"
+                },
+                "consumedAt": {
+                  "column": "consumedAt"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "deviceId": {
+                  "column": "deviceId"
+                },
+                "expiresAt": {
+                  "column": "expiresAt"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "devicePairingSession"
             }
           },
           "File": {
@@ -2527,6 +2658,21 @@
                 },
                 "to": {
                   "model": "CustomerDevice",
+                  "namespace": "public"
+                }
+              },
+              "devicePairingSessions": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "DevicePairingSession",
                   "namespace": "public"
                 }
               },
@@ -3764,6 +3910,117 @@
                 }
               ]
             },
+            "devicePairingSession": {
+              "columns": {
+                "codeHash": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "consumedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "deviceId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": true
+                },
+                "expiresAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "userId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "devicePairingSession"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "user"
+                  }
+                },
+                {
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "deviceId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "devicePairingSession"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "customerDevice"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "deviceId"
+                  ],
+                  "name": "devicePairingSession_deviceId_idx_a7d461e8",
+                  "prefix": "devicePairingSession_deviceId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "expiresAt"
+                  ],
+                  "name": "devicePairingSession_expiresAt_idx_6b6b8c10",
+                  "prefix": "devicePairingSession_expiresAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "devicePairingSession_userId_idx_a489d58a",
+                  "prefix": "devicePairingSession_userId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "file": {
               "checks": [
                 {
@@ -4619,10 +4876,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "b354bca5f9be38e21931f11e3abbb89563de94cc3498ce519d0792286a79ff7a"
+    "storageHash": "27ef97615bdea45da4e7055103a711356a9aa1c0f861ae0e06580657f2543f65"
   },
   "execution": {
-    "executionHash": "0f765720e7994aa1c6c654cfec398d156d8b8e39c6a26ac4f1fe931797373f44",
+    "executionHash": "e653937496620ac89066e28ffe6e96ed6973b4ddfbe0e1c09189c6164dbb1cb5",
     "mutations": {
       "defaults": [
         {
@@ -4812,6 +5069,17 @@
             "column": "updatedAt",
             "namespace": "public",
             "table": "deviceContactMapping"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "devicePairingSession"
           }
         },
         {

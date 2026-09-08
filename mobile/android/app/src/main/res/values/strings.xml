@@ -25,4 +25,10 @@
     <string name="syncing">Syncing…</string>
     <string name="sync_failed">Sync failed</string>
     <string name="signed_in_as">Signed in as %1$s</string>
+    <string name="pair_device_title">Connect this device</string>
+    <string name="pair_device_subtitle">Enter the pairing code shown on the CloudStoreNow website under My Files → Contacts.</string>
+    <string name="pairing_code_label">Pairing code</string>
+    <string name="connect_device">Connect device</string>
+    <string name="back_to_sign_in">Back to sign in</string>
+    <string name="connect_with_pairing_code">Connect with pairing code</string>
 </resources>

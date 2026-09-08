@@ -125,6 +125,7 @@ model User {
   cloudContacts CloudContact[]
   customerDevices CustomerDevice[]
   contactBackupSettings ContactBackupSettings?
+  devicePairingSessions DevicePairingSession[]
 }
 
 model File {
@@ -299,9 +300,26 @@ model CustomerDevice {
   user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   tokens   CustomerDeviceToken[]
   mappings DeviceContactMapping[]
+  pairingSessions DevicePairingSession[]
 
   @@index([userId])
   @@index([userId, revokedAt])
+}
+
+model DevicePairingSession {
+  id         Uuid              @id @default(uuid())
+  userId     Uuid
+  codeHash   String
+  expiresAt  TimestamptzString
+  consumedAt TimestamptzString?
+  deviceId   Uuid?
+  createdAt  TimestamptzString @default(now())
+
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device CustomerDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model CustomerDeviceToken {

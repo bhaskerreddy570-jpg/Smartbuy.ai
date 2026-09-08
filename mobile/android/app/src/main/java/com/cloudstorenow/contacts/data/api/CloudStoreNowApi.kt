@@ -27,4 +27,7 @@ interface CloudStoreNowApi {
         @Header("Authorization") authorization: String,
         @Body request: BackupSettingsRequest,
     ): Response<BackupSummaryResponse>
+
+    @POST("/api/mobile/v1/devices/pairing/complete")
+    suspend fun completePairing(@Body request: PairingCompleteRequest): Response<LoginResponse>
 }
