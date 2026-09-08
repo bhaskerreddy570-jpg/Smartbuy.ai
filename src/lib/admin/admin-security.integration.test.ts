@@ -44,9 +44,9 @@ function adminCookie(token: string): string {
   return `${ADMIN_SESSION_COOKIE}=${token}`;
 }
 
-async function createTestAdmin(): Promise<TestAdmin> {
+async function createTestAdmin(params?: { email?: string }): Promise<TestAdmin> {
   const id = randomUUID();
-  const email = `security-test-${id}@example.com`;
+  const email = params?.email ?? `security-test-${id}@example.com`;
   const passwordHash = await hashAdminPassword('InitialPassword123!');
 
   await orm.AdminUser.create({
@@ -310,7 +310,7 @@ describeIntegration('admin security integration', () => {
     await cleanupAdmin(admin.id);
   });
 
-  it('10. ensures configured ADMIN without overwriting an existing password', async () => {
+  it('10. enforces a single configured ADMIN without overwriting an existing password', async () => {
     const existing = await createTestAdmin();
     const beforeHash = (await orm.AdminUser.where({ id: existing.id }).first())!.passwordHash;
 
@@ -325,21 +325,22 @@ describeIntegration('admin security integration', () => {
     assert.equal(afterHash, beforeHash);
 
     const additionalEmail = `new-${randomUUID()}@example.com`;
-    process.env.ADMIN_INITIAL_EMAIL = additionalEmail;
+    const additional = await createTestAdmin({ email: additionalEmail });
+    createdAdminIds.add(additional.id);
+
+    process.env.ADMIN_INITIAL_EMAIL = existing.email;
     process.env.ADMIN_INITIAL_PASSWORD = 'DifferentPassword123!';
 
-    const created = await provisionInitialAdmin();
-    assert.equal(created.status, 'created');
-    assert.equal(created.email, additionalEmail.toLowerCase());
+    const consolidated = await provisionInitialAdmin();
+    assert.equal(consolidated.status, 'already_exists');
+    assert.equal(consolidated.removedOtherAdmins, 1);
 
-    const additionalAdmin = await orm.AdminUser.where({
-      email: additionalEmail.toLowerCase(),
-    }).first();
-    assert.ok(additionalAdmin);
-    createdAdminIds.add(additionalAdmin!.id);
+    const remainingAdmins = await orm.AdminUser.select('email').all();
+    assert.equal(remainingAdmins.length, 1);
+    assert.equal(remainingAdmins[0]?.email, existing.email.toLowerCase());
+    assert.equal(await orm.AdminUser.where({ id: additional.id }).first(), null);
 
     await cleanupAdmin(existing.id);
-    await cleanupAdmin(additionalAdmin!.id);
   });
 
   it('11. authenticates ADMIN login and rejects wrong password', async () => {

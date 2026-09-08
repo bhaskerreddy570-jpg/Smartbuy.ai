@@ -33,7 +33,8 @@ Legacy aliases still supported by the bootstrap script:
 
 Behavior:
 
-- Creates the first ADMIN only when no admin account exists
+- Creates or preserves the configured ADMIN email from env vars
+- Removes any other admin accounts so only one application ADMIN remains
 - Refuses to overwrite an existing ADMIN password
 - Never prints the password
 - Reports whether the ADMIN was created or already exists

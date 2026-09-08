@@ -23,10 +23,20 @@ async function main() {
   switch (result.status) {
     case 'created':
       console.log(`Initial ADMIN created for ${result.email}.`);
+      if (result.removedOtherAdmins > 0) {
+        console.log(
+          `Removed ${result.removedOtherAdmins} other admin account(s) to enforce single-admin policy.`,
+        );
+      }
       console.log('Sign in at /admin/login and change the password after first login.');
       return;
     case 'already_exists':
-      console.log(`ADMIN already exists for ${result.email}. No changes were made.`);
+      console.log(`ADMIN already exists for ${result.email}. No password changes were made.`);
+      if (result.removedOtherAdmins > 0) {
+        console.log(
+          `Removed ${result.removedOtherAdmins} other admin account(s) to enforce single-admin policy.`,
+        );
+      }
       return;
     case 'missing_credentials':
       console.error(

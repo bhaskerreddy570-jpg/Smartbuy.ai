@@ -6,6 +6,7 @@ import {
 } from '@/lib/customer-limits';
 import { getDashboardData, type DashboardData } from '@/lib/dashboard';
 import { ADMIN_SESSION_COOKIE, getAdminSessionUser } from '@/lib/admin/session';
+import { resolvePortalUserRole } from '@/lib/admin/bootstrap';
 import { isCustomerAccountLocked } from '@/lib/admin/customer-accounts';
 import { getCustomerStorageUsageByCategory } from '@/lib/storage/category-usage';
 import { formatBytes } from '@/lib/storage/validation';
@@ -17,7 +18,7 @@ export type PortalUser = {
   email: string;
   createdAt: string;
   status: 'Active' | 'Locked';
-  role: 'USER';
+  role: 'USER' | 'ADMIN';
 };
 
 export type PortalStorageSummary = {
@@ -89,6 +90,7 @@ export async function getPortalContext(userId: string): Promise<PortalContext | 
   const adminSession = await getAdminSessionUser(
     cookieStore.get(ADMIN_SESSION_COOKIE)?.value,
   );
+  const portalRole = await resolvePortalUserRole(user.email);
 
   return {
     user: {
@@ -97,7 +99,7 @@ export async function getPortalContext(userId: string): Promise<PortalContext | 
       email: user.email,
       createdAt: user.createdAt,
       status: 'Active',
-      role: 'USER',
+      role: portalRole,
     },
     storageSummary: {
       used: limits.storageUsed.toString(),
@@ -126,6 +128,8 @@ export async function getOverviewData(userId: string): Promise<OverviewData | nu
   if (!dashboard || !user || isCustomerAccountLocked(user)) {
     return null;
   }
+
+  const portalRole = await resolvePortalUserRole(user.email);
 
   const quota = BigInt(dashboard.storage.quota);
   const categorySource = usage?.categories ?? [];
@@ -165,7 +169,7 @@ export async function getOverviewData(userId: string): Promise<OverviewData | nu
       email: user.email,
       createdAt: user.createdAt,
       status: 'Active',
-      role: 'USER',
+      role: portalRole,
     },
     greeting: buildGreeting(user.name),
     categoryUsage: categories,
@@ -209,6 +213,7 @@ export async function getProfileData(userId: string): Promise<ProfileData | null
     return null;
   }
 
+  const portalRole = await resolvePortalUserRole(user.email);
   const limits = resolveCustomerLimits(user);
   const bandwidthUsed = shouldResetBandwidthPeriod(user.bandwidthPeriodStart)
     ? 0n
@@ -241,7 +246,7 @@ export async function getProfileData(userId: string): Promise<ProfileData | null
       email: user.email,
       createdAt: user.createdAt,
       status: 'Active',
-      role: 'USER',
+      role: portalRole,
     },
     storage: {
       used: limits.storageUsed.toString(),

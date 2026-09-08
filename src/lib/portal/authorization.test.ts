@@ -58,8 +58,17 @@ describe('portal and role separation', () => {
       join(customerApiRoot, 'profile', 'route.ts'),
       'utf8',
     );
-    assert.doesNotMatch(profileRoute, /role/);
+    assert.doesNotMatch(profileRoute, /\brole\b/);
     assert.match(profileRoute, /name/);
+  });
+
+  it('derives portal role from AdminUser records without customer self-promotion', () => {
+    const portalDataSource = readFileSync(
+      join(projectRoot, 'lib', 'portal', 'data.ts'),
+      'utf8',
+    );
+    assert.match(portalDataSource, /resolvePortalUserRole/);
+    assert.doesNotMatch(portalDataSource, /role:\s*'USER'/);
   });
 
   it('shows admin portal entry only through server-provided admin session flag', () => {

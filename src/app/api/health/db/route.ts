@@ -8,6 +8,7 @@ import {
   resolveAuthUrl,
   resolveDatabaseUrl,
 } from '@/lib/server-env';
+import { readInitialAdminCredentials } from '@/lib/admin/bootstrap';
 import { resolveAwsCredentials, resolveS3Bucket } from '@/lib/config';
 
 function awsEnvPresence() {
@@ -112,6 +113,36 @@ export async function GET() {
       );
     }
 
+    let adminTableExists = false;
+    let adminCount = 0;
+    let designatedAdminPresent = false;
+    const designatedAdminEmail =
+      readInitialAdminCredentials().email?.toLowerCase() ?? null;
+
+    const adminTableResult = await pool.query<{ exists: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1
+         FROM information_schema.tables
+         WHERE table_schema = 'public' AND table_name = 'adminUser'
+       ) AS exists`,
+    );
+    adminTableExists = adminTableResult.rows[0]?.exists === true;
+
+    if (adminTableExists) {
+      const adminCountResult = await pool.query<{ count: string }>(
+        'SELECT COUNT(*)::text AS count FROM "adminUser"',
+      );
+      adminCount = Number(adminCountResult.rows[0]?.count ?? '0');
+
+      if (designatedAdminEmail) {
+        const designatedResult = await pool.query<{ exists: boolean }>(
+          'SELECT EXISTS (SELECT 1 FROM "adminUser" WHERE email = $1) AS exists',
+          [designatedAdminEmail],
+        );
+        designatedAdminPresent = designatedResult.rows[0]?.exists === true;
+      }
+    }
+
     const ok =
       authSecretConfigured &&
       userTableExists &&
@@ -141,6 +172,11 @@ export async function GET() {
         userSchemaReady,
         fileSchemaReady,
         storageConfigured,
+        adminTableExists,
+        adminCount,
+        adminConfigured: adminCount === 1,
+        designatedAdminEmailConfigured: Boolean(designatedAdminEmail),
+        designatedAdminPresent,
         awsEnv,
         authRelatedEnvKeys,
         envPresence,

@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { orm } from '@/lib/db';
 import { hashAdminPassword } from '@/lib/admin/password';
+import { revokeAllAdminSessions } from '@/lib/admin/session';
 
 export type ProvisionInitialAdminResult =
-  | { status: 'created'; email: string }
-  | { status: 'already_exists'; email: string }
+  | { status: 'created'; email: string; removedOtherAdmins: number }
+  | { status: 'already_exists'; email: string; removedOtherAdmins: number }
   | { status: 'missing_credentials' }
   | { status: 'invalid_credentials'; reason: string };
 
@@ -46,6 +47,53 @@ export async function countAdminUsers(): Promise<number> {
   return admins.length;
 }
 
+export async function getAdminUserByEmail(
+  email: string,
+): Promise<{ id: string; email: string; role: 'ADMIN'; lockedAt: string | null } | null> {
+  return orm.AdminUser.where({ email: email.toLowerCase() })
+    .select('id', 'email', 'role', 'lockedAt')
+    .first();
+}
+
+export async function consolidateSingleApplicationAdmin(
+  designatedEmail: string,
+): Promise<number> {
+  const normalizedEmail = designatedEmail.toLowerCase();
+  const admins = await orm.AdminUser.select('id', 'email').all();
+  let removedOtherAdmins = 0;
+
+  for (const admin of admins) {
+    if (admin.email === normalizedEmail) {
+      continue;
+    }
+
+    await revokeAllAdminSessions(admin.id);
+    await orm.AdminUser.where({ id: admin.id }).delete();
+    removedOtherAdmins += 1;
+  }
+
+  const designatedAdmin = await orm.AdminUser.where({ email: normalizedEmail }).first();
+  if (designatedAdmin) {
+    const updates: Record<string, string | number | null> = {};
+
+    if (designatedAdmin.role !== 'ADMIN') {
+      updates.role = 'ADMIN';
+    }
+    if (designatedAdmin.lockedAt) {
+      updates.lockedAt = null;
+      updates.lockReason = null;
+      updates.failedLoginAttempts = 0;
+      updates.lastFailedLoginAt = null;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await orm.AdminUser.where({ id: designatedAdmin.id }).update(updates);
+    }
+  }
+
+  return removedOtherAdmins;
+}
+
 export async function provisionInitialAdmin(): Promise<ProvisionInitialAdminResult> {
   const { email, password, displayName } = readInitialAdminCredentials();
 
@@ -57,13 +105,12 @@ export async function provisionInitialAdmin(): Promise<ProvisionInitialAdminResu
   const existingAdmin = await orm.AdminUser.where({ email: normalizedEmail }).first();
 
   if (existingAdmin) {
-    if (existingAdmin.role !== 'ADMIN') {
-      await orm.AdminUser.where({ id: existingAdmin.id }).update({ role: 'ADMIN' });
-    }
+    const removedOtherAdmins = await consolidateSingleApplicationAdmin(normalizedEmail);
 
     return {
       status: 'already_exists',
       email: normalizedEmail,
+      removedOtherAdmins,
     };
   }
 
@@ -94,5 +141,18 @@ export async function provisionInitialAdmin(): Promise<ProvisionInitialAdminResu
     mfaEnabled: false,
   });
 
-  return { status: 'created', email: normalizedEmail };
+  const removedOtherAdmins = await consolidateSingleApplicationAdmin(normalizedEmail);
+
+  return { status: 'created', email: normalizedEmail, removedOtherAdmins };
+}
+
+export async function resolvePortalUserRole(
+  email: string,
+): Promise<'USER' | 'ADMIN'> {
+  const adminUser = await getAdminUserByEmail(email);
+  if (adminUser && adminUser.role === 'ADMIN' && !adminUser.lockedAt) {
+    return 'ADMIN';
+  }
+
+  return 'USER';
 }
