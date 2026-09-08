@@ -1,0 +1,476 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0E71B5EEC204418CB45A72B9 /* CloudStoreNowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F88D10E6D2045A4BAC1B884 /* CloudStoreNowApp.swift */; };
+		137C76D2FFE442FA981E6833 /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0C4006B8C24856B1959C16 /* AppConfig.swift */; };
+		4DB3D86B27E94494A9C3E835 /* ContactPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD8BCBCA51284D208DD829C2 /* ContactPayload.swift */; };
+		8192BAF8AEE443848FA7EBCA /* PendingSyncItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D79C39FA42ED41A184B2AEDB /* PendingSyncItem.swift */; };
+		1A36203FF09D4FA4B8D744E1 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F709E9A3D03148F3A11BCAB4 /* APIClient.swift */; };
+		EDDD1A7E24054415A244D839 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48A3FA640DC84E0095CA5818 /* KeychainService.swift */; };
+		8924F75631374A9F8B82B077 /* ContactMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7642C53B3504925A78D537D /* ContactMapper.swift */; };
+		0C6AA89BEA9C4868B8EBDF37 /* ContactsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C4BB61E10934DB6AB1277CC /* ContactsService.swift */; };
+		2D6AE3A1202F4BAEB71CBE1A /* ContactMappingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8299DA7A86E24F0CBFF76A26 /* ContactMappingStore.swift */; };
+		7864EFE03EA34419AD49EAB6 /* PendingSyncQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFFEB749933547E4A3A9A7BB /* PendingSyncQueue.swift */; };
+		90AC2393AE544BB09755E203 /* SyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B0A8B348C04187A81FF401 /* SyncEngine.swift */; };
+		2089AA44478B4E1D8601C41E /* BackgroundTaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD7936C8A0C43BAB692BC52 /* BackgroundTaskManager.swift */; };
+		0EA9C4525BBF48BB9D01E774 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E490D5BCD7D492C8CBF630D /* AuthViewModel.swift */; };
+		2E40A00DD8A04EA585EC5E74 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14769B631F26454093E85A34 /* LoginView.swift */; };
+		482568AD79AA4A878F1EF1EC /* EnableBackupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E8542BC471F49AEA1BF39AF /* EnableBackupView.swift */; };
+		61734BBF7E6740E1B2846883 /* BackupStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4757D942A4654CEE952FABF9 /* BackupStatusView.swift */; };
+		F008CD89942D417E910B81A3 /* RestoreConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02AE3883F2B74793BB21EDC2 /* RestoreConfirmationView.swift */; };
+		0AB869ADD515486FA51E82A9 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7F3FCD7B16F453781B8F45C /* RootView.swift */; };
+		0E458DEAE3584502AC13C370 /* ContactPayloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B94D111423B45568484C0C5 /* ContactPayloadTests.swift */; };
+		3B21F9E5CD16436AB631D596 /* ContactMapperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78F6F00CF1934A7D906DE326 /* ContactMapperTests.swift */; };
+		5737E36143E14CFE9490289F /* AppConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AAADFDAF7D746F2AFA4BDD0 /* AppConfigTests.swift */; };
+		E1EFD113E9454BBE913C8504 /* ContactMappingStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48D961A9C2D343FE96869B13 /* ContactMappingStoreTests.swift */; };
+		D327128591AE4DD393880D82 /* CloudStoreNow.app in Embed */ = {isa = PBXBuildFile; fileRef = F51507D072B442179578F5C6 /* CloudStoreNow.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		F51507D072B442179578F5C6 /* CloudStoreNow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CloudStoreNow.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		61B775A9901D4CD2BAF0ACC5 /* CloudStoreNowTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CloudStoreNowTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5F88D10E6D2045A4BAC1B884 /* CloudStoreNowApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudStoreNowApp.swift; sourceTree = "<group>"; };
+		DD0C4006B8C24856B1959C16 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		CD8BCBCA51284D208DD829C2 /* ContactPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactPayload.swift; sourceTree = "<group>"; };
+		D79C39FA42ED41A184B2AEDB /* PendingSyncItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingSyncItem.swift; sourceTree = "<group>"; };
+		F709E9A3D03148F3A11BCAB4 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		48A3FA640DC84E0095CA5818 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
+		D7642C53B3504925A78D537D /* ContactMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactMapper.swift; sourceTree = "<group>"; };
+		4C4BB61E10934DB6AB1277CC /* ContactsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsService.swift; sourceTree = "<group>"; };
+		8299DA7A86E24F0CBFF76A26 /* ContactMappingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactMappingStore.swift; sourceTree = "<group>"; };
+		CFFEB749933547E4A3A9A7BB /* PendingSyncQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingSyncQueue.swift; sourceTree = "<group>"; };
+		C2B0A8B348C04187A81FF401 /* SyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncEngine.swift; sourceTree = "<group>"; };
+		6BD7936C8A0C43BAB692BC52 /* BackgroundTaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskManager.swift; sourceTree = "<group>"; };
+		1E490D5BCD7D492C8CBF630D /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
+		14769B631F26454093E85A34 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		6E8542BC471F49AEA1BF39AF /* EnableBackupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnableBackupView.swift; sourceTree = "<group>"; };
+		4757D942A4654CEE952FABF9 /* BackupStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupStatusView.swift; sourceTree = "<group>"; };
+		02AE3883F2B74793BB21EDC2 /* RestoreConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestoreConfirmationView.swift; sourceTree = "<group>"; };
+		E7F3FCD7B16F453781B8F45C /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		8D2A3CAE2FE7470BA65A60D5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		3B94D111423B45568484C0C5 /* ContactPayloadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactPayloadTests.swift; sourceTree = "<group>"; };
+		78F6F00CF1934A7D906DE326 /* ContactMapperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactMapperTests.swift; sourceTree = "<group>"; };
+		0AAADFDAF7D746F2AFA4BDD0 /* AppConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigTests.swift; sourceTree = "<group>"; };
+		48D961A9C2D343FE96869B13 /* ContactMappingStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactMappingStoreTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B200951371404748A9719470 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		356F15CDBD5D474291095DDA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		24B1A317009A40D1A5116E31 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				5F88D10E6D2045A4BAC1B884,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		FA0BF346876A44E9BAD7CCC9 /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				DD0C4006B8C24856B1959C16,
+			);
+			path = Configuration;
+			sourceTree = "<group>";
+		};
+		74E547E0FBCA4911A16EBAC8 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				CD8BCBCA51284D208DD829C2,
+				D79C39FA42ED41A184B2AEDB,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		BC9556E181594C4EBEA3CAE6 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				F709E9A3D03148F3A11BCAB4,
+				48A3FA640DC84E0095CA5818,
+				D7642C53B3504925A78D537D,
+				4C4BB61E10934DB6AB1277CC,
+				8299DA7A86E24F0CBFF76A26,
+				CFFEB749933547E4A3A9A7BB,
+				C2B0A8B348C04187A81FF401,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		B77421FEB744459E886052F8 /* Background */ = {
+			isa = PBXGroup;
+			children = (
+				6BD7936C8A0C43BAB692BC52,
+			);
+			path = Background;
+			sourceTree = "<group>";
+		};
+		61C14E65C03145D8AF0191FF /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				1E490D5BCD7D492C8CBF630D,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		2CEAF6359140450F9CEEE7EF /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				14769B631F26454093E85A34,
+				6E8542BC471F49AEA1BF39AF,
+				4757D942A4654CEE952FABF9,
+				02AE3883F2B74793BB21EDC2,
+				E7F3FCD7B16F453781B8F45C,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		738A1AACDE494E6FA3833C8B /* Supporting */ = {
+			isa = PBXGroup;
+			children = (
+				8D2A3CAE2FE7470BA65A60D5,
+			);
+			sourceTree = "<group>";
+		};
+		334CAACA9A3C4F0296451ADF /* CloudStoreNow */ = {
+			isa = PBXGroup;
+			children = (
+				24B1A317009A40D1A5116E31,
+				FA0BF346876A44E9BAD7CCC9,
+				74E547E0FBCA4911A16EBAC8,
+				BC9556E181594C4EBEA3CAE6,
+				B77421FEB744459E886052F8,
+				61C14E65C03145D8AF0191FF,
+				2CEAF6359140450F9CEEE7EF,
+				738A1AACDE494E6FA3833C8B,
+			);
+			path = CloudStoreNow;
+			sourceTree = "<group>";
+		};
+		43F08C84B1DC484FAB40788D /* CloudStoreNowTests */ = {
+			isa = PBXGroup;
+			children = (
+				3B94D111423B45568484C0C5,
+				78F6F00CF1934A7D906DE326,
+				0AAADFDAF7D746F2AFA4BDD0,
+				48D961A9C2D343FE96869B13,
+			);
+			path = CloudStoreNowTests;
+			sourceTree = "<group>";
+		};
+		8678727D1A254F4288D3B3A3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F51507D072B442179578F5C6,
+				61B775A9901D4CD2BAF0ACC5,
+			);
+			sourceTree = "<group>";
+		};
+		FF62C7BC58EA4F6184278F27 /*  */ = {
+			isa = PBXGroup;
+			children = (
+				334CAACA9A3C4F0296451ADF,
+				43F08C84B1DC484FAB40788D,
+				8678727D1A254F4288D3B3A3,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0A1A3FA54DAA4149AB320BAE /* CloudStoreNow */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3759DC17CDE549D5BC09909A /* Build configuration list for PBXNativeTarget "CloudStoreNow" */;
+			buildPhases = (
+				30B153EC4D04467C9F28252E /* Sources */,
+				B200951371404748A9719470 /* Frameworks */,
+				7D60A16D14CA4635B8711BC7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CloudStoreNow;
+			productName = CloudStoreNow;
+			productReference = F51507D072B442179578F5C6 /* CloudStoreNow.app */;
+			productType = "com.apple.product-type.application";
+		};
+		8BF64452530041188D87B55B /* CloudStoreNowTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 19863622A6D24B0BB212974F /* Build configuration list for PBXNativeTarget "CloudStoreNowTests" */;
+			buildPhases = (
+				EC1AFA01F49E474FBCC0E725 /* Sources */,
+				356F15CDBD5D474291095DDA /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D924B54443724600BB6E8878 /* PBXTargetDependency */,
+			);
+			name = CloudStoreNowTests;
+			productName = CloudStoreNowTests;
+			productReference = 61B775A9901D4CD2BAF0ACC5 /* CloudStoreNowTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		48F9A81B710C436395CF00A2 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					0A1A3FA54DAA4149AB320BAE = { CreatedOnToolsVersion = 15.0; };
+					8BF64452530041188D87B55B = { CreatedOnToolsVersion = 15.0; TestTargetID = 0A1A3FA54DAA4149AB320BAE; };
+				};
+			};
+			buildConfigurationList = E22B8BAC60844E18A5B54CC6 /* Build configuration list for PBXProject "CloudStoreNow" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = ( en, Base, );
+			mainGroup = FF62C7BC58EA4F6184278F27;
+			productRefGroup = 8678727D1A254F4288D3B3A3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0A1A3FA54DAA4149AB320BAE /* CloudStoreNow */,
+				8BF64452530041188D87B55B /* CloudStoreNowTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7D60A16D14CA4635B8711BC7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		30B153EC4D04467C9F28252E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0E71B5EEC204418CB45A72B9 /* CloudStoreNowApp.swift in Sources */,
+				137C76D2FFE442FA981E6833 /* AppConfig.swift in Sources */,
+				4DB3D86B27E94494A9C3E835 /* ContactPayload.swift in Sources */,
+				8192BAF8AEE443848FA7EBCA /* PendingSyncItem.swift in Sources */,
+				1A36203FF09D4FA4B8D744E1 /* APIClient.swift in Sources */,
+				EDDD1A7E24054415A244D839 /* KeychainService.swift in Sources */,
+				8924F75631374A9F8B82B077 /* ContactMapper.swift in Sources */,
+				0C6AA89BEA9C4868B8EBDF37 /* ContactsService.swift in Sources */,
+				2D6AE3A1202F4BAEB71CBE1A /* ContactMappingStore.swift in Sources */,
+				7864EFE03EA34419AD49EAB6 /* PendingSyncQueue.swift in Sources */,
+				90AC2393AE544BB09755E203 /* SyncEngine.swift in Sources */,
+				2089AA44478B4E1D8601C41E /* BackgroundTaskManager.swift in Sources */,
+				0EA9C4525BBF48BB9D01E774 /* AuthViewModel.swift in Sources */,
+				2E40A00DD8A04EA585EC5E74 /* LoginView.swift in Sources */,
+				482568AD79AA4A878F1EF1EC /* EnableBackupView.swift in Sources */,
+				61734BBF7E6740E1B2846883 /* BackupStatusView.swift in Sources */,
+				F008CD89942D417E910B81A3 /* RestoreConfirmationView.swift in Sources */,
+				0AB869ADD515486FA51E82A9 /* RootView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EC1AFA01F49E474FBCC0E725 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0E458DEAE3584502AC13C370 /* ContactPayloadTests.swift in Sources */,
+				3B21F9E5CD16436AB631D596 /* ContactMapperTests.swift in Sources */,
+				5737E36143E14CFE9490289F /* AppConfigTests.swift in Sources */,
+				E1EFD113E9454BBE913C8504 /* ContactMappingStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXContainerItemProxy section */
+		A5FD74D9F5C849CB94810975 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 48F9A81B710C436395CF00A2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0A1A3FA54DAA4149AB320BAE;
+			remoteInfo = CloudStoreNow;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		D924B54443724600BB6E8878 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0A1A3FA54DAA4149AB320BAE /* CloudStoreNow */;
+			targetProxy = A5FD74D9F5C849CB94810975 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		E1F5545557774AE9B27D7945 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = ('DEBUG=1', '$(inherited)');
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = -Onone;
+			};
+			name = Debug;
+		};
+		DFC1E40906E148C9852A9205 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf-with-dsym;
+				ENABLE_NS_ASSERTIONS = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		43C67B2D03004D45B8725228 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CloudStoreNow/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = ('$(inherited)', '@executable_path/Frameworks');
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cloudstorenow.ios;
+				PRODUCT_NAME = $(TARGET_NAME);
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		BC4B72197B284C7AAA05BAF0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CloudStoreNow/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = ('$(inherited)', '@executable_path/Frameworks');
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cloudstorenow.ios;
+				PRODUCT_NAME = $(TARGET_NAME);
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		45965DE3BF364CAE9583FF19 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = $(TEST_HOST);
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cloudstorenow.ios.tests;
+				PRODUCT_NAME = $(TARGET_NAME);
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = $(BUILT_PRODUCTS_DIR)/CloudStoreNow.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CloudStoreNow;
+			};
+			name = Debug;
+		};
+		C5044A2DECA3406281BC19EF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = $(TEST_HOST);
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cloudstorenow.ios.tests;
+				PRODUCT_NAME = $(TARGET_NAME);
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = $(BUILT_PRODUCTS_DIR)/CloudStoreNow.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CloudStoreNow;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		E22B8BAC60844E18A5B54CC6 /* Build configuration list for PBXNativeTarget "Project" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E1F5545557774AE9B27D7945 /* Debug */,
+				DFC1E40906E148C9852A9205 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3759DC17CDE549D5BC09909A /* Build configuration list for PBXNativeTarget "CloudStoreNow" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				43C67B2D03004D45B8725228 /* Debug */,
+				BC4B72197B284C7AAA05BAF0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		19863622A6D24B0BB212974F /* Build configuration list for PBXNativeTarget "CloudStoreNowTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				45965DE3BF364CAE9583FF19 /* Debug */,
+				C5044A2DECA3406281BC19EF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 48F9A81B710C436395CF00A2 /* Project object */;
+}
