@@ -14,12 +14,13 @@ export type PlanLimitConfiguration = {
 };
 
 const GIB = 1024n * 1024n * 1024n;
+const FREE_PLAN_STORAGE_BYTES = 1n * GIB;
 
 export const DEFAULT_PLAN_LIMITS: Record<Plan, Omit<PlanLimitConfiguration, 'active'>> = {
   FREE: {
     plan: 'FREE',
     displayName: 'Free',
-    storageQuotaBytes: appConfig.defaultStorageQuotaBytes,
+    storageQuotaBytes: FREE_PLAN_STORAGE_BYTES,
     maxFileSizeBytes: appConfig.defaultMaxFileSizeBytes,
     monthlyBandwidthLimitBytes: appConfig.defaultMonthlyBandwidthLimitBytes,
   },

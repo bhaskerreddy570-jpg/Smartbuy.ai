@@ -1,10 +1,11 @@
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 import { orm } from '@/lib/db';
 import {
   resolveCustomerLimits,
   shouldResetBandwidthPeriod,
 } from '@/lib/customer-limits';
-import { getDashboardData, type DashboardData } from '@/lib/dashboard';
+import { getDashboardSummary, mapStoredFileToDashboardEntry } from '@/lib/dashboard';
 import { ADMIN_SESSION_COOKIE, getAdminSessionUser } from '@/lib/admin/session';
 import { resolvePortalUserRole } from '@/lib/admin/bootstrap';
 import { isCustomerAccountLocked } from '@/lib/admin/customer-accounts';
@@ -49,11 +50,14 @@ export type CategoryCardData = {
   percentOfQuota: number;
 };
 
-export type OverviewData = Omit<DashboardData, 'categories'> & {
+export type OverviewData = Omit<
+  NonNullable<Awaited<ReturnType<typeof getDashboardSummary>>>,
+  'categories' | 'files' | 'activeCategory' | 'view'
+> & {
   user: PortalUser;
   greeting: string;
   categoryUsage: CategoryCardData[];
-  recentFiles: DashboardData['files'];
+  recentFiles: ReturnType<typeof mapStoredFileToDashboardEntry>[];
   smartAccess: {
     recentlyOpened: SmartFileSummary[];
     secureFiles: SmartFileSummary[];
@@ -68,7 +72,7 @@ function buildGreeting(name: string | null): string {
   return name ? `${salutation}, ${name.split(' ')[0]}` : salutation;
 }
 
-export async function getPortalContext(userId: string): Promise<PortalContext | null> {
+async function getPortalContextImpl(userId: string): Promise<PortalContext | null> {
   await ensureCustomerQuotaPersisted(userId);
 
   const user = await orm.User.where({ id: userId })
@@ -120,11 +124,13 @@ export async function getPortalContext(userId: string): Promise<PortalContext | 
   };
 }
 
-export async function getOverviewData(userId: string): Promise<OverviewData | null> {
+export const getPortalContext = cache(getPortalContextImpl);
+
+export const getOverviewData = cache(async (userId: string): Promise<OverviewData | null> => {
   await ensureCustomerQuotaPersisted(userId);
 
-  const [dashboard, usage, user, smartAccess] = await Promise.all([
-    getDashboardData(userId),
+  const [summary, usage, user, smartAccess] = await Promise.all([
+    getDashboardSummary(userId),
     getCustomerStorageUsageByCategory(userId),
     orm.User.where({ id: userId })
       .select('id', 'name', 'email', 'createdAt', 'lockedAt')
@@ -132,17 +138,17 @@ export async function getOverviewData(userId: string): Promise<OverviewData | nu
     getOverviewSmartAccess(userId),
   ]);
 
-  if (!dashboard || !user || isCustomerAccountLocked(user)) {
+  if (!summary || !user || isCustomerAccountLocked(user)) {
     return null;
   }
 
   const portalRole = await resolvePortalUserRole(user.email);
 
-  const quota = BigInt(dashboard.storage.quota);
+  const quota = BigInt(summary.storage.quota);
   const categorySource = usage?.categories ?? [];
   const categories: CategoryCardData[] = (categorySource.length > 0
     ? categorySource
-    : dashboard.categories.map((c) => ({
+    : summary.categories.map((c) => ({
         category: c.id,
         label: c.label,
         bytesUsed: BigInt(0),
@@ -161,15 +167,24 @@ export async function getOverviewData(userId: string): Promise<OverviewData | nu
         : 0,
   }));
 
-  const recentFiles = [...dashboard.files]
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    )
-    .slice(0, 8);
+  const recentFiles = smartAccess.recentUploads.map((file) =>
+    mapStoredFileToDashboardEntry({
+      id: file.id,
+      name: file.name,
+      originalName: file.name,
+      size: file.size,
+      mimeType: file.mimeType,
+      category: file.category,
+      starred: file.starred,
+      securityMode: file.securityMode,
+      createdAt: file.createdAt,
+    }),
+  );
 
   return {
-    ...dashboard,
+    storage: summary.storage,
+    bandwidth: summary.bandwidth,
+    maxFileSize: summary.maxFileSize,
     user: {
       id: user.id,
       name: user.name,
@@ -187,7 +202,7 @@ export async function getOverviewData(userId: string): Promise<OverviewData | nu
       largeFiles: smartAccess.largeFiles,
     },
   };
-}
+});
 
 export type ProfileData = {
   user: PortalUser;

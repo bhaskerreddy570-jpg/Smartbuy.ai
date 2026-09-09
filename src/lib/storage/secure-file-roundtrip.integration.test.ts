@@ -161,5 +161,18 @@ describeIntegration('secure file S3 roundtrip', () => {
         }),
       /SECURE_DECRYPTION_FAILED/,
     );
+
+    const tampered = new Uint8Array(ciphertext);
+    tampered[tampered.length - 1] = tampered[tampered.length - 1]! ^ 0xff;
+
+    await assert.rejects(
+      () =>
+        decryptSecureFileWithPassphrase({
+          encryptedBlob: tampered.buffer,
+          passphrase,
+          salt: saltBytes,
+        }),
+      /SECURE_DECRYPTION_FAILED/,
+    );
   });
 });

@@ -2,7 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 
 export function LoginForm() {
   const router = useRouter();
@@ -11,11 +11,16 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const submitLockRef = useRef(false);
 
   const registered = searchParams.get("registered") === "1";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitLockRef.current || loading) {
+      return;
+    }
+    submitLockRef.current = true;
     setLoading(true);
     setError(null);
 
@@ -52,6 +57,7 @@ export function LoginForm() {
     } catch {
       setError("Unable to sign in right now. Please try again.");
     } finally {
+      submitLockRef.current = false;
       setLoading(false);
     }
   }

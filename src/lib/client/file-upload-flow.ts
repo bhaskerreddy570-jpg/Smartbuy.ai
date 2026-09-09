@@ -7,6 +7,7 @@ import {
   generateSecureFileKey,
 } from '@/lib/crypto/secure-file-crypto';
 import { mapUploadClientError } from '@/lib/storage/upload-api-errors';
+import type { UploadCompletePayload } from '@/lib/client/upload-result';
 import {
   beginClientUpload,
   createClientUploadId,
@@ -21,11 +22,18 @@ export type PreparedSecureUpload = {
   generatedKey?: string;
 };
 
-export type UploadPreparedResult = {
-  fileId: string;
+export type UploadPreparedResult = UploadCompletePayload & {
   clientUploadId: string;
-  status: 'READY' | 'PENDING';
+  timings?: Record<string, number>;
 };
+
+function markTiming(
+  timings: Record<string, number>,
+  label: string,
+  started: number,
+) {
+  timings[label] = Math.round(performance.now() - started);
+}
 
 export async function prepareSecureUpload(params: {
   file: File;
@@ -86,12 +94,14 @@ export async function uploadPreparedFile(params: {
   clientUploadId?: string;
 }): Promise<UploadPreparedResult> {
   const clientUploadId = params.clientUploadId ?? createClientUploadId();
+  const timings: Record<string, number> = {};
 
   if (!beginClientUpload(clientUploadId)) {
     throw new Error('An upload is already in progress.');
   }
 
   try {
+    let stepStarted = performance.now();
     const requestResponse = await fetch('/api/files/upload/request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -104,6 +114,7 @@ export async function uploadPreparedFile(params: {
         clientUploadId,
       }),
     });
+    markTiming(timings, 'upload_request_ms', stepStarted);
 
     if (!requestResponse.ok) {
       const payload = (await requestResponse.json().catch(() => null)) as {
@@ -114,6 +125,7 @@ export async function uploadPreparedFile(params: {
 
     const { fileId } = (await requestResponse.json()) as { fileId: string };
 
+    stepStarted = performance.now();
     const transferForm = new FormData();
     transferForm.append('fileId', fileId);
     transferForm.append('file', params.payloadFile, params.payloadFile.name);
@@ -122,6 +134,7 @@ export async function uploadPreparedFile(params: {
       method: 'POST',
       body: transferForm,
     });
+    markTiming(timings, 'upload_transfer_ms', stepStarted);
 
     if (!transferResponse.ok) {
       const payload = (await transferResponse.json().catch(() => null)) as {
@@ -130,11 +143,13 @@ export async function uploadPreparedFile(params: {
       throw new Error(mapUploadClientError(payload?.error));
     }
 
+    stepStarted = performance.now();
     const completeResponse = await fetch('/api/files/upload/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fileId, clientUploadId }),
     });
+    markTiming(timings, 'upload_complete_ms', stepStarted);
 
     if (!completeResponse.ok) {
       const payload = (await completeResponse.json().catch(() => null)) as {
@@ -143,15 +158,16 @@ export async function uploadPreparedFile(params: {
       throw new Error(mapUploadClientError(payload?.error));
     }
 
-    const completePayload = (await completeResponse.json()) as {
-      fileId: string;
-      status: 'READY' | 'PENDING';
-    };
+    const completePayload = (await completeResponse.json()) as UploadCompletePayload;
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.info('[perf:upload_client]', timings);
+    }
 
     return {
-      fileId: completePayload.fileId,
+      ...completePayload,
       clientUploadId,
-      status: completePayload.status,
+      timings,
     };
   } finally {
     endClientUpload(clientUploadId);

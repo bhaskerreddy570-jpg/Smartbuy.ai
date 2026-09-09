@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser } from '@/lib/api/auth';
+import { resolveCustomerLimits } from '@/lib/customer-limits';
 import { orm } from '@/lib/db';
+import { mapStoredFileToDashboardEntry } from '@/lib/dashboard';
+import { logPerformanceSpans, measureAsync, type PerformanceSpan } from '@/lib/performance/timing';
 import { recordCustomerSecurityEvent } from '@/lib/security/customer-events';
 import { runAntivirusScanHook } from '@/lib/storage/antivirus';
 import { resolveOwnedFileStorage } from '@/lib/storage/owned-file-storage';
@@ -13,6 +16,7 @@ import {
   finalizePendingUpload,
   releaseReservedStorageForUser,
 } from '@/lib/storage/upload-lifecycle';
+import { formatBytes } from '@/lib/storage/validation';
 import { validateUploadFilename } from '@/lib/storage/validation';
 
 const completeSchema = z
@@ -48,7 +52,53 @@ async function cleanupPendingUpload(params: {
   );
 }
 
+async function buildCompleteResponse(params: {
+  userId: string;
+  fileId: string;
+  alreadyComplete: boolean;
+}) {
+  const [readyFile, userRecord] = await Promise.all([
+    orm.File.where({ id: params.fileId, userId: params.userId }).first(),
+    orm.User.where({ id: params.userId })
+      .select(
+        'storageQuota',
+        'storageUsed',
+        'maxFileSizeBytes',
+        'monthlyBandwidthLimitBytes',
+        'monthlyBandwidthUsedBytes',
+        'bandwidthPeriodStart',
+      )
+      .first(),
+  ]);
+
+  if (!readyFile || !userRecord) {
+    return {
+      fileId: params.fileId,
+      status: 'READY' as const,
+      alreadyComplete: params.alreadyComplete,
+    };
+  }
+
+  const limits = resolveCustomerLimits(userRecord);
+
+  return {
+    fileId: params.fileId,
+    status: 'READY' as const,
+    alreadyComplete: params.alreadyComplete,
+    file: mapStoredFileToDashboardEntry(readyFile),
+    storage: {
+      quota: limits.storageQuota.toString(),
+      used: limits.storageUsed.toString(),
+      available: limits.storageRemaining.toString(),
+      quotaLabel: formatBytes(limits.storageQuota),
+      usedLabel: formatBytes(limits.storageUsed),
+      availableLabel: formatBytes(limits.storageRemaining),
+    },
+  };
+}
+
 export async function POST(request: Request) {
+  const spans: PerformanceSpan[] = [];
   const { error, user } = await requireAuthUser();
   if (error) {
     return error;
@@ -65,11 +115,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    const owned = await resolveOwnedFileStorage({
-      userId: user.id,
-      fileId: parsed.data.fileId,
-      mode: 'pending',
-    });
+    const ownedResult = await measureAsync('resolve_pending_file', () =>
+      resolveOwnedFileStorage({
+        userId: user.id,
+        fileId: parsed.data.fileId,
+        mode: 'pending',
+      }),
+    );
+    spans.push({ label: 'resolve_pending_file', durationMs: ownedResult.durationMs });
+    const owned = ownedResult.result;
 
     if (!owned) {
       return NextResponse.json({ error: 'FILE_NOT_FOUND' }, { status: 404 });
@@ -91,10 +145,20 @@ export async function POST(request: Request) {
     }
 
     if (file.status === 'READY') {
-      return NextResponse.json({ fileId: file.id, status: file.status, alreadyComplete: true });
+      const payload = await buildCompleteResponse({
+        userId: user.id,
+        fileId: file.id,
+        alreadyComplete: true,
+      });
+      logPerformanceSpans('upload_complete', spans);
+      return NextResponse.json(payload);
     }
 
-    const metadata = await getStorageService().headObject(owned.objectRef);
+    const headResult = await measureAsync('s3_head_object', () =>
+      getStorageService().headObject(owned.objectRef),
+    );
+    spans.push({ label: 's3_head_object', durationMs: headResult.durationMs });
+    const metadata = headResult.result;
     if (metadata.size <= 0n) {
       return NextResponse.json({ error: 'FILE_NOT_FOUND' }, { status: 404 });
     }
@@ -121,22 +185,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'File rejected by security policy' }, { status: 415 });
     }
 
-    if (scanResult.status !== 'skipped' && scanResult.status !== 'clean') {
-      console.info('Antivirus hook result', {
-        fileId: file.id,
+    const finalizeResult = await measureAsync('finalize_db', () =>
+      finalizePendingUpload({
         userId: user.id,
-        result: scanResult,
-      });
-    }
+        fileId: file.id,
+        actualSize: metadata.size,
+      }),
+    );
+    spans.push({ label: 'finalize_db', durationMs: finalizeResult.durationMs });
 
-    const finalizeResult = await finalizePendingUpload({
-      userId: user.id,
-      fileId: file.id,
-      actualSize: metadata.size,
-    });
-
-    if (!finalizeResult.ok) {
-      if (finalizeResult.reason === 'quota_exceeded') {
+    if (!finalizeResult.result.ok) {
+      if (finalizeResult.result.reason === 'quota_exceeded') {
         await cleanupPendingUpload({
           userId: user.id,
           fileId: file.id,
@@ -157,7 +216,14 @@ export async function POST(request: Request) {
       metadata: { fileId: file.id, fileName: file.name, size: metadata.size.toString() },
     });
 
-    return NextResponse.json({ fileId: file.id, status: 'READY' });
+    const payload = await buildCompleteResponse({
+      userId: user.id,
+      fileId: file.id,
+      alreadyComplete: finalizeResult.result.alreadyComplete,
+    });
+
+    logPerformanceSpans('upload_complete', spans);
+    return NextResponse.json(payload);
   } catch (completeError) {
     console.error('Upload completion failed', completeError);
     return NextResponse.json({ error: 'Unable to complete upload' }, { status: 500 });

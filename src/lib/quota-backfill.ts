@@ -1,17 +1,23 @@
+import { cache } from 'react';
 import { orm } from '@/lib/db';
 import {
+  computeEffectiveLimitsForUser,
+  currentBandwidthPeriodStart,
   normalizeMaxFileSizeBytes,
   normalizeMonthlyBandwidthLimitBytes,
   normalizeStorageQuota,
-  currentBandwidthPeriodStart,
 } from '@/lib/customer-limits';
 
-export async function ensureCustomerQuotaPersisted(userId: string): Promise<void> {
+async function ensureCustomerQuotaPersistedImpl(userId: string): Promise<void> {
   const user = await orm.User.where({ id: userId })
     .select(
+      'assignedPlan',
       'storageQuota',
+      'storageQuotaOverride',
       'maxFileSizeBytes',
+      'maxFileSizeOverride',
       'monthlyBandwidthLimitBytes',
+      'monthlyBandwidthLimitOverride',
       'bandwidthPeriodStart',
     )
     .first();
@@ -42,7 +48,37 @@ export async function ensureCustomerQuotaPersisted(userId: string): Promise<void
     updates.bandwidthPeriodStart = currentBandwidthPeriodStart();
   }
 
+  const layers = await computeEffectiveLimitsForUser({
+    assignedPlan: user.assignedPlan,
+    storageQuotaOverride: user.storageQuotaOverride,
+    maxFileSizeOverride: user.maxFileSizeOverride,
+    monthlyBandwidthLimitOverride: user.monthlyBandwidthLimitOverride,
+  });
+
+  if (
+    user.storageQuotaOverride === null &&
+    BigInt(user.storageQuota) !== layers.storage.effectiveBytes
+  ) {
+    updates.storageQuota = layers.storage.effectiveBytes;
+  }
+
+  if (
+    user.maxFileSizeOverride === null &&
+    BigInt(user.maxFileSizeBytes) !== layers.maxFileSize.effectiveBytes
+  ) {
+    updates.maxFileSizeBytes = layers.maxFileSize.effectiveBytes;
+  }
+
+  if (
+    user.monthlyBandwidthLimitOverride === null &&
+    BigInt(user.monthlyBandwidthLimitBytes) !== layers.bandwidth.effectiveBytes
+  ) {
+    updates.monthlyBandwidthLimitBytes = layers.bandwidth.effectiveBytes;
+  }
+
   if (Object.keys(updates).length > 0) {
     await orm.User.where({ id: userId }).update(updates);
   }
 }
+
+export const ensureCustomerQuotaPersisted = cache(ensureCustomerQuotaPersistedImpl);

@@ -11,6 +11,7 @@ import { SecureUploadDialog } from "@/components/portal/secure-upload-dialog";
 import { SecureUnlockDialog } from "@/components/portal/secure-unlock-dialog";
 import { uploadNormalFile, uploadPreparedFile } from "@/lib/client/file-upload-flow";
 import { createClientUploadId } from "@/lib/client/upload-inflight";
+import { mergeUploadIntoDashboard } from "@/lib/client/upload-result";
 import {
   handleNormalFileDownload,
   handleSecureFileDownload,
@@ -163,9 +164,9 @@ export function FilesClient({
     const clientUploadId = createClientUploadId();
 
     try {
-      await uploadNormalFile(file, clientUploadId);
+      const result = await uploadNormalFile(file, clientUploadId);
+      setData((current) => mergeUploadIntoDashboard(current, result));
       setActionMessage(`${file.name} uploaded successfully`);
-      await refreshFiles(data.activeCategory);
     } catch (uploadError) {
       setError(mapUploadTransferClientError(uploadError));
     } finally {
@@ -173,7 +174,7 @@ export function FilesClient({
     }
   }
 
-  async function completeSecureUpload(result: {
+  async function completeSecureUpload(prepared: {
     encryptedFile: File;
     metadata: Parameters<typeof uploadPreparedFile>[0]["encryption"];
   }) {
@@ -187,17 +188,17 @@ export function FilesClient({
     const clientUploadId = createClientUploadId();
 
     try {
-      await uploadPreparedFile({
+      const uploadResult = await uploadPreparedFile({
         originalFile: pendingSecureFile,
-        payloadFile: result.encryptedFile,
+        payloadFile: prepared.encryptedFile,
         secure: true,
-        encryption: result.metadata,
+        encryption: prepared.metadata,
         clientUploadId,
       });
+      setData((current) => mergeUploadIntoDashboard(current, uploadResult));
       setActionMessage(`${pendingSecureFile.name} uploaded securely`);
       setPendingSecureFile(null);
       setSecureUploadEnabled(false);
-      await refreshFiles(data.activeCategory);
     } catch (uploadError) {
       setError(mapUploadTransferClientError(uploadError));
     } finally {
@@ -208,7 +209,7 @@ export function FilesClient({
   async function handleUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (file) {
+    if (file && !uploading) {
       await uploadFile(file);
     }
   }

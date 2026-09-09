@@ -47,7 +47,7 @@ Set in **Project → Settings → Environment Variables → Production**:
 | `AWS_S3_BUCKET` | `cloudstorenow-storage-777929922747-ap-south-1-an` |
 | `AWS_ACCESS_KEY_ID` | Existing `CloudStoreNowApp` key (server-side only) |
 | `AWS_SECRET_ACCESS_KEY` | Matching secret (server-side only) |
-| `DEFAULT_STORAGE_QUOTA_BYTES` | `10737418240` |
+| `DEFAULT_STORAGE_QUOTA_BYTES` | `1073741824` |
 | `MAX_UPLOAD_BYTES` | `104857600` |
 | `ADMIN_INITIAL_EMAIL` | `bhaskerreddy570@gmail.com` (Production only — single application admin) |
 | `ADMIN_INITIAL_PASSWORD` | Strong 12+ character password with letters and numbers (Production only; never commit) |
