@@ -31,6 +31,5 @@ enum AppConfig {
         static let login = "/api/mobile/v1/auth/login"
         static let sync = "/api/mobile/v1/contacts/sync"
         static let restore = "/api/mobile/v1/contacts/restore"
-        static let pairingComplete = "/api/mobile/v1/devices/pairing/complete"
     }
 }

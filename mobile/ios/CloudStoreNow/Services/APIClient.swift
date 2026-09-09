@@ -68,43 +68,6 @@ struct APIClient: Sendable {
         )
     }
 
-    func completePairing(
-        email: String,
-        password: String,
-        pairingCode: String,
-        sessionId: String?,
-        installationId: String?
-    ) async throws -> LoginResponse {
-        struct Body: Encodable {
-            let sessionId: String?
-            let pairingCode: String
-            let platform: String
-            let appVersion: String
-            let displayName: String
-            let installationId: String?
-            let email: String
-            let password: String
-        }
-
-        let body = Body(
-            sessionId: sessionId,
-            pairingCode: pairingCode.uppercased(),
-            platform: AppConfig.platform,
-            appVersion: AppConfig.appVersion,
-            displayName: UIDeviceDisplayName.current,
-            installationId: installationId,
-            email: email,
-            password: password
-        )
-
-        return try await request(
-            path: AppConfig.APIPath.pairingComplete,
-            method: "POST",
-            body: body,
-            bearerToken: nil
-        )
-    }
-
     func fetchBackupSummary(bearerToken: String) async throws -> ContactBackupSummary {
         try await request(
             path: AppConfig.APIPath.sync,

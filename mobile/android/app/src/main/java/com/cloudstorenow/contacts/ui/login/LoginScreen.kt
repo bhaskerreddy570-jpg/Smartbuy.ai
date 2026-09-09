@@ -13,7 +13,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,7 +27,6 @@ import com.cloudstorenow.contacts.R
 fun LoginScreen(
     viewModel: LoginViewModel,
     onLoggedIn: () -> Unit,
-    onConnectWithPairingCode: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -88,9 +86,6 @@ fun LoginScreen(
             } else {
                 Text(stringResource(R.string.sign_in))
             }
-        }
-        TextButton(onClick = onConnectWithPairingCode, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.connect_with_pairing_code))
         }
     }
 }

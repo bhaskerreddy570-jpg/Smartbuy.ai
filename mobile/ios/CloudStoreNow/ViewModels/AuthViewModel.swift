@@ -45,38 +45,16 @@ final class AuthViewModel: ObservableObject {
                 deviceId: existingDeviceId
             )
 
-            try saveSession(from: response)
-            password = ""
-        } catch let error as APIClientError {
-            errorMessage = error.errorDescription
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    func completePairing(pairingCode: String, sessionId: String? = nil) async {
-        errorMessage = nil
-        isLoading = true
-        defer { isLoading = false }
-
-        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedCode = pairingCode.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmedEmail.contains("@"), password.count >= 8, trimmedCode.count >= 4 else {
-            errorMessage = "Enter your account, password, and the website pairing code."
-            return
-        }
-
-        do {
-            let existingDeviceId = try keychain.loadSession()?.deviceId
-            let response = try await apiClient.completePairing(
-                email: trimmedEmail,
-                password: password,
-                pairingCode: trimmedCode,
-                sessionId: sessionId,
-                installationId: existingDeviceId
+            let expiresAt = ISO8601DateFormatter().date(from: response.expiresAt) ?? Date().addingTimeInterval(90 * 24 * 3600)
+            let stored = StoredSession(
+                deviceId: response.deviceId,
+                token: response.token,
+                expiresAt: expiresAt,
+                userEmail: response.user.email,
+                userName: response.user.name
             )
-
-            try saveSession(from: response)
+            try keychain.saveSession(stored)
+            session = stored
             password = ""
         } catch let error as APIClientError {
             errorMessage = error.errorDescription
@@ -90,19 +68,5 @@ final class AuthViewModel: ObservableObject {
         session = nil
         password = ""
         errorMessage = nil
-    }
-
-    private func saveSession(from response: LoginResponse) throws {
-        let expiresAt = ISO8601DateFormatter().date(from: response.expiresAt)
-            ?? Date().addingTimeInterval(90 * 24 * 3600)
-        let stored = StoredSession(
-            deviceId: response.deviceId,
-            token: response.token,
-            expiresAt: expiresAt,
-            userEmail: response.user.email,
-            userName: response.user.name
-        )
-        try keychain.saveSession(stored)
-        session = stored
     }
 }

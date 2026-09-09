@@ -232,4 +232,86 @@ describeIntegration('upload duplicate protection integration', () => {
     assert.equal(rows.length, 1);
     assert.equal(rows[0]?.status, 'READY');
   });
+
+  it('reuses pending upload and finalizes once after simulated retry', async () => {
+    const email = `upload-retry-${randomUUID()}@example.com`;
+    const defaults = await createPlanBasedCustomerLimits('FREE');
+    const user = await orm.User.create({
+      email,
+      name: 'Retry Upload Test',
+      passwordHash: await bcrypt.hash('UploadTest123!', 12),
+      assignedPlan: 'FREE',
+      storageQuotaOverride: null,
+      maxFileSizeOverride: null,
+      monthlyBandwidthLimitOverride: null,
+      storageQuota: defaults.storageQuota,
+      storageUsed: BigInt(0),
+      maxFileSizeBytes: defaults.maxFileSizeBytes,
+      monthlyBandwidthLimitBytes: defaults.monthlyBandwidthLimitBytes,
+      monthlyBandwidthUsedBytes: defaults.monthlyBandwidthUsedBytes,
+      bandwidthPeriodStart: defaults.bandwidthPeriodStart,
+    });
+    userId = user.id;
+    const clientUploadId = randomUUID();
+
+    const firstCreate = await createPendingUpload({
+      userId,
+      fileName: 'retry.txt',
+      originalName: 'retry.txt',
+      mimeType: 'text/plain',
+      uploadSize: BigInt(96),
+      category: 'DOCUMENTS',
+      clientUploadId,
+    });
+    assert.equal(firstCreate.ok, true);
+    if (!firstCreate.ok) {
+      return;
+    }
+
+    const retryCreate = await createPendingUpload({
+      userId,
+      fileName: 'retry.txt',
+      originalName: 'retry.txt',
+      mimeType: 'text/plain',
+      uploadSize: BigInt(96),
+      category: 'DOCUMENTS',
+      clientUploadId,
+    });
+    assert.equal(retryCreate.ok, true);
+    if (!retryCreate.ok) {
+      return;
+    }
+    assert.equal(retryCreate.file.reusedExisting, true);
+    assert.equal(retryCreate.file.fileId, firstCreate.file.fileId);
+
+    const stored = await orm.File.where({ id: firstCreate.file.fileId }).first();
+    assert.ok(stored);
+    await getStorageService().putObject({
+      objectRef: toStorageObjectRef(stored),
+      body: Buffer.alloc(96),
+      size: 96n,
+    });
+
+    const firstFinalize = await finalizePendingUpload({
+      userId,
+      fileId: firstCreate.file.fileId,
+      actualSize: 96n,
+    });
+    const retryFinalize = await finalizePendingUpload({
+      userId,
+      fileId: firstCreate.file.fileId,
+      actualSize: 96n,
+    });
+
+    assert.equal(firstFinalize.ok, true);
+    assert.equal(retryFinalize.ok, true);
+    if (!firstFinalize.ok || !retryFinalize.ok) {
+      return;
+    }
+    assert.equal(retryFinalize.alreadyComplete, true);
+
+    const rows = await orm.File.where({ userId, clientUploadId }).all();
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]?.status, 'READY');
+  });
 });
