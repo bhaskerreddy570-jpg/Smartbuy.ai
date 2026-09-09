@@ -1,0 +1,566 @@
+[
+  {
+    "id": "table.customerSecurityEvent",
+    "label": "Create table \"customerSecurityEvent\"",
+    "summary": "Creates table \"customerSecurityEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "customerSecurityEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"customerSecurityEvent\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerSecurityEvent\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"customerSecurityEvent\"",
+        "sql": "CREATE TABLE \"public\".\"customerSecurityEvent\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"eventType\" text NOT NULL,\n  \"id\" uuid NOT NULL,\n  \"ipAddress\" text,\n  \"metadata\" text,\n  \"riskLevel\" text DEFAULT 'INFO' NOT NULL,\n  \"userAgent\" text,\n  \"userId\" uuid NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"customerSecurityEvent_eventType_check_f524d5a3\" CHECK (\"eventType\" IN ('LOGIN_SUCCESS', 'LOGIN_FAILURE', 'LOGOUT', 'PASSWORD_CHANGED', 'SESSION_CREATED', 'SESSION_REVOKED', 'FILE_UPLOAD', 'FILE_DOWNLOAD', 'FILE_DELETE', 'FILE_RESTORE', 'SECURITY_SETTING_CHANGED', 'NEW_DEVICE_DETECTED', 'UNUSUAL_ACTIVITY')),\n  CONSTRAINT \"customerSecurityEvent_riskLevel_check_0cbc839c\" CHECK (\"riskLevel\" IN ('INFO', 'LOW', 'MEDIUM'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"customerSecurityEvent\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerSecurityEvent\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.customerSession",
+    "label": "Create table \"customerSession\"",
+    "summary": "Creates table \"customerSession\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "customerSession"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"customerSession\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerSession\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"customerSession\"",
+        "sql": "CREATE TABLE \"public\".\"customerSession\" (\n  \"browser\" text,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"deviceLabel\" text,\n  \"expiresAt\" timestamptz,\n  \"id\" uuid NOT NULL,\n  \"ipAddress\" text,\n  \"lastActiveAt\" timestamptz,\n  \"platform\" text,\n  \"revokedAt\" timestamptz,\n  \"sessionTokenHash\" text NOT NULL,\n  \"userAgent\" text,\n  \"userId\" uuid NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"customerSession\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerSession\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.file.clientUploadId",
+    "label": "Add column \"clientUploadId\" to \"file\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "clientUploadId",
+        "table": "file"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"clientUploadId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "file",
+          "clientUploadId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"clientUploadId\"",
+        "sql": "ALTER TABLE \"public\".\"file\" ADD COLUMN \"clientUploadId\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"clientUploadId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "file",
+          "clientUploadId"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.file.lastAccessedAt",
+    "label": "Add column \"lastAccessedAt\" to \"file\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "lastAccessedAt",
+        "table": "file"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"lastAccessedAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "file",
+          "lastAccessedAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"lastAccessedAt\"",
+        "sql": "ALTER TABLE \"public\".\"file\" ADD COLUMN \"lastAccessedAt\" timestamptz"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"lastAccessedAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "file",
+          "lastAccessedAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.customerSession.customerSession_sessionTokenHash_key",
+    "label": "Add unique constraint on \"customerSession\" (sessionTokenHash)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "customerSession_sessionTokenHash_key",
+        "table": "customerSession"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"customerSession_sessionTokenHash_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerSession_sessionTokenHash_key",
+          "public",
+          "\"public\".\"customerSession\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"customerSession_sessionTokenHash_key\"",
+        "sql": "ALTER TABLE \"public\".\"customerSession\" ADD CONSTRAINT \"customerSession_sessionTokenHash_key\" UNIQUE (\"sessionTokenHash\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"customerSession_sessionTokenHash_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerSession_sessionTokenHash_key",
+          "public",
+          "\"public\".\"customerSession\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.file.file_userId_clientUploadId_key",
+    "label": "Add unique constraint on \"file\" (userId, clientUploadId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "file_userId_clientUploadId_key",
+        "table": "file"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"file_userId_clientUploadId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "file_userId_clientUploadId_key",
+          "public",
+          "\"public\".\"file\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"file_userId_clientUploadId_key\"",
+        "sql": "ALTER TABLE \"public\".\"file\" ADD CONSTRAINT \"file_userId_clientUploadId_key\" UNIQUE (\"userId\", \"clientUploadId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"file_userId_clientUploadId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "file_userId_clientUploadId_key",
+          "public",
+          "\"public\".\"file\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.customerSecurityEvent.customerSecurityEvent_eventType_idx_e4cf7742",
+    "label": "Create index \"customerSecurityEvent_eventType_idx_e4cf7742\" on \"customerSecurityEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "customerSecurityEvent_eventType_idx_e4cf7742",
+        "table": "customerSecurityEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"customerSecurityEvent_eventType_idx_e4cf7742\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerSecurityEvent_eventType_idx_e4cf7742\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"customerSecurityEvent_eventType_idx_e4cf7742\"",
+        "sql": "CREATE INDEX \"customerSecurityEvent_eventType_idx_e4cf7742\" ON \"public\".\"customerSecurityEvent\" (\"eventType\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"customerSecurityEvent_eventType_idx_e4cf7742\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerSecurityEvent_eventType_idx_e4cf7742\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.customerSecurityEvent.customerSecurityEvent_userId_createdAt_idx_f726f04a",
+    "label": "Create index \"customerSecurityEvent_userId_createdAt_idx_f726f04a\" on \"customerSecurityEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "customerSecurityEvent_userId_createdAt_idx_f726f04a",
+        "table": "customerSecurityEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"customerSecurityEvent_userId_createdAt_idx_f726f04a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerSecurityEvent_userId_createdAt_idx_f726f04a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"customerSecurityEvent_userId_createdAt_idx_f726f04a\"",
+        "sql": "CREATE INDEX \"customerSecurityEvent_userId_createdAt_idx_f726f04a\" ON \"public\".\"customerSecurityEvent\" (\"userId\", \"createdAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"customerSecurityEvent_userId_createdAt_idx_f726f04a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerSecurityEvent_userId_createdAt_idx_f726f04a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.customerSecurityEvent.customerSecurityEvent_userId_idx_a489d58a",
+    "label": "Create index \"customerSecurityEvent_userId_idx_a489d58a\" on \"customerSecurityEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "customerSecurityEvent_userId_idx_a489d58a",
+        "table": "customerSecurityEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"customerSecurityEvent_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerSecurityEvent_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"customerSecurityEvent_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"customerSecurityEvent_userId_idx_a489d58a\" ON \"public\".\"customerSecurityEvent\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"customerSecurityEvent_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerSecurityEvent_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.customerSession.customerSession_userId_idx_a489d58a",
+    "label": "Create index \"customerSession_userId_idx_a489d58a\" on \"customerSession\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "customerSession_userId_idx_a489d58a",
+        "table": "customerSession"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"customerSession_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerSession_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"customerSession_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"customerSession_userId_idx_a489d58a\" ON \"public\".\"customerSession\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"customerSession_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerSession_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.customerSession.customerSession_userId_revokedAt_idx_eae4cbef",
+    "label": "Create index \"customerSession_userId_revokedAt_idx_eae4cbef\" on \"customerSession\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "customerSession_userId_revokedAt_idx_eae4cbef",
+        "table": "customerSession"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"customerSession_userId_revokedAt_idx_eae4cbef\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerSession_userId_revokedAt_idx_eae4cbef\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"customerSession_userId_revokedAt_idx_eae4cbef\"",
+        "sql": "CREATE INDEX \"customerSession_userId_revokedAt_idx_eae4cbef\" ON \"public\".\"customerSession\" (\"userId\", \"revokedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"customerSession_userId_revokedAt_idx_eae4cbef\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"customerSession_userId_revokedAt_idx_eae4cbef\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.file.file_userId_lastAccessedAt_idx_6e312cf5",
+    "label": "Create index \"file_userId_lastAccessedAt_idx_6e312cf5\" on \"file\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "file_userId_lastAccessedAt_idx_6e312cf5",
+        "table": "file"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"file_userId_lastAccessedAt_idx_6e312cf5\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"file_userId_lastAccessedAt_idx_6e312cf5\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"file_userId_lastAccessedAt_idx_6e312cf5\"",
+        "sql": "CREATE INDEX \"file_userId_lastAccessedAt_idx_6e312cf5\" ON \"public\".\"file\" (\"userId\", \"lastAccessedAt\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"file_userId_lastAccessedAt_idx_6e312cf5\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"file_userId_lastAccessedAt_idx_6e312cf5\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.customerSecurityEvent.customerSecurityEvent_userId_fkey",
+    "label": "Add foreign key \"customerSecurityEvent_userId_fkey\" on \"customerSecurityEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "customerSecurityEvent_userId_fkey",
+        "table": "customerSecurityEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"customerSecurityEvent_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerSecurityEvent_userId_fkey",
+          "public",
+          "\"public\".\"customerSecurityEvent\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"customerSecurityEvent_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"customerSecurityEvent\"\nADD CONSTRAINT \"customerSecurityEvent_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"customerSecurityEvent_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerSecurityEvent_userId_fkey",
+          "public",
+          "\"public\".\"customerSecurityEvent\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.customerSession.customerSession_userId_fkey",
+    "label": "Add foreign key \"customerSession_userId_fkey\" on \"customerSession\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "customerSession_userId_fkey",
+        "table": "customerSession"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"customerSession_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerSession_userId_fkey",
+          "public",
+          "\"public\".\"customerSession\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"customerSession_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"customerSession\"\nADD CONSTRAINT \"customerSession_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"customerSession_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "customerSession_userId_fkey",
+          "public",
+          "\"public\".\"customerSession\""
+        ]
+      }
+    ]
+  }
+]

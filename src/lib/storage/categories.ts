@@ -85,7 +85,7 @@ export function detectFileCategory(params: {
   }
 
   if (CONTACT_EXTENSIONS.has(extension) || mimeType.includes('vcard')) {
-    return 'CONTACTS';
+    return 'DOCUMENTS';
   }
 
   if (

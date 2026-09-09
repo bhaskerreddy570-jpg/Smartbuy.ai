@@ -88,6 +88,28 @@ enum ContactConflictResolution {
   DEFER
 }
 
+enum CustomerSecurityEventType {
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  LOGOUT
+  PASSWORD_CHANGED
+  SESSION_CREATED
+  SESSION_REVOKED
+  FILE_UPLOAD
+  FILE_DOWNLOAD
+  FILE_DELETE
+  FILE_RESTORE
+  SECURITY_SETTING_CHANGED
+  NEW_DEVICE_DETECTED
+  UNUSUAL_ACTIVITY
+}
+
+enum CustomerRiskLevel {
+  INFO
+  LOW
+  MEDIUM
+}
+
 model PlanConfiguration {
   plan Plan @id
   displayName String
@@ -126,6 +148,8 @@ model User {
   customerDevices CustomerDevice[]
   contactBackupSettings ContactBackupSettings?
   devicePairingSessions DevicePairingSession[]
+  customerSessions CustomerSession[]
+  securityEvents CustomerSecurityEvent[]
 }
 
 model File {
@@ -149,6 +173,8 @@ model File {
   encryptionIv String?
   plaintextSize BigInt?
   folderId     Uuid?
+  clientUploadId String?
+  lastAccessedAt TimestamptzString?
   createdAt    TimestamptzString @default(now())
   updatedAt    temporal.updatedAtString()
   deletedAt    TimestamptzString?
@@ -162,6 +188,44 @@ model File {
   @@index([userId, category])
   @@index([userId, category, status])
   @@index([userId, starred])
+  @@index([userId, lastAccessedAt])
+  @@unique([userId, clientUploadId])
+}
+
+model CustomerSession {
+  id           Uuid              @id @default(uuid())
+  userId       Uuid
+  sessionTokenHash String        @unique
+  deviceLabel  String?
+  platform     String?
+  browser      String?
+  ipAddress    String?
+  userAgent    String?
+  lastActiveAt TimestamptzString?
+  expiresAt    TimestamptzString?
+  revokedAt    TimestamptzString?
+  createdAt    TimestamptzString @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, revokedAt])
+}
+
+model CustomerSecurityEvent {
+  id        Uuid                    @id @default(uuid())
+  userId    Uuid
+  eventType CustomerSecurityEventType
+  riskLevel CustomerRiskLevel       @default(INFO)
+  metadata  String?
+  ipAddress String?
+  userAgent String?
+  createdAt TimestamptzString       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([eventType])
 }
 
 model Folder {

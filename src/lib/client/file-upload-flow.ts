@@ -7,6 +7,11 @@ import {
   generateSecureFileKey,
 } from '@/lib/crypto/secure-file-crypto';
 import { mapUploadClientError } from '@/lib/storage/upload-api-errors';
+import {
+  beginClientUpload,
+  createClientUploadId,
+  endClientUpload,
+} from '@/lib/client/upload-inflight';
 
 export type SecureUploadMode = 'generated-key' | 'passphrase';
 
@@ -14,6 +19,12 @@ export type PreparedSecureUpload = {
   encryptedFile: File;
   metadata: SecureEncryptionMetadata;
   generatedKey?: string;
+};
+
+export type UploadPreparedResult = {
+  fileId: string;
+  clientUploadId: string;
+  status: 'READY' | 'PENDING';
 };
 
 export async function prepareSecureUpload(params: {
@@ -72,65 +83,90 @@ export async function uploadPreparedFile(params: {
   payloadFile: File;
   secure: boolean;
   encryption?: SecureEncryptionMetadata;
-}): Promise<{ fileId: string }> {
-  const requestResponse = await fetch('/api/files/upload/request', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      fileName: params.originalFile.name,
-      mimeType: params.originalFile.type || 'application/octet-stream',
-      size: params.payloadFile.size,
-      secure: params.secure,
-      encryption: params.encryption,
-    }),
-  });
+  clientUploadId?: string;
+}): Promise<UploadPreparedResult> {
+  const clientUploadId = params.clientUploadId ?? createClientUploadId();
 
-  if (!requestResponse.ok) {
-    const payload = (await requestResponse.json().catch(() => null)) as {
-      error?: string;
-    } | null;
-    throw new Error(mapUploadClientError(payload?.error));
+  if (!beginClientUpload(clientUploadId)) {
+    throw new Error('An upload is already in progress.');
   }
 
-  const { fileId } = (await requestResponse.json()) as { fileId: string };
+  try {
+    const requestResponse = await fetch('/api/files/upload/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: params.originalFile.name,
+        mimeType: params.originalFile.type || 'application/octet-stream',
+        size: params.payloadFile.size,
+        secure: params.secure,
+        encryption: params.encryption,
+        clientUploadId,
+      }),
+    });
 
-  const transferForm = new FormData();
-  transferForm.append('fileId', fileId);
-  transferForm.append('file', params.payloadFile, params.payloadFile.name);
+    if (!requestResponse.ok) {
+      const payload = (await requestResponse.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      throw new Error(mapUploadClientError(payload?.error));
+    }
 
-  const transferResponse = await fetch('/api/files/upload/transfer', {
-    method: 'POST',
-    body: transferForm,
-  });
+    const { fileId } = (await requestResponse.json()) as { fileId: string };
 
-  if (!transferResponse.ok) {
-    const payload = (await transferResponse.json().catch(() => null)) as {
-      error?: string;
-    } | null;
-    throw new Error(mapUploadClientError(payload?.error));
+    const transferForm = new FormData();
+    transferForm.append('fileId', fileId);
+    transferForm.append('file', params.payloadFile, params.payloadFile.name);
+
+    const transferResponse = await fetch('/api/files/upload/transfer', {
+      method: 'POST',
+      body: transferForm,
+    });
+
+    if (!transferResponse.ok) {
+      const payload = (await transferResponse.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      throw new Error(mapUploadClientError(payload?.error));
+    }
+
+    const completeResponse = await fetch('/api/files/upload/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileId, clientUploadId }),
+    });
+
+    if (!completeResponse.ok) {
+      const payload = (await completeResponse.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      throw new Error(mapUploadClientError(payload?.error));
+    }
+
+    const completePayload = (await completeResponse.json()) as {
+      fileId: string;
+      status: 'READY' | 'PENDING';
+    };
+
+    return {
+      fileId: completePayload.fileId,
+      clientUploadId,
+      status: completePayload.status,
+    };
+  } finally {
+    endClientUpload(clientUploadId);
   }
-
-  const completeResponse = await fetch('/api/files/upload/complete', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileId }),
-  });
-
-  if (!completeResponse.ok) {
-    const payload = (await completeResponse.json().catch(() => null)) as {
-      error?: string;
-    } | null;
-    throw new Error(mapUploadClientError(payload?.error));
-  }
-
-  return { fileId };
 }
 
-export async function uploadNormalFile(file: File): Promise<{ fileId: string }> {
+export async function uploadNormalFile(
+  file: File,
+  clientUploadId?: string,
+): Promise<UploadPreparedResult> {
   return uploadPreparedFile({
     originalFile: file,
     payloadFile: file,
     secure: false,
+    clientUploadId,
   });
 }
 

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser } from '@/lib/api/auth';
 import { changeCustomerPassword } from '@/lib/customer-password';
+import { recordCustomerSecurityEvent } from '@/lib/security/customer-events';
+import { getRequestIp, getRequestUserAgent } from '@/lib/security/request-context';
 
 const changePasswordSchema = z
   .object({
@@ -47,6 +49,13 @@ export async function POST(request: Request) {
   if (!result.ok) {
     return NextResponse.json({ error: result.reason }, { status: 400 });
   }
+
+  await recordCustomerSecurityEvent({
+    userId: user.id,
+    eventType: 'PASSWORD_CHANGED',
+    ipAddress: getRequestIp(request),
+    userAgent: getRequestUserAgent(request),
+  });
 
   return NextResponse.json({ ok: true });
 }

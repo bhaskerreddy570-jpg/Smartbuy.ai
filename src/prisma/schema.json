@@ -40,6 +40,14 @@
       "model": "CustomerDeviceToken",
       "namespace": "public"
     },
+    "customerSecurityEvent": {
+      "model": "CustomerSecurityEvent",
+      "namespace": "public"
+    },
+    "customerSession": {
+      "model": "CustomerSession",
+      "namespace": "public"
+    },
     "deviceContactMapping": {
       "model": "DeviceContactMapping",
       "namespace": "public"
@@ -223,6 +231,80 @@
               {
                 "name": "PAUSED",
                 "value": "PAUSED"
+              }
+            ]
+          },
+          "CustomerRiskLevel": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "INFO",
+                "value": "INFO"
+              },
+              {
+                "name": "LOW",
+                "value": "LOW"
+              },
+              {
+                "name": "MEDIUM",
+                "value": "MEDIUM"
+              }
+            ]
+          },
+          "CustomerSecurityEventType": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "LOGIN_SUCCESS",
+                "value": "LOGIN_SUCCESS"
+              },
+              {
+                "name": "LOGIN_FAILURE",
+                "value": "LOGIN_FAILURE"
+              },
+              {
+                "name": "LOGOUT",
+                "value": "LOGOUT"
+              },
+              {
+                "name": "PASSWORD_CHANGED",
+                "value": "PASSWORD_CHANGED"
+              },
+              {
+                "name": "SESSION_CREATED",
+                "value": "SESSION_CREATED"
+              },
+              {
+                "name": "SESSION_REVOKED",
+                "value": "SESSION_REVOKED"
+              },
+              {
+                "name": "FILE_UPLOAD",
+                "value": "FILE_UPLOAD"
+              },
+              {
+                "name": "FILE_DOWNLOAD",
+                "value": "FILE_DOWNLOAD"
+              },
+              {
+                "name": "FILE_DELETE",
+                "value": "FILE_DELETE"
+              },
+              {
+                "name": "FILE_RESTORE",
+                "value": "FILE_RESTORE"
+              },
+              {
+                "name": "SECURITY_SETTING_CHANGED",
+                "value": "SECURITY_SETTING_CHANGED"
+              },
+              {
+                "name": "NEW_DEVICE_DETECTED",
+                "value": "NEW_DEVICE_DETECTED"
+              },
+              {
+                "name": "UNUSUAL_ACTIVITY",
+                "value": "UNUSUAL_ACTIVITY"
               }
             ]
           },
@@ -1550,6 +1632,272 @@
               "table": "customerDeviceToken"
             }
           },
+          "CustomerSecurityEvent": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "eventType": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "CustomerSecurityEventType",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "ipAddress": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "metadata": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "riskLevel": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "CustomerRiskLevel",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "userAgent": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "user": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "eventType": {
+                  "column": "eventType"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "ipAddress": {
+                  "column": "ipAddress"
+                },
+                "metadata": {
+                  "column": "metadata"
+                },
+                "riskLevel": {
+                  "column": "riskLevel"
+                },
+                "userAgent": {
+                  "column": "userAgent"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "customerSecurityEvent"
+            }
+          },
+          "CustomerSession": {
+            "fields": {
+              "browser": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "deviceLabel": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "expiresAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "ipAddress": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastActiveAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "platform": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "revokedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "sessionTokenHash": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "userAgent": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "user": {
+                "cardinality": "N:1",
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "browser": {
+                  "column": "browser"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "deviceLabel": {
+                  "column": "deviceLabel"
+                },
+                "expiresAt": {
+                  "column": "expiresAt"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "ipAddress": {
+                  "column": "ipAddress"
+                },
+                "lastActiveAt": {
+                  "column": "lastActiveAt"
+                },
+                "platform": {
+                  "column": "platform"
+                },
+                "revokedAt": {
+                  "column": "revokedAt"
+                },
+                "sessionTokenHash": {
+                  "column": "sessionTokenHash"
+                },
+                "userAgent": {
+                  "column": "userAgent"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "customerSession"
+            }
+          },
           "DeviceContactMapping": {
             "fields": {
               "cloudContactId": {
@@ -1815,6 +2163,13 @@
                   "plane": "domain"
                 }
               },
+              "clientUploadId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "createdAt": {
                 "nullable": false,
                 "type": {
@@ -1875,6 +2230,13 @@
                 "nullable": false,
                 "type": {
                   "codecId": "pg/uuid@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastAccessedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
                   "kind": "scalar"
                 }
               },
@@ -2025,6 +2387,9 @@
                 "category": {
                   "column": "category"
                 },
+                "clientUploadId": {
+                  "column": "clientUploadId"
+                },
                 "createdAt": {
                   "column": "createdAt"
                 },
@@ -2051,6 +2416,9 @@
                 },
                 "id": {
                   "column": "id"
+                },
+                "lastAccessedAt": {
+                  "column": "lastAccessedAt"
                 },
                 "mimeType": {
                   "column": "mimeType"
@@ -2661,6 +3029,21 @@
                   "namespace": "public"
                 }
               },
+              "customerSessions": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "CustomerSession",
+                  "namespace": "public"
+                }
+              },
               "devicePairingSessions": {
                 "cardinality": "1:N",
                 "on": {
@@ -2703,6 +3086,21 @@
                 },
                 "to": {
                   "model": "Folder",
+                  "namespace": "public"
+                }
+              },
+              "securityEvents": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "CustomerSecurityEvent",
                   "namespace": "public"
                 }
               },
@@ -3773,6 +4171,252 @@
                 }
               ]
             },
+            "customerSecurityEvent": {
+              "checks": [
+                {
+                  "expression": "\"eventType\" IN ('LOGIN_SUCCESS', 'LOGIN_FAILURE', 'LOGOUT', 'PASSWORD_CHANGED', 'SESSION_CREATED', 'SESSION_REVOKED', 'FILE_UPLOAD', 'FILE_DOWNLOAD', 'FILE_DELETE', 'FILE_RESTORE', 'SECURITY_SETTING_CHANGED', 'NEW_DEVICE_DETECTED', 'UNUSUAL_ACTIVITY')",
+                  "name": "customerSecurityEvent_eventType_check_f524d5a3",
+                  "prefix": "customerSecurityEvent_eventType_check"
+                },
+                {
+                  "expression": "\"riskLevel\" IN ('INFO', 'LOW', 'MEDIUM')",
+                  "name": "customerSecurityEvent_riskLevel_check_0cbc839c",
+                  "prefix": "customerSecurityEvent_riskLevel_check"
+                }
+              ],
+              "columns": {
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "eventType": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "CustomerSecurityEventType",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "ipAddress": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "metadata": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "riskLevel": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "INFO"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "CustomerRiskLevel",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "userAgent": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "userId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "customerSecurityEvent"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "user"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "eventType"
+                  ],
+                  "name": "customerSecurityEvent_eventType_idx_e4cf7742",
+                  "prefix": "customerSecurityEvent_eventType_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "createdAt"
+                  ],
+                  "name": "customerSecurityEvent_userId_createdAt_idx_f726f04a",
+                  "prefix": "customerSecurityEvent_userId_createdAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "customerSecurityEvent_userId_idx_a489d58a",
+                  "prefix": "customerSecurityEvent_userId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "customerSession": {
+              "columns": {
+                "browser": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "deviceLabel": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "expiresAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                },
+                "ipAddress": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "lastActiveAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "platform": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "revokedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "sessionTokenHash": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "userAgent": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "userId": {
+                  "codecId": "pg/uuid@1",
+                  "nativeType": "uuid",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "customerSession"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "user"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "customerSession_userId_idx_a489d58a",
+                  "prefix": "customerSession_userId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "revokedAt"
+                  ],
+                  "name": "customerSession_userId_revokedAt_idx_eae4cbef",
+                  "prefix": "customerSession_userId_revokedAt_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "sessionTokenHash"
+                  ]
+                }
+              ]
+            },
             "deviceContactMapping": {
               "checks": [
                 {
@@ -4060,6 +4704,11 @@
                     "plane": "storage"
                   }
                 },
+                "clientUploadId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "createdAt": {
                   "codecId": "pg/timestamptz-string@1",
                   "default": {
@@ -4108,6 +4757,11 @@
                   "codecId": "pg/uuid@1",
                   "nativeType": "uuid",
                   "nullable": false
+                },
+                "lastAccessedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
                 },
                 "mimeType": {
                   "codecId": "pg/text@1",
@@ -4283,6 +4937,15 @@
                 {
                   "columns": [
                     "userId",
+                    "lastAccessedAt"
+                  ],
+                  "name": "file_userId_lastAccessedAt_idx_6e312cf5",
+                  "prefix": "file_userId_lastAccessedAt_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "userId",
                     "starred"
                   ],
                   "name": "file_userId_starred_idx_57631854",
@@ -4308,6 +4971,12 @@
                 {
                   "columns": [
                     "storageKey"
+                  ]
+                },
+                {
+                  "columns": [
+                    "userId",
+                    "clientUploadId"
                   ]
                 }
               ]
@@ -4815,6 +5484,32 @@
                 "PAUSED"
               ]
             },
+            "CustomerRiskLevel": {
+              "kind": "valueSet",
+              "values": [
+                "INFO",
+                "LOW",
+                "MEDIUM"
+              ]
+            },
+            "CustomerSecurityEventType": {
+              "kind": "valueSet",
+              "values": [
+                "LOGIN_SUCCESS",
+                "LOGIN_FAILURE",
+                "LOGOUT",
+                "PASSWORD_CHANGED",
+                "SESSION_CREATED",
+                "SESSION_REVOKED",
+                "FILE_UPLOAD",
+                "FILE_DOWNLOAD",
+                "FILE_DELETE",
+                "FILE_RESTORE",
+                "SECURITY_SETTING_CHANGED",
+                "NEW_DEVICE_DETECTED",
+                "UNUSUAL_ACTIVITY"
+              ]
+            },
             "FileCategory": {
               "kind": "valueSet",
               "values": [
@@ -4876,10 +5571,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "27ef97615bdea45da4e7055103a711356a9aa1c0f861ae0e06580657f2543f65"
+    "storageHash": "a000c93448272ca6e224da6349e0012074d2209ba98c0d6d175dcd09d722e48f"
   },
   "execution": {
-    "executionHash": "e653937496620ac89066e28ffe6e96ed6973b4ddfbe0e1c09189c6164dbb1cb5",
+    "executionHash": "67859fc8aae6091182c8c557fd4adf8f068a6f7d44807f6f44e915fbeda7a229",
     "mutations": {
       "defaults": [
         {
@@ -5043,6 +5738,28 @@
             "column": "id",
             "namespace": "public",
             "table": "customerDeviceToken"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "customerSecurityEvent"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "customerSession"
           }
         },
         {

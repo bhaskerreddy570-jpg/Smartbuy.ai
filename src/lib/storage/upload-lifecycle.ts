@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg';
 import { randomUUID } from 'node:crypto';
+import { orm } from '@/lib/db';
 import { resolveCustomerLimits } from '@/lib/customer-limits';
 import { getStorageService } from '@/lib/storage/storage-service';
 import {
@@ -32,6 +33,7 @@ export type CreatedPendingUpload = {
   storageKey: string;
   reservedBytes: bigint;
   category: FileCategory;
+  reusedExisting?: boolean;
 };
 
 export type UploadFailureReason =
@@ -75,11 +77,34 @@ export async function createPendingUpload(params: {
   category: FileCategory;
   secure?: boolean;
   encryption?: SecureEncryptionMetadata;
+  clientUploadId?: string;
 }): Promise<
   | { ok: true; file: CreatedPendingUpload }
   | { ok: false; reason: UploadFailureReason }
 > {
   try {
+    if (params.clientUploadId) {
+      const existing = await orm.File.where({
+        userId: params.userId,
+        clientUploadId: params.clientUploadId,
+      })
+        .select('id', 'storageKey', 'size', 'category', 'status')
+        .first();
+
+      if (existing) {
+        return {
+          ok: true,
+          file: {
+            fileId: existing.id,
+            storageKey: existing.storageKey,
+            reservedBytes: BigInt(existing.size),
+            category: existing.category,
+            reusedExisting: true,
+          },
+        };
+      }
+    }
+
     return await withLockedUser(params.userId, async (user, client) => {
       const reservation = reserveStorageBytes(user, params.uploadSize);
       if (!reservation.ok) {
@@ -106,8 +131,8 @@ export async function createPendingUpload(params: {
           id, "userId", name, "originalName", "storageKey", size, "mimeType", status,
           category, "storageProvider", "storageNamespace", "securityMode",
           "encryptionFormatVersion", "encryptionAlgorithm", "encryptionKdf",
-          "encryptionSalt", "encryptionIv", "plaintextSize", "updatedAt"
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8, 'S3', $9, $10, $11, $12, $13, $14, $15, $16, NOW())`,
+          "encryptionSalt", "encryptionIv", "plaintextSize", "clientUploadId", "updatedAt"
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8, 'S3', $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())`,
         [
           fileId,
           params.userId,
@@ -125,6 +150,7 @@ export async function createPendingUpload(params: {
           encryptionFields?.encryptionSalt ?? null,
           encryptionFields?.encryptionIv ?? null,
           encryptionFields?.plaintextSize?.toString() ?? null,
+          params.clientUploadId ?? null,
         ],
       );
 
@@ -141,6 +167,32 @@ export async function createPendingUpload(params: {
       };
     });
   } catch (error) {
+    if (
+      params.clientUploadId &&
+      error instanceof Error &&
+      /unique|duplicate key/i.test(error.message)
+    ) {
+      const existing = await orm.File.where({
+        userId: params.userId,
+        clientUploadId: params.clientUploadId,
+      })
+        .select('id', 'storageKey', 'size', 'category')
+        .first();
+
+      if (existing) {
+        return {
+          ok: true,
+          file: {
+            fileId: existing.id,
+            storageKey: existing.storageKey,
+            reservedBytes: BigInt(existing.size),
+            category: existing.category,
+            reusedExisting: true,
+          },
+        };
+      }
+    }
+
     console.error('createPendingUpload failed', {
       userId: params.userId,
       fileName: params.fileName,

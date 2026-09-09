@@ -2,8 +2,10 @@ import { orm } from '@/lib/db';
 import { resolveCustomerLimits, shouldResetBandwidthPeriod } from '@/lib/customer-limits';
 import { ensureCustomerQuotaPersisted } from '@/lib/quota-backfill';
 import { getCategoryLabel } from '@/lib/storage/categories';
+import { applyFileSearchFilters, type FileSearchFilters } from '@/lib/files/search';
+import { countReadyFilesByCategory } from '@/lib/storage/file-insights';
 import { listDeletedFiles, listReadyFiles, listStarredFiles } from '@/lib/storage/files';
-import { FILE_CATEGORIES, type FileCategory } from '@/lib/storage/types';
+import { CUSTOMER_FILE_CATEGORIES, type FileCategory } from '@/lib/storage/types';
 import { formatBytes } from '@/lib/storage/validation';
 
 export async function getDashboardData(
@@ -12,6 +14,7 @@ export async function getDashboardData(
     category?: FileCategory;
     starred?: boolean;
     trash?: boolean;
+    search?: FileSearchFilters;
   },
 ) {
   await ensureCustomerQuotaPersisted(userId);
@@ -40,26 +43,38 @@ export async function getDashboardData(
       ? limits.monthlyBandwidthLimitBytes - bandwidthUsed
       : 0n;
 
-  const allFiles = await listReadyFiles(userId);
-  const category = options?.category;
-  const sourceFiles = options?.trash
-    ? await listDeletedFiles(userId)
-    : options?.starred
-      ? await listStarredFiles(userId)
-      : allFiles;
-  const files = category
-    ? sourceFiles.filter((file) => file.category === category)
-    : sourceFiles;
+  const category = options?.category ?? options?.search?.category;
 
-  const countsByCategory = new Map<FileCategory, number>();
-  for (const fileCategory of FILE_CATEGORIES) {
-    countsByCategory.set(fileCategory, 0);
-  }
-  for (const file of allFiles) {
-    countsByCategory.set(
-      file.category,
-      (countsByCategory.get(file.category) ?? 0) + 1,
+  const [categoryCounts, sourceFilesList] = await Promise.all([
+    countReadyFilesByCategory(userId),
+    options?.trash
+      ? listDeletedFiles(userId)
+      : options?.starred
+        ? listStarredFiles(userId)
+        : listReadyFiles(userId, category),
+  ]);
+  const sourceFiles = sourceFilesList;
+  let files =
+    category && !options?.trash && !options?.starred
+      ? sourceFiles
+      : category
+        ? sourceFiles.filter((file) => file.category === category)
+        : sourceFiles;
+
+  if (options?.search) {
+    const searchable = files.map((file) => ({
+      id: file.id,
+      name: file.name,
+      category: file.category,
+      starred: Boolean(file.starred),
+      securityMode: (file.securityMode ?? 'NORMAL') as 'NORMAL' | 'SECURE',
+      size: file.size.toString(),
+      createdAt: file.createdAt,
+    }));
+    const filteredIds = new Set(
+      applyFileSearchFilters(searchable, options.search).map((entry) => entry.id),
     );
+    files = files.filter((file) => filteredIds.has(file.id));
   }
 
   return {
@@ -85,10 +100,10 @@ export async function getDashboardData(
     },
     activeCategory: category ?? null,
     view: options?.trash ? 'trash' : options?.starred ? 'starred' : 'files',
-    categories: FILE_CATEGORIES.map((fileCategory) => ({
+    categories: CUSTOMER_FILE_CATEGORIES.map((fileCategory) => ({
       id: fileCategory,
       label: getCategoryLabel(fileCategory),
-      count: countsByCategory.get(fileCategory) ?? 0,
+      count: categoryCounts.get(fileCategory) ?? 0,
     })),
     files: files.map((file) => {
       const storedSize = BigInt(file.size);

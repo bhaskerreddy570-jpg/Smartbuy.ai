@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser } from '@/lib/api/auth';
 import { orm } from '@/lib/db';
+import { recordCustomerSecurityEvent } from '@/lib/security/customer-events';
 import { runAntivirusScanHook } from '@/lib/storage/antivirus';
 import { resolveOwnedFileStorage } from '@/lib/storage/owned-file-storage';
 import {
@@ -17,6 +18,7 @@ import { validateUploadFilename } from '@/lib/storage/validation';
 const completeSchema = z
   .object({
     fileId: z.string().uuid(),
+    clientUploadId: z.string().uuid().optional(),
   })
   .strict();
 
@@ -89,15 +91,13 @@ export async function POST(request: Request) {
     }
 
     if (file.status === 'READY') {
-      return NextResponse.json({ fileId: file.id, status: file.status });
-    }
-
-    const objectExists = await getStorageService().objectExists(owned.objectRef);
-    if (!objectExists) {
-      return NextResponse.json({ error: 'FILE_NOT_FOUND' }, { status: 404 });
+      return NextResponse.json({ fileId: file.id, status: file.status, alreadyComplete: true });
     }
 
     const metadata = await getStorageService().headObject(owned.objectRef);
+    if (metadata.size <= 0n) {
+      return NextResponse.json({ error: 'FILE_NOT_FOUND' }, { status: 404 });
+    }
     const reservedBytes = BigInt(file.size);
 
     const scanResult = await runAntivirusScanHook({
@@ -150,6 +150,12 @@ export async function POST(request: Request) {
 
       return NextResponse.json({ error: 'FILE_NOT_FOUND' }, { status: 404 });
     }
+
+    await recordCustomerSecurityEvent({
+      userId: user.id,
+      eventType: 'FILE_UPLOAD',
+      metadata: { fileId: file.id, fileName: file.name, size: metadata.size.toString() },
+    });
 
     return NextResponse.json({ fileId: file.id, status: 'READY' });
   } catch (completeError) {

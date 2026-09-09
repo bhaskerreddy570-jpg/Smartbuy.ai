@@ -88,6 +88,9 @@ export async function ensurePlanConfigurationsSeeded(): Promise<void> {
     await orm.PlanConfiguration.where({ plan }).update({
       displayName: defaults.displayName,
       active: true,
+      storageQuotaBytes: defaults.storageQuotaBytes,
+      maxFileSizeBytes: defaults.maxFileSizeBytes,
+      monthlyBandwidthLimitBytes: defaults.monthlyBandwidthLimitBytes,
     });
   }
 

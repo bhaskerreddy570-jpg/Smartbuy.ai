@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuthUser } from '@/lib/api/auth';
+import { mergeFileSearchFilters } from '@/lib/files/search';
 import { getDashboardData } from '@/lib/dashboard';
 import { isFileCategory } from '@/lib/storage/categories';
 
@@ -22,8 +23,9 @@ export async function GET(request: Request) {
       categoryParam && isFileCategory(categoryParam) ? categoryParam : undefined;
     const starred = url.searchParams.get('starred') === 'true';
     const trash = url.searchParams.get('trash') === 'true';
+    const search = mergeFileSearchFilters(url.searchParams);
 
-    const data = await getDashboardData(user.id, { category, starred, trash });
+    const data = await getDashboardData(user.id, { category, starred, trash, search });
 
     if (!data) {
       return NextResponse.json({ error: 'USER_NOT_FOUND' }, { status: 404 });

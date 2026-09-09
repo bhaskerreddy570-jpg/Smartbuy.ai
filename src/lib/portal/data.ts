@@ -11,6 +11,9 @@ import { isCustomerAccountLocked } from '@/lib/admin/customer-accounts';
 import { getCustomerStorageUsageByCategory } from '@/lib/storage/category-usage';
 import { formatBytes } from '@/lib/storage/validation';
 import type { FileCategory } from '@/lib/storage/types';
+import { getOverviewSmartAccess } from '@/lib/portal/security-data';
+import type { SmartFileSummary } from '@/lib/storage/file-insights';
+import { ensureCustomerQuotaPersisted } from '@/lib/quota-backfill';
 
 export type PortalUser = {
   id: string;
@@ -51,9 +54,12 @@ export type OverviewData = Omit<DashboardData, 'categories'> & {
   greeting: string;
   categoryUsage: CategoryCardData[];
   recentFiles: DashboardData['files'];
+  smartAccess: {
+    recentlyOpened: SmartFileSummary[];
+    secureFiles: SmartFileSummary[];
+    largeFiles: SmartFileSummary[];
+  };
 };
-
-import { ensureCustomerQuotaPersisted } from '@/lib/quota-backfill';
 
 function buildGreeting(name: string | null): string {
   const hour = new Date().getHours();
@@ -117,12 +123,13 @@ export async function getPortalContext(userId: string): Promise<PortalContext | 
 export async function getOverviewData(userId: string): Promise<OverviewData | null> {
   await ensureCustomerQuotaPersisted(userId);
 
-  const [dashboard, usage, user] = await Promise.all([
+  const [dashboard, usage, user, smartAccess] = await Promise.all([
     getDashboardData(userId),
     getCustomerStorageUsageByCategory(userId),
     orm.User.where({ id: userId })
       .select('id', 'name', 'email', 'createdAt', 'lockedAt')
       .first(),
+    getOverviewSmartAccess(userId),
   ]);
 
   if (!dashboard || !user || isCustomerAccountLocked(user)) {
@@ -174,6 +181,11 @@ export async function getOverviewData(userId: string): Promise<OverviewData | nu
     greeting: buildGreeting(user.name),
     categoryUsage: categories,
     recentFiles,
+    smartAccess: {
+      recentlyOpened: smartAccess.recentlyOpened,
+      secureFiles: smartAccess.secureFiles,
+      largeFiles: smartAccess.largeFiles,
+    },
   };
 }
 

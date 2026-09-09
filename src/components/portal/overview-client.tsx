@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { OverviewData } from "@/lib/portal/data";
+import { getCategoryLabel } from "@/lib/storage/categories";
 import { FileTypeIcon } from "@/components/portal/file-type-icon";
 
 type OverviewClientProps = {
@@ -186,22 +187,88 @@ export function OverviewClient({ data }: OverviewClientProps) {
                 </span>
               </span>
             </Link>
-            <Link href="/files" className="portal-action-card">
-              <span className="portal-action-icon bg-gradient-to-br from-violet-500 to-purple-600">
+            <Link href="/security" className="portal-action-card">
+              <span className="portal-action-icon bg-gradient-to-br from-emerald-500 to-teal-600">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
-                  <path d="M4 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M12 3 20 7v6c0 5-3.5 7.5-8 8-4.5-.5-8-3-8-8V7l8-4Z" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </span>
               <span>
-                <span className="block font-medium">Browse files</span>
+                <span className="block font-medium">Security Center</span>
                 <span className="block text-xs text-zinc-500 dark:text-zinc-400">
-                  Open your full file manager
+                  Review sessions and activity
+                </span>
+              </span>
+            </Link>
+            <Link href="/files?q=secure+files" className="portal-action-card">
+              <span className="portal-action-icon bg-gradient-to-br from-violet-500 to-purple-600">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+                  <path d="M12 3 20 7v6c0 5-3.5 7.5-8 8-4.5-.5-8-3-8-8V7l8-4Z" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span>
+                <span className="block font-medium">Secure files</span>
+                <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+                  {data.smartAccess.secureFiles.length} zero-knowledge file
+                  {data.smartAccess.secureFiles.length === 1 ? "" : "s"}
                 </span>
               </span>
             </Link>
           </div>
         </section>
       </div>
+
+      {(data.smartAccess.largeFiles.length > 0 || data.smartAccess.recentlyOpened.length > 0) && (
+        <div className="grid gap-6 xl:grid-cols-2">
+          {data.smartAccess.recentlyOpened.length > 0 ? (
+            <section className="portal-card">
+              <h2 className="text-xl font-semibold">Recently opened</h2>
+              <div className="mt-4 space-y-3">
+                {data.smartAccess.recentlyOpened.slice(0, 5).map((file) => (
+                  <Link
+                    key={file.id}
+                    href="/files"
+                    className="flex items-center gap-3 rounded-2xl border border-zinc-100 bg-zinc-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-900/40"
+                  >
+                    <FileTypeIcon category={file.category} mimeType={file.mimeType} compact />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{file.name}</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {getCategoryLabel(file.category)}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {data.smartAccess.largeFiles.length > 0 ? (
+            <section className="portal-card">
+              <h2 className="text-xl font-semibold">Large files</h2>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                Files using the most storage space
+              </p>
+              <div className="mt-4 space-y-3">
+                {data.smartAccess.largeFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-100 bg-zinc-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-900/40"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <FileTypeIcon category={file.category} mimeType={file.mimeType} compact />
+                      <p className="truncate font-medium">{file.name}</p>
+                    </div>
+                    <p className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
+                      {(Number(file.size) / (1024 * 1024)).toFixed(1)} MB
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

@@ -3,27 +3,23 @@
 import { useRouter } from "next/navigation";
 import { ChangeEvent, useMemo, useState } from "react";
 import type { DashboardData } from "@/lib/dashboard";
+import { applyFileSearchFilters, parseNaturalLanguageFileQuery } from "@/lib/files/search";
 import { mapFilesLoadClientError, mapUploadTransferClientError } from "@/lib/api/fetch-errors";
 import type { FileCategory } from "@/lib/storage/types";
 import { FileTypeIcon } from "@/components/portal/file-type-icon";
 import { SecureUploadDialog } from "@/components/portal/secure-upload-dialog";
 import { SecureUnlockDialog } from "@/components/portal/secure-unlock-dialog";
-import {
-  uploadNormalFile,
-  uploadPreparedFile,
-} from "@/lib/client/file-upload-flow";
+import { uploadNormalFile, uploadPreparedFile } from "@/lib/client/file-upload-flow";
+import { createClientUploadId } from "@/lib/client/upload-inflight";
 import {
   handleNormalFileDownload,
   handleSecureFileDownload,
   type SecureDownloadPayload,
 } from "@/lib/client/secure-file-access";
-import { ContactsClient } from "@/components/portal/contacts-client";
-import type { ContactsPortalData } from "@/lib/contacts/portal-data";
 
 type FilesClientProps = {
   initialData: DashboardData;
   initialQuery?: string;
-  contactsData?: ContactsPortalData;
 };
 
 type ViewMode = "grid" | "list";
@@ -46,7 +42,6 @@ function sortFiles(
 export function FilesClient({
   initialData,
   initialQuery = "",
-  contactsData,
 }: FilesClientProps) {
   const router = useRouter();
   const [data, setData] = useState(initialData);
@@ -66,15 +61,15 @@ export function FilesClient({
     usesPassphrase: boolean;
     payload: SecureDownloadPayload;
   } | null>(null);
-  const [contactsViewData, setContactsViewData] = useState(contactsData ?? null);
 
   const filteredFiles = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    const base = sortFiles(data.files, sortBy);
-    if (!query) {
-      return base;
-    }
-    return base.filter((file) => file.name.toLowerCase().includes(query));
+    const parsed = parseNaturalLanguageFileQuery(search);
+    const filters = {
+      ...parsed,
+      query: search.trim() && !parsed.query ? undefined : parsed.query ?? (search.trim() || undefined),
+      sort: sortBy,
+    };
+    return applyFileSearchFilters(sortFiles(data.files, sortBy), filters);
   }, [data.files, search, sortBy]);
 
   async function refreshFiles(category?: FileCategory | null) {
@@ -147,23 +142,16 @@ export function FilesClient({
 
       const payload = (await response.json()) as DashboardData;
       setData(payload);
-
-      if (category === "CONTACTS") {
-        const contactsResponse = await fetch("/api/contacts", { cache: "no-store" });
-        if (contactsResponse.ok) {
-          setContactsViewData((await contactsResponse.json()) as ContactsPortalData);
-        } else {
-          setContactsViewData(null);
-        }
-      } else {
-        setContactsViewData(null);
-      }
     } catch (loadError) {
       setError(mapFilesLoadClientError(loadError));
     }
   }
 
   async function uploadFile(file: File, secure = secureUploadEnabled) {
+    if (uploading) {
+      return;
+    }
+
     if (secure) {
       setPendingSecureFile(file);
       return;
@@ -172,9 +160,10 @@ export function FilesClient({
     setUploading(true);
     setActionMessage(null);
     setError(null);
+    const clientUploadId = createClientUploadId();
 
     try {
-      await uploadNormalFile(file);
+      await uploadNormalFile(file, clientUploadId);
       setActionMessage(`${file.name} uploaded successfully`);
       await refreshFiles(data.activeCategory);
     } catch (uploadError) {
@@ -188,13 +177,14 @@ export function FilesClient({
     encryptedFile: File;
     metadata: Parameters<typeof uploadPreparedFile>[0]["encryption"];
   }) {
-    if (!pendingSecureFile) {
+    if (!pendingSecureFile || uploading) {
       return;
     }
 
     setUploading(true);
     setError(null);
     setActionMessage(null);
+    const clientUploadId = createClientUploadId();
 
     try {
       await uploadPreparedFile({
@@ -202,6 +192,7 @@ export function FilesClient({
         payloadFile: result.encryptedFile,
         secure: true,
         encryption: result.metadata,
+        clientUploadId,
       });
       setActionMessage(`${pendingSecureFile.name} uploaded securely`);
       setPendingSecureFile(null);
@@ -293,8 +284,6 @@ export function FilesClient({
     await refreshFiles(data.activeCategory);
   }
 
-  const isContactsCategory = data.activeCategory === "CONTACTS";
-
   return (
     <div className="space-y-6 pb-24 lg:pb-6">
       <div className="portal-page-header">
@@ -304,45 +293,42 @@ export function FilesClient({
             Upload, organize, and manage your private cloud storage.
           </p>
         </div>
-        {!isContactsCategory ? (
-          <div className="flex flex-col items-stretch gap-3 sm:items-end">
-            <label className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950">
-              <input
-                type="checkbox"
-                checked={secureUploadEnabled}
-                onChange={(event) => setSecureUploadEnabled(event.target.checked)}
-              />
-              Secure this file 🔐
-            </label>
-            <label className="portal-primary-button cursor-pointer">
-              {uploading ? "Uploading..." : secureUploadEnabled ? "Upload securely" : "Upload file"}
-              <input type="file" className="hidden" disabled={uploading} onChange={handleUpload} />
-            </label>
-          </div>
-        ) : null}
+        <div className="flex flex-col items-stretch gap-3 sm:items-end">
+          <label className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950">
+            <input
+              type="checkbox"
+              checked={secureUploadEnabled}
+              onChange={(event) => setSecureUploadEnabled(event.target.checked)}
+            />
+            Secure this file 🔐
+          </label>
+          <label className="portal-primary-button cursor-pointer">
+            {uploading ? "Uploading..." : secureUploadEnabled ? "Upload securely" : "Upload file"}
+            <input type="file" className="hidden" disabled={uploading} onChange={handleUpload} />
+          </label>
+        </div>
       </div>
 
-      {!isContactsCategory ? (
-        <div
-          className={`portal-upload-zone rounded-3xl border-2 border-dashed p-8 text-center transition ${
-            dragActive
-              ? "border-sky-400 bg-sky-50/80 dark:border-sky-500 dark:bg-sky-950/30"
-              : "border-zinc-200 bg-white/70 dark:border-zinc-700 dark:bg-zinc-950/50"
-          }`}
-          onDragOver={(event) => {
-            event.preventDefault();
-            setDragActive(true);
-          }}
-          onDragLeave={() => setDragActive(false)}
-          onDrop={async (event) => {
-            event.preventDefault();
-            setDragActive(false);
-            const file = event.dataTransfer.files?.[0];
-            if (file) {
-              await uploadFile(file);
-            }
-          }}
-        >
+      <div
+        className={`portal-upload-zone rounded-3xl border-2 border-dashed p-8 text-center transition ${
+          dragActive
+            ? "border-sky-400 bg-sky-50/80 dark:border-sky-500 dark:bg-sky-950/30"
+            : "border-zinc-200 bg-white/70 dark:border-zinc-700 dark:bg-zinc-950/50"
+        }`}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragActive(true);
+        }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={async (event) => {
+          event.preventDefault();
+          setDragActive(false);
+          const file = event.dataTransfer.files?.[0];
+          if (file) {
+            await uploadFile(file);
+          }
+        }}
+      >
           <div className="mx-auto flex max-w-md flex-col items-center gap-3">
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/20">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-7 w-7">
@@ -354,8 +340,7 @@ export function FilesClient({
               Max file size: {data.maxFileSize.label}
             </p>
           </div>
-        </div>
-      ) : null}
+      </div>
 
       <section className="portal-card">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -382,8 +367,7 @@ export function FilesClient({
             ))}
           </div>
 
-          {!isContactsCategory ? (
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
               <input
                 type="search"
                 value={search}
@@ -419,12 +403,9 @@ export function FilesClient({
                 </button>
               </div>
             </div>
-          ) : null}
         </div>
 
-        {!isContactsCategory ? (
-          <>
-            {actionMessage ? (
+        {actionMessage ? (
               <p className="portal-alert-success mt-4">{actionMessage}</p>
             ) : null}
             {error ? <p className="portal-alert-error mt-4">{error}</p> : null}
@@ -558,14 +539,6 @@ export function FilesClient({
                 </table>
               </div>
             )}
-          </>
-        ) : contactsViewData ? (
-          <div className="mt-6">
-            <ContactsClient initialData={contactsViewData} embedded />
-          </div>
-        ) : (
-          <p className="portal-alert-error mt-4">Unable to load contacts backup.</p>
-        )}
       </section>
 
       <SecureUploadDialog

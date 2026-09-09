@@ -1,19 +1,35 @@
 import { auth } from '@/auth';
 import { NextResponse } from 'next/server';
 
-export async function requireAuthUser() {
+export type AuthenticatedUser = {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+};
+
+export async function requireAuthUser(): Promise<
+  | { error: NextResponse; user: null }
+  | { error: null; user: AuthenticatedUser }
+> {
   const session = await auth();
 
-  if (!session?.user?.id) {
+  const userId = session?.user?.id;
+  if (!userId) {
     return {
       error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
-      user: null as null,
+      user: null,
     };
   }
 
   return {
-    error: null as null,
-    user: session.user,
+    error: null,
+    user: {
+      id: userId,
+      name: session.user?.name,
+      email: session.user?.email,
+      image: session.user?.image,
+    },
   };
 }
 

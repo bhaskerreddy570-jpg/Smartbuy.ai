@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { FILE_CATEGORIES, type FileCategory } from '@/lib/storage/types';
+import { FILE_CATEGORIES, CUSTOMER_FILE_CATEGORIES, type FileCategory } from '@/lib/storage/types';
 import { resolveDatabaseUrl } from '@/lib/server-env';
 import { formatBytes } from '@/lib/storage/validation';
 
@@ -71,11 +71,20 @@ export async function getCustomerStorageUsageByCategory(
   }
 
   const usageByCategory = new Map<FileCategory, { bytesUsed: bigint; fileCount: number }>();
-  for (const category of FILE_CATEGORIES) {
+  for (const category of CUSTOMER_FILE_CATEGORIES) {
     usageByCategory.set(category, { bytesUsed: BigInt(0), fileCount: 0 });
   }
 
   for (const row of result.rows) {
+    if (row.category === 'CONTACTS') {
+      const other = usageByCategory.get('OTHER')!;
+      other.bytesUsed += BigInt(row.bytesUsed);
+      other.fileCount += Number(row.fileCount);
+      continue;
+    }
+    if (!usageByCategory.has(row.category)) {
+      continue;
+    }
     usageByCategory.set(row.category, {
       bytesUsed: BigInt(row.bytesUsed),
       fileCount: Number(row.fileCount),
@@ -83,7 +92,7 @@ export async function getCustomerStorageUsageByCategory(
   }
 
   let totalBytesUsed = BigInt(0);
-  const categories = FILE_CATEGORIES.map((category) => {
+  const categories = CUSTOMER_FILE_CATEGORIES.map((category) => {
     const usage = usageByCategory.get(category)!;
     totalBytesUsed += usage.bytesUsed;
     return {

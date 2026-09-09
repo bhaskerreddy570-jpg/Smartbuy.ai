@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { SecurityClient } from "@/components/portal/security-client";
-import { listCustomerDevices } from "@/lib/contacts/sync-service";
+import { getSecurityCenterData } from "@/lib/portal/security-data";
 
 export default async function SecurityPage() {
   const session = await auth();
@@ -9,17 +9,10 @@ export default async function SecurityPage() {
     redirect("/login");
   }
 
-  const devices = await listCustomerDevices(session.user.id);
-
-  return (
-    <SecurityClient
-      initialDevices={devices.map((device) => ({
-        id: device.id,
-        displayName: device.displayName,
-        platform: device.platform,
-        lastSyncAt: device.lastSyncAt,
-        revokedAt: device.revokedAt,
-      }))}
-    />
+  const data = await getSecurityCenterData(
+    session.user.id,
+    session.customerSessionId ?? null,
   );
+
+  return <SecurityClient initialData={data} />;
 }

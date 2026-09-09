@@ -2,90 +2,17 @@
 
 import { signOut } from "next-auth/react";
 import { FormEvent, useState } from "react";
+import type { SecurityCenterData } from "@/lib/portal/security-data";
 
-function ConnectedDevicesPanel({
-  initialDevices,
-}: {
-  initialDevices: Array<{
-    id: string;
-    displayName: string;
-    platform: "ANDROID" | "IOS";
-    lastSyncAt: string | null;
-    revokedAt: string | null;
-  }>;
-}) {
-  const [devices, setDevices] = useState(initialDevices);
-  const [error, setError] = useState<string | null>(null);
-
-  async function revokeDevice(deviceId: string) {
-    const response = await fetch(`/api/contacts/devices/${deviceId}`, { method: "DELETE" });
-    if (!response.ok) {
-      setError("Unable to revoke device");
-      return;
-    }
-    setDevices((current) =>
-      current.map((device) =>
-        device.id === deviceId
-          ? { ...device, revokedAt: new Date().toISOString() }
-          : device,
-      ),
-    );
+function formatWhen(value: string | null | undefined) {
+  if (!value) {
+    return "Unknown";
   }
-
-  if (error) {
-    return <p className="portal-alert-error mt-4">{error}</p>;
-  }
-
-  if (devices.length === 0) {
-    return (
-      <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
-        No connected mobile devices yet.
-      </p>
-    );
-  }
-
-  return (
-    <div className="mt-4 space-y-3">
-      {devices.map((device) => (
-        <div
-          key={device.id}
-          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-700"
-        >
-          <div>
-            <p className="font-medium">{device.displayName}</p>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              {device.platform === "ANDROID" ? "Android" : "iPhone"} · Last sync{" "}
-              {device.lastSyncAt ? new Date(device.lastSyncAt).toLocaleString() : "never"}
-            </p>
-          </div>
-          {!device.revokedAt ? (
-            <button
-              type="button"
-              className="portal-danger-button"
-              onClick={() => void revokeDevice(device.id)}
-            >
-              Revoke
-            </button>
-          ) : (
-            <span className="text-sm text-zinc-500">Revoked</span>
-          )}
-        </div>
-      ))}
-    </div>
-  );
+  return new Date(value).toLocaleString();
 }
 
-export function SecurityClient({
-  initialDevices,
-}: {
-  initialDevices: Array<{
-    id: string;
-    displayName: string;
-    platform: "ANDROID" | "IOS";
-    lastSyncAt: string | null;
-    revokedAt: string | null;
-  }>;
-}) {
+export function SecurityClient({ initialData }: { initialData: SecurityCenterData }) {
+  const [data, setData] = useState(initialData);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -93,8 +20,19 @@ export function SecurityClient({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  async function refreshSecurityCenter() {
+    const response = await fetch("/api/customer/security", { cache: "no-store" });
+    if (response.ok) {
+      setData((await response.json()) as SecurityCenterData);
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (loading) {
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
     setError(null);
@@ -132,18 +70,142 @@ export function SecurityClient({
     setNewPassword("");
     setConfirmPassword("");
     setLoading(false);
+    await refreshSecurityCenter();
+  }
+
+  async function revokeSession(sessionId: string) {
+    const response = await fetch(`/api/customer/sessions/${sessionId}`, { method: "DELETE" });
+    if (!response.ok) {
+      setError("Unable to revoke session");
+      return;
+    }
+    await refreshSecurityCenter();
+  }
+
+  async function revokeOtherSessions() {
+    const response = await fetch("/api/customer/sessions/revoke-others", { method: "POST" });
+    if (!response.ok) {
+      setError("Unable to sign out other sessions");
+      return;
+    }
+    await refreshSecurityCenter();
   }
 
   return (
     <div className="space-y-6 pb-24 lg:pb-6">
       <div className="portal-page-header">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Security</h1>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Security Center</h1>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Manage your password and account security.
+            Review account security, active sessions, and recent activity.
           </p>
         </div>
       </div>
+
+      {message ? <p className="portal-alert-success">{message}</p> : null}
+      {error ? <p className="portal-alert-error">{error}</p> : null}
+
+      <section className="portal-card">
+        <h2 className="text-lg font-semibold">Security status</h2>
+        <p className="mt-2 text-sm font-medium">
+          {data.status.label} — {data.status.description}
+        </p>
+        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+          Secure files in your account: {data.secureFileCount}
+        </p>
+      </section>
+
+      <section className="portal-card">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Devices &amp; sessions</h2>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+              Authenticated browser sessions for your CloudStoreNow account.
+            </p>
+          </div>
+          <button type="button" className="portal-secondary-button" onClick={() => void revokeOtherSessions()}>
+            Sign out other sessions
+          </button>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {data.sessions.length === 0 ? (
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">No active sessions recorded yet.</p>
+          ) : (
+            data.sessions.map((session) => (
+              <article
+                key={session.id}
+                className="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-700"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium">
+                      {session.deviceLabel ?? "Unknown device"}
+                      {session.isCurrent ? " · Current session" : ""}
+                    </p>
+                    <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                      Last active: {formatWhen(session.lastActiveAt)}
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-400">
+                      First seen: {formatWhen(session.createdAt)}
+                    </p>
+                  </div>
+                  {!session.isCurrent ? (
+                    <button
+                      type="button"
+                      className="portal-danger-button"
+                      onClick={() => void revokeSession(session.id)}
+                    >
+                      Revoke
+                    </button>
+                  ) : null}
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="portal-card">
+        <h2 className="text-lg font-semibold">Recent security activity</h2>
+        <div className="mt-4 space-y-3">
+          {data.events.length === 0 ? (
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">No security events recorded yet.</p>
+          ) : (
+            data.events.map((event) => (
+              <div
+                key={event.id}
+                className="rounded-xl border border-zinc-200 px-4 py-3 dark:border-zinc-700"
+              >
+                <p className="text-sm font-medium">{event.eventType}</p>
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  {formatWhen(event.createdAt)}
+                  {event.riskLevel !== "INFO" ? ` · ${event.riskLevel}` : ""}
+                </p>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      {data.storageRecommendations.length > 0 ? (
+        <section className="portal-card">
+          <h2 className="text-lg font-semibold">Storage recommendations</h2>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            Review large files that may be consuming significant space. Nothing is deleted automatically.
+          </p>
+          <div className="mt-4 space-y-3">
+            {data.storageRecommendations.map((item) => (
+              <div key={item.id} className="rounded-xl border border-zinc-200 px-4 py-3 dark:border-zinc-700">
+                <p className="font-medium">{item.name}</p>
+                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                  {item.sizeLabel} · {item.reason}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="portal-card">
         <h2 className="text-lg font-semibold">Change password</h2>
@@ -189,8 +251,6 @@ export function SecurityClient({
               className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none ring-sky-500/30 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950"
             />
           </div>
-          {message ? <p className="portal-alert-success">{message}</p> : null}
-          {error ? <p className="portal-alert-error">{error}</p> : null}
           <button type="submit" disabled={loading} className="portal-primary-button">
             {loading ? "Updating..." : "Update password"}
           </button>
@@ -198,18 +258,9 @@ export function SecurityClient({
       </section>
 
       <section className="portal-card">
-        <h2 className="text-lg font-semibold">Connected mobile devices</h2>
-        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Connect new phones from My Files → Contacts. Revoke a device here to stop contact
-          synchronization without deleting backed-up contacts.
-        </p>
-        <ConnectedDevicesPanel initialDevices={initialDevices} />
-      </section>
-
-      <section className="portal-card">
         <h2 className="text-lg font-semibold">Current session</h2>
         <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          You are signed in on this browser session.
+          Sign out of this browser session.
         </p>
         <button
           type="button"
@@ -218,13 +269,6 @@ export function SecurityClient({
         >
           Sign out
         </button>
-      </section>
-
-      <section className="portal-card">
-        <h2 className="text-lg font-semibold">Multi-factor authentication</h2>
-        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          MFA is not enabled for customer accounts.
-        </p>
       </section>
     </div>
   );

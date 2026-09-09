@@ -38,11 +38,6 @@ function NavIcon({ name }: { name: string }) {
         <path d="M4 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
-    contacts: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
-        <path d="M16 11a4 4 0 1 0-8 0M4 20a8 8 0 0 1 16 0" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
     starred: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
         <path d="m12 3 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.8 7.2 17.9l.9-5.4L4.2 8.7l5.4-.8L12 3Z" strokeLinecap="round" strokeLinejoin="round" />

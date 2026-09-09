@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser, notFoundResponse } from '@/lib/api/auth';
 import { buildDownloadEncryptionPayload } from '@/lib/crypto/secure-file-crypto';
-import { db } from '@/lib/db';
+import { db, orm } from '@/lib/db';
+import { recordCustomerSecurityEvent } from '@/lib/security/customer-events';
 import { isSecureFileRecord } from '@/lib/storage/secure-upload-metadata';
 import { reserveDownloadBandwidth } from '@/lib/storage/bandwidth-reservation';
 import {
@@ -54,6 +55,16 @@ export async function GET(_request: Request, { params }: RouteParams) {
   }
 
   try {
+    await orm.File.where({ id: owned.file.id, userId: user.id }).update({
+      lastAccessedAt: new Date().toISOString(),
+    });
+
+    await recordCustomerSecurityEvent({
+      userId: user.id,
+      eventType: 'FILE_DOWNLOAD',
+      metadata: { fileId: owned.file.id, fileName: owned.file.name },
+    });
+
     const downloadUrl = await getStorageService().createDownloadUrl({
       objectRef: owned.objectRef,
       fileName: owned.file.name,
@@ -121,6 +132,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     if (!restored) {
       return notFoundResponse();
     }
+    await recordCustomerSecurityEvent({
+      userId: user.id,
+      eventType: 'FILE_RESTORE',
+      metadata: { fileId },
+    });
     return NextResponse.json({ success: true });
   }
 
@@ -158,6 +174,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       }
     });
 
+    await recordCustomerSecurityEvent({
+      userId: user.id,
+      eventType: 'FILE_DELETE',
+      metadata: { fileId, fileName: deletedFile.name, permanent: true },
+    });
+
     return NextResponse.json({ success: true });
   } catch (purgeError) {
     console.error('Permanent delete failed', purgeError);
@@ -189,6 +211,12 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   if (!file) {
     return notFoundResponse();
   }
+
+  await recordCustomerSecurityEvent({
+    userId: user.id,
+    eventType: 'FILE_DELETE',
+    metadata: { fileId, fileName: owned.file.name, permanent: false },
+  });
 
   return NextResponse.json({ success: true, trashed: true });
 }

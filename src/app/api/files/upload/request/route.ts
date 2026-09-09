@@ -25,6 +25,7 @@ const uploadRequestSchema = z
     category: z.enum(FILE_CATEGORIES).optional(),
     secure: z.boolean().optional().default(false),
     encryption: secureEncryptionMetadataSchema.optional(),
+    clientUploadId: z.string().uuid().optional(),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -131,6 +132,7 @@ export async function POST(request: Request) {
       category,
       secure: parsed.data.secure,
       encryption: parsed.data.encryption,
+      clientUploadId: parsed.data.clientUploadId,
     });
 
     if (!pendingUpload.ok) {
@@ -142,6 +144,7 @@ export async function POST(request: Request) {
       category: pendingUpload.file.category,
       contentType: 'application/octet-stream',
       securityMode: parsed.data.secure ? 'SECURE' : 'NORMAL',
+      reusedExisting: pendingUpload.file.reusedExisting === true,
     });
   } catch (uploadError) {
     if (

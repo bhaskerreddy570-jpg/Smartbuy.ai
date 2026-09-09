@@ -8,6 +8,14 @@ export const FILE_CATEGORIES = [
 
 export type FileCategory = (typeof FILE_CATEGORIES)[number];
 
+/** Categories shown in the customer portal (Contacts backup product removed). */
+export const CUSTOMER_FILE_CATEGORIES = [
+  'IMAGES',
+  'VIDEOS',
+  'DOCUMENTS',
+  'OTHER',
+] as const satisfies readonly FileCategory[];
+
 export const STORAGE_PROVIDERS = ['S3'] as const;
 
 export type StorageProviderId = (typeof STORAGE_PROVIDERS)[number];

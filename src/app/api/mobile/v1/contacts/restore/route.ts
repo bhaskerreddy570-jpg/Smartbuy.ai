@@ -1,26 +1,8 @@
-import { NextResponse } from 'next/server';
-import { requireMobileAuth } from '@/lib/mobile/require-mobile-auth';
-import { listActiveContacts } from '@/lib/contacts/sync-service';
-import { parseContactPayload } from '@/lib/contacts/payload';
+import { featureRemovedResponse } from '@/lib/api/feature-removed';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-export async function GET(request: Request) {
-  const { error, auth } = await requireMobileAuth(request);
-  if (error || !auth) {
-    return error!;
-  }
-
-  const contacts = await listActiveContacts(auth.userId);
-  return NextResponse.json({
-    total: contacts.length,
-    contacts: contacts.map((contact) => ({
-      cloudContactId: contact.id,
-      displayName: contact.displayName,
-      payload: parseContactPayload(contact.payloadJson),
-      syncVersion: contact.syncVersion.toString(),
-      updatedAt: contact.updatedAt,
-    })),
-  });
+export async function GET() {
+  return featureRemovedResponse('Mobile contacts restore');
 }
