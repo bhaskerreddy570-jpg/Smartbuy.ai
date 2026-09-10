@@ -19,7 +19,7 @@ export type AdminLoginResult =
       ok: true;
       sessionToken: string;
       cookie: string;
-      admin: { id: string; email: string; role: 'ADMIN' };
+      admin: { id: string; email: string; role: 'ADMIN' | 'SUPER_ADMIN' };
     }
   | {
       ok: false;

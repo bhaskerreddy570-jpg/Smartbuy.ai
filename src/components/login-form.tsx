@@ -52,7 +52,7 @@ export function LoginForm() {
         return;
       }
 
-      router.push("/overview");
+      router.push("/account");
       router.refresh();
     } catch {
       setError("Unable to sign in right now. Please try again.");

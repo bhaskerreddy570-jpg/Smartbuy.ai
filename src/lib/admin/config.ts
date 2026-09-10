@@ -4,7 +4,7 @@ const DEFAULT_RATE_LIMIT_WINDOW_MINUTES = 15;
 const DEFAULT_ACCOUNT_LOCK_THRESHOLD = 10;
 
 export const adminConfig = {
-  sessionCookieName: 'cloudstorenow_admin_session',
+  sessionCookieName: 'smartbuy_admin_session',
   sessionTtlHours: Number(
     process.env.ADMIN_SESSION_TTL_HOURS ?? DEFAULT_SESSION_TTL_HOURS,
   ),

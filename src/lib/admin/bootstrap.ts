@@ -65,7 +65,7 @@ export async function countAdminUsers(): Promise<number> {
 
 export async function getAdminUserByEmail(
   email: string,
-): Promise<{ id: string; email: string; role: 'ADMIN'; lockedAt: string | null } | null> {
+): Promise<{ id: string; email: string; role: 'ADMIN' | 'SUPER_ADMIN'; lockedAt: string | null } | null> {
   return orm.AdminUser.where({ email: email.toLowerCase() })
     .select('id', 'email', 'role', 'lockedAt')
     .first();

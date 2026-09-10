@@ -1,25 +1,22 @@
-import { Suspense } from "react";
-import Link from "next/link";
-import { redirect } from "next/navigation";
-import { auth } from "@/auth";
-import { SiteHeader } from "@/components/site-header";
-import { LoginForm } from "@/components/login-form";
+import { Suspense } from 'react';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { auth } from '@/auth';
+import { SmartBuyHeader } from '@/components/smartbuy/site-header';
+import { LoginForm } from '@/components/login-form';
 
 export default async function LoginPage() {
   const session = await auth();
-
-  if (session?.user?.id) {
-    redirect("/overview");
-  }
+  if (session?.user?.id) redirect('/account');
 
   return (
     <>
-      <SiteHeader />
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-12 sm:px-6">
+      <SmartBuyHeader />
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-12">
         <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
           <h1 className="text-2xl font-semibold">Sign in</h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Access your secure cloud storage dashboard.
+            Access your SmartBuy AI account.
           </p>
           <div className="mt-6">
             <Suspense fallback={<p>Loading...</p>}>
@@ -27,10 +24,8 @@ export default async function LoginPage() {
             </Suspense>
           </div>
           <p className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
-            Need an account?{" "}
-            <Link href="/register" className="font-medium text-blue-600">
-              Create one
-            </Link>
+            Need an account?{' '}
+            <Link href="/register" className="font-medium text-emerald-600">Create one</Link>
           </p>
         </div>
       </main>

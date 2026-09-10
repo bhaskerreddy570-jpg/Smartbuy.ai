@@ -1,8 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createPlanBasedCustomerLimits } from '@/lib/customer-limits';
-import { ensurePlanConfigurationsSeeded } from '@/lib/plan-configuration';
 import { db, orm } from '@/lib/db';
 
 const registerSchema = z.object({
@@ -22,68 +20,41 @@ export async function POST(request: Request) {
     const parsed = registerSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Invalid registration details' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'Invalid registration details' }, { status: 400 });
     }
 
     const email = parsed.data.email.toLowerCase();
     const existing = await orm.User.where({ email }).first();
 
     if (existing) {
-      return NextResponse.json(
-        { error: 'An account with this email already exists' },
-        { status: 409 },
-      );
+      return NextResponse.json({ error: 'An account with this email already exists' }, { status: 409 });
     }
 
     const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-    await ensurePlanConfigurationsSeeded();
-    const defaults = await createPlanBasedCustomerLimits('FREE');
 
     const user = await db.transaction(async (tx) => {
       const createdUser = await tx.orm.public.User.create({
         email,
         name: parsed.data.name ?? null,
         passwordHash,
-        assignedPlan: defaults.assignedPlan,
-        storageQuotaOverride: null,
-        maxFileSizeOverride: null,
-        monthlyBandwidthLimitOverride: null,
-        storageQuota: defaults.storageQuota,
-        storageUsed: BigInt(0),
-        maxFileSizeBytes: defaults.maxFileSizeBytes,
-        monthlyBandwidthLimitBytes: defaults.monthlyBandwidthLimitBytes,
-        monthlyBandwidthUsedBytes: defaults.monthlyBandwidthUsedBytes,
-        bandwidthPeriodStart: defaults.bandwidthPeriodStart,
       });
 
-      await tx.orm.public.Subscription.create({
+      await tx.orm.public.NotificationPreference.create({
         userId: createdUser.id,
-        plan: defaults.assignedPlan,
-        status: 'ACTIVE',
-        storageQuota: defaults.storageQuota,
+        email: true,
+        push: false,
+        inApp: true,
       });
 
       return createdUser;
     });
 
     return NextResponse.json(
-      {
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        },
-      },
+      { user: { id: user.id, email: user.email, name: user.name } },
       { status: 201 },
     );
   } catch (error) {
     console.error('Registration failed', error);
-    return NextResponse.json(
-      { error: 'Unable to create account' },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Unable to create account' }, { status: 500 });
   }
 }

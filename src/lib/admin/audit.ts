@@ -8,20 +8,17 @@ export type AdminAuditAction =
   | 'ADMIN_LOGOUT'
   | 'ADMIN_SESSION_REVOKED'
   | 'ADMIN_PASSWORD_CHANGED'
-  | 'CUSTOMER_ACCOUNT_LOCKED'
-  | 'CUSTOMER_ACCOUNT_UNLOCKED'
-  | 'STORAGE_LIMIT_CHANGED'
-  | 'MAX_FILE_SIZE_CHANGED'
-  | 'BANDWIDTH_LIMIT_CHANGED'
-  | 'CUSTOMER_PLAN_CHANGED'
-  | 'CUSTOMER_LOCKED'
-  | 'CUSTOMER_UNLOCKED'
-  | 'CUSTOMER_RECOVERY'
   | 'RECOVERY_TOKEN_ISSUED'
   | 'RECOVERY_TOKEN_USED'
   | 'RECOVERY_REQUEST_DENIED'
-  | 'BACKUP_REQUESTED'
-  | 'DATA_RECOVERY_REQUESTED';
+  | 'PROVIDER_UPDATED'
+  | 'MERCHANT_UPDATED'
+  | 'AFFILIATE_RULE_UPDATED'
+  | 'PRODUCT_MERGED'
+  | 'PRODUCT_UNMERGED'
+  | 'SETTINGS_UPDATED'
+  | 'USER_LOCKED'
+  | 'USER_UNLOCKED';
 
 export async function writeAdminAuditLog(params: {
   adminUserId?: string | null;
@@ -43,5 +40,6 @@ export async function writeAdminAuditLog(params: {
     metadata: safeMetadata ? JSON.stringify(safeMetadata) : null,
     ipAddress: params.ipAddress ?? null,
     userAgent: params.userAgent ?? null,
+    createdAt: new Date().toISOString(),
   });
 }

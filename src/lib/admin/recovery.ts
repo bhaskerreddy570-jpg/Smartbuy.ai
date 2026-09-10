@@ -239,8 +239,8 @@ export async function requestBackupRecovery(params: {
 }): Promise<void> {
   await writeAdminAuditLog({
     adminUserId: params.adminUserId,
-    action: params.requestType,
-    metadata: params.metadata,
+    action: 'SETTINGS_UPDATED',
+    metadata: { ...params.metadata, requestType: params.requestType },
     ipAddress: params.ipAddress,
     userAgent: params.userAgent,
   });

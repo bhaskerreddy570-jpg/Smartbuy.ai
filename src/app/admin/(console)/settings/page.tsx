@@ -1,18 +1,24 @@
 export default function AdminSettingsPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Admin settings</h1>
-        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Console preferences and operational notes.
+      <h1 className="text-2xl font-semibold">AI & Recommendation Settings</h1>
+      <div className="admin-card space-y-4">
+        <div>
+          <label className="text-sm font-medium">Customer value weight</label>
+          <p className="text-2xl font-bold text-emerald-600">75%</p>
+        </div>
+        <div>
+          <label className="text-sm font-medium">Business/affiliate weight</label>
+          <p className="text-2xl font-bold">25%</p>
+        </div>
+        <div>
+          <label className="text-sm font-medium">Match confidence threshold</label>
+          <p className="text-2xl font-bold">0.85</p>
+        </div>
+        <p className="text-sm text-zinc-500">
+          Configurable via SystemSetting table. Customer satisfaction dominates recommendations.
         </p>
       </div>
-      <section className="admin-card">
-        <h2 className="text-lg font-semibold">Console</h2>
-        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Admin settings are managed through environment configuration and secure bootstrap flows. No secrets are displayed here.
-        </p>
-      </section>
     </div>
   );
 }

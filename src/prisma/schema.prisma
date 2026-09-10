@@ -1,48 +1,82 @@
-// Cloud Storage Platform data contract (Prisma 8)
+// SmartBuy AI — production data contract (Prisma 8)
 
-enum FileStatus {
-  PENDING
-  READY
+enum UserRole {
+  CUSTOMER
+  ADMIN
 }
 
-enum FileSecurityMode {
-  NORMAL
-  SECURE
+enum ProviderStatus {
+  ACTIVE
+  INACTIVE
+  PENDING_APPROVAL
+  NOT_SUPPORTED
 }
 
-enum FileCategory {
-  CONTACTS
-  IMAGES
-  VIDEOS
-  DOCUMENTS
+enum DataAcquisitionMode {
+  OFFICIAL_API
+  AFFILIATE_API
+  PRODUCT_FEED
+  AUTHORIZED_PARTNER
+  PERMITTED_PUBLIC
+  LICENSED_THIRD_PARTY
+  CUSTOMER_PROVIDED
+  MANUAL_CHECK
+  MOCK
+}
+
+enum ProviderCategory {
+  ECOMMERCE
+  TRAVEL_FLIGHT
+  TRAVEL_HOTEL
+  TRAVEL_BUS
+  TRAVEL_TRAIN
+  CAR_RENTAL
+  RIDE_SERVICE
   OTHER
 }
 
-enum StorageProviderKind {
-  S3
-}
-
-enum Plan {
-  FREE
-  BASIC
-  PRO
-  BUSINESS
-}
-
-enum SubscriptionStatus {
+enum AffiliateProgramStatus {
   ACTIVE
+  PENDING
+  INACTIVE
+}
+
+enum CommissionState {
+  CLICKED
+  PENDING
+  CONFIRMED
+  REJECTED
   CANCELLED
-  PAST_DUE
+  PAID
+}
+
+enum DataFreshness {
+  LIVE
+  CACHED
+  HISTORICAL
+  CUSTOMER_PROVIDED
+  ESTIMATED
+  UNAVAILABLE
+}
+
+enum PriceAlertStatus {
+  ACTIVE
+  TRIGGERED
+  CANCELLED
   EXPIRED
 }
 
-enum BillingPeriod {
-  MONTHLY
-  ANNUAL
+enum SearchStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  PARTIAL
 }
 
 enum AdminRole {
   ADMIN
+  SUPER_ADMIN
 }
 
 enum AdminAuditAction {
@@ -51,216 +85,514 @@ enum AdminAuditAction {
   ADMIN_LOGOUT
   ADMIN_SESSION_REVOKED
   ADMIN_PASSWORD_CHANGED
-  CUSTOMER_ACCOUNT_LOCKED
-  CUSTOMER_ACCOUNT_UNLOCKED
-  STORAGE_LIMIT_CHANGED
-  MAX_FILE_SIZE_CHANGED
-  BANDWIDTH_LIMIT_CHANGED
-  CUSTOMER_PLAN_CHANGED
-  CUSTOMER_LOCKED
-  CUSTOMER_UNLOCKED
-  CUSTOMER_RECOVERY
   RECOVERY_TOKEN_ISSUED
   RECOVERY_TOKEN_USED
   RECOVERY_REQUEST_DENIED
-  BACKUP_REQUESTED
-  DATA_RECOVERY_REQUESTED
-  CONTACT_BACKUP_VIEWED
-  MOBILE_DEVICE_REVOKED
+  PROVIDER_UPDATED
+  MERCHANT_UPDATED
+  AFFILIATE_RULE_UPDATED
+  PRODUCT_MERGED
+  PRODUCT_UNMERGED
+  SETTINGS_UPDATED
+  USER_LOCKED
+  USER_UNLOCKED
 }
 
-enum MobilePlatform {
-  ANDROID
-  IOS
-}
-
-enum ContactMappingSyncState {
-  SYNCED
-  PENDING
-  CONFLICT
-  PAUSED
-}
-
-enum ContactConflictResolution {
-  KEEP_DEVICE
-  KEEP_CLOUD
-  MERGE
-  DEFER
-}
-
-enum CustomerSecurityEventType {
-  LOGIN_SUCCESS
-  LOGIN_FAILURE
-  LOGOUT
-  PASSWORD_CHANGED
-  SESSION_CREATED
-  SESSION_REVOKED
-  FILE_UPLOAD
-  FILE_DOWNLOAD
-  FILE_DELETE
-  FILE_RESTORE
-  SECURITY_SETTING_CHANGED
-  NEW_DEVICE_DETECTED
-  UNUSUAL_ACTIVITY
-}
-
-enum CustomerRiskLevel {
-  INFO
-  LOW
-  MEDIUM
-}
-
-model PlanConfiguration {
-  plan Plan @id
-  displayName String
-  storageQuotaBytes BigInt
-  maxFileSizeBytes BigInt
-  monthlyBandwidthLimitBytes BigInt
-  active Boolean @default(true)
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+enum NotificationChannel {
+  EMAIL
+  PUSH
+  IN_APP
 }
 
 model User {
   id           Uuid     @id @default(uuid())
-  name         String?
   email        String   @unique
   passwordHash String
-  assignedPlan Plan @default(FREE)
-  storageQuotaOverride BigInt?
-  maxFileSizeOverride BigInt?
-  monthlyBandwidthLimitOverride BigInt?
-  storageQuota BigInt
-  storageUsed  BigInt   @default(0)
-  maxFileSizeBytes BigInt
-  monthlyBandwidthLimitBytes BigInt
-  monthlyBandwidthUsedBytes BigInt @default(0)
-  bandwidthPeriodStart TimestamptzString?
+  name         String?
+  phone        String?
   lockedAt     TimestamptzString?
   lockReason   String?
   createdAt    TimestamptzString @default(now())
   updatedAt    temporal.updatedAtString()
 
-  files         File[]
-  folders       Folder[]
-  subscriptions Subscription[]
-  cloudContacts CloudContact[]
-  customerDevices CustomerDevice[]
-  contactBackupSettings ContactBackupSettings?
-  devicePairingSessions DevicePairingSession[]
-  customerSessions CustomerSession[]
-  securityEvents CustomerSecurityEvent[]
+  sessions         UserSession[]
+  searches         Search[]
+  savedProducts    SavedProduct[]
+  savedSearches    SavedSearch[]
+  priceAlerts      PriceAlert[]
+  affiliateClicks  AffiliateClick[]
+  submittedFares   CustomerSubmittedFare[]
+  screenshots      CustomerScreenshot[]
+  notificationPrefs NotificationPreference?
 }
 
-model File {
-  id           Uuid       @id @default(uuid())
-  userId       Uuid
-  name         String
-  originalName String
-  storageKey   String     @unique
-  size         BigInt
-  mimeType     String
-  status       FileStatus
-  category     FileCategory      @default(OTHER)
-  storageProvider StorageProviderKind @default(S3)
-  storageNamespace String          @default("default")
-  starred      Boolean           @default(false)
-  securityMode FileSecurityMode  @default(NORMAL)
-  encryptionFormatVersion String?
-  encryptionAlgorithm String?
-  encryptionKdf String?
-  encryptionSalt String?
-  encryptionIv String?
-  plaintextSize BigInt?
-  folderId     Uuid?
-  clientUploadId String?
-  lastAccessedAt TimestamptzString?
+model UserSession {
+  id               Uuid              @id @default(uuid())
+  userId           Uuid
+  sessionTokenHash String            @unique
+  deviceLabel      String?
+  ipAddress        String?
+  userAgent        String?
+  lastActiveAt     TimestamptzString?
+  expiresAt        TimestamptzString?
+  revokedAt        TimestamptzString?
+  createdAt        TimestamptzString @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Provider {
+  id                  Uuid                @id @default(uuid())
+  slug                String              @unique
+  name                String
+  category            ProviderCategory
+  status              ProviderStatus      @default(PENDING_APPROVAL)
+  dataMode            DataAcquisitionMode @default(MOCK)
+  apiAvailable        Boolean             @default(false)
+  affiliateAvailable  Boolean             @default(false)
+  supportedOperations String              @default("[]")
+  termsNotes        String?
+  commissionNotes   String?
+  baseUrl           String?
+  allowedDomains    String              @default("[]")
+  rateLimitPerMin   Int?
+  lastSuccessfulSync TimestamptzString?
+  errorCount        Int                 @default(0)
+  configJson        String              @default("{}")
+  createdAt         TimestamptzString   @default(now())
+  updatedAt         temporal.updatedAtString()
+
+  credentials ProviderCredential[]
+  merchants   Merchant[]
+  listings    MerchantListing[]
+  syncJobs    ProviderSyncJob[]
+
+  @@index([status])
+  @@index([category])
+}
+
+model ProviderCredential {
+  id           Uuid              @id @default(uuid())
+  providerId   Uuid
+  credentialType String
+  encryptedValue String
+  expiresAt    TimestamptzString?
   createdAt    TimestamptzString @default(now())
   updatedAt    temporal.updatedAtString()
-  deletedAt    TimestamptzString?
 
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  folder Folder? @relation(fields: [folderId], references: [id])
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([folderId])
-  @@index([userId, status])
-  @@index([userId, category])
-  @@index([userId, category, status])
-  @@index([userId, starred])
-  @@index([userId, lastAccessedAt])
-  @@unique([userId, clientUploadId])
+  @@index([providerId])
 }
 
-model CustomerSession {
+model AffiliateProgram {
+  id              Uuid                   @id @default(uuid())
+  name            String
+  network         String?
+  status          AffiliateProgramStatus @default(PENDING)
+  trackingParam   String?
+  cookieDurationDays Int?
+  paymentTerms    String?
+  createdAt       TimestamptzString    @default(now())
+  updatedAt       temporal.updatedAtString()
+
+  merchants Merchant[]
+}
+
+model Merchant {
+  id                 Uuid              @id @default(uuid())
+  providerId         Uuid
+  affiliateProgramId Uuid?
+  slug               String            @unique
+  name               String
+  affiliateId        String?
+  deepLinkTemplate   String?
+  defaultCommissionRate Decimal?
+  status             ProviderStatus    @default(ACTIVE)
+  configJson         String            @default("{}")
+  createdAt          TimestamptzString @default(now())
+  updatedAt          temporal.updatedAtString()
+
+  provider         Provider          @relation(fields: [providerId], references: [id])
+  affiliateProgram AffiliateProgram? @relation(fields: [affiliateProgramId], references: [id])
+  commissionRules  CommissionRule[]
+  listings         MerchantListing[]
+  affiliateClicks  AffiliateClick[]
+  affiliateOrders  AffiliateOrder[]
+  priceObservations PriceObservation[]
+
+  @@index([providerId])
+}
+
+model CommissionRule {
   id           Uuid              @id @default(uuid())
-  userId       Uuid
-  sessionTokenHash String        @unique
-  deviceLabel  String?
-  platform     String?
-  browser      String?
-  ipAddress    String?
-  userAgent    String?
-  lastActiveAt TimestamptzString?
-  expiresAt    TimestamptzString?
-  revokedAt    TimestamptzString?
+  merchantId   Uuid
+  category     String?
+  productId    Uuid?
+  ratePercent  Decimal
+  newCustomerRate Decimal?
+  existingCustomerRate Decimal?
+  exclusions   String?
+  effectiveFrom TimestamptzString @default(now())
+  effectiveTo  TimestamptzString?
   createdAt    TimestamptzString @default(now())
 
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+  @@index([category])
+}
+
+model Product {
+  id            Uuid              @id @default(uuid())
+  brand         String?
+  model         String?
+  title         String
+  category      String
+  subcategory   String?
+  description   String?
+  specifications String           @default("{}")
+  identifiers   String            @default("{}")
+  images        String            @default("[]")
+  canonicalAttributes String      @default("{}")
+  createdAt     TimestamptzString @default(now())
+  updatedAt     temporal.updatedAtString()
+
+  variants      ProductVariant[]
+  productIds    ProductIdentifier[]
+  listings      MerchantListing[]
+  savedProducts SavedProduct[]
+  priceAlerts   PriceAlert[]
+  priceObservations PriceObservation[]
+  searchResults SearchResult[]
+  recommendations Recommendation[]
+
+  @@index([category])
+  @@index([brand])
+}
+
+model ProductVariant {
+  id        Uuid              @id @default(uuid())
+  productId Uuid
+  name      String
+  attributes String           @default("{}")
+  sku       String?
+  createdAt TimestamptzString @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductIdentifier {
+  id         Uuid              @id @default(uuid())
+  productId  Uuid
+  type       String
+  value      String
+  createdAt  TimestamptzString @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([type, value])
+  @@index([productId])
+}
+
+model MerchantListing {
+  id                Uuid              @id @default(uuid())
+  canonicalProductId Uuid?
+  merchantId        Uuid
+  providerId        Uuid
+  merchantProductId String
+  title             String
+  url               String
+  affiliateUrl      String?
+  price             Decimal?
+  mrp               Decimal?
+  currency          String            @default("INR")
+  availability      String?
+  seller            String?
+  sellerRating      Decimal?
+  warranty          String?
+  returnPolicy      String?
+  deliveryInfo      String?
+  rating            Decimal?
+  reviewCount       Int?
+  dataFreshness     DataFreshness     @default(LIVE)
+  sourceTimestamp   TimestamptzString?
+  matchConfidence   Decimal?
+  createdAt         TimestamptzString @default(now())
+  updatedAt         temporal.updatedAtString()
+
+  product  Product?  @relation(fields: [canonicalProductId], references: [id])
+  merchant Merchant  @relation(fields: [merchantId], references: [id])
+  provider Provider  @relation(fields: [providerId], references: [id])
+  priceObservations PriceObservation[]
+  affiliateClicks   AffiliateClick[]
+  searchResults     SearchResult[]
+
+  @@unique([merchantId, merchantProductId])
+  @@index([canonicalProductId])
+  @@index([merchantId])
+  @@index([providerId])
+}
+
+model PriceObservation {
+  id           Uuid              @id @default(uuid())
+  productId    Uuid
+  merchantId   Uuid
+  listingId    Uuid
+  price        Decimal
+  mrp          Decimal?
+  availability String?
+  currency     String            @default("INR")
+  source       String
+  observedAt   TimestamptzString @default(now())
+
+  product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  merchant Merchant       @relation(fields: [merchantId], references: [id])
+  listing MerchantListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([productId, observedAt])
+  @@index([listingId])
+}
+
+model Search {
+  id              Uuid              @id @default(uuid())
+  userId          Uuid?
+  sessionId       String?
+  query           String
+  parsedIntent    String            @default("{}")
+  category        String?
+  status          SearchStatus      @default(PENDING)
+  resultCount     Int               @default(0)
+  createdAt       TimestamptzString @default(now())
+  completedAt     TimestamptzString?
+
+  user            User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  results         SearchResult[]
+  recommendations Recommendation[]
+  affiliateClicks AffiliateClick[]
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([createdAt])
+}
+
+model SearchResult {
+  id              Uuid              @id @default(uuid())
+  searchId        Uuid
+  productId       Uuid?
+  listingId       Uuid?
+  rank            Int
+  customerScore   Decimal?
+  businessScore   Decimal?
+  combinedScore   Decimal?
+  badge           String?
+  explanation     String?
+  createdAt       TimestamptzString @default(now())
+
+  search  Search           @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  product Product?         @relation(fields: [productId], references: [id])
+  listing MerchantListing? @relation(fields: [listingId], references: [id])
+
+  @@index([searchId])
+}
+
+model Recommendation {
+  id              Uuid              @id @default(uuid())
+  searchId        Uuid
+  productId       Uuid
+  type            String
+  customerScore   Decimal
+  businessScore   Decimal
+  combinedScore   Decimal
+  explanation     String
+  savingsAmount   Decimal?
+  savingsPercent  Decimal?
+  createdAt       TimestamptzString @default(now())
+
+  search  Search  @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([searchId])
+}
+
+model AffiliateClick {
+  id                Uuid              @id @default(uuid())
+  userId            Uuid?
+  sessionId         String?
+  searchId          Uuid?
+  productId         Uuid?
+  listingId         Uuid?
+  merchantId        Uuid
+  affiliateProgram  String?
+  clickId           String            @unique @default(uuid())
+  destinationUrl    String
+  affiliateUrlId    String?
+  deviceInfo        String?
+  ipAddress         String?
+  createdAt         TimestamptzString @default(now())
+
+  user     User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  search   Search?          @relation(fields: [searchId], references: [id], onDelete: SetNull)
+  merchant Merchant         @relation(fields: [merchantId], references: [id])
+  listing  MerchantListing? @relation(fields: [listingId], references: [id])
+  orders   AffiliateOrder[]
+
+  @@index([userId])
+  @@index([merchantId])
+  @@index([searchId])
+  @@index([createdAt])
+}
+
+model AffiliateOrder {
+  id              Uuid              @id @default(uuid())
+  clickId         Uuid?
+  merchantId      Uuid
+  externalOrderId String?
+  orderAmount     Decimal?
+  currency        String            @default("INR")
+  orderDate       TimestamptzString?
+  createdAt       TimestamptzString @default(now())
+
+  click        AffiliateClick?    @relation(fields: [clickId], references: [id])
+  merchant     Merchant           @relation(fields: [merchantId], references: [id])
+  commissions  AffiliateCommission[]
+
+  @@index([merchantId])
+  @@index([clickId])
+}
+
+model AffiliateCommission {
+  id                Uuid              @id @default(uuid())
+  orderId           Uuid?
+  merchantId        Uuid
+  state             CommissionState     @default(CLICKED)
+  estimatedAmount   Decimal?
+  confirmedAmount   Decimal?
+  paidAmount        Decimal?
+  commissionRate    Decimal?
+  currency          String            @default("INR")
+  notes             String?
+  stateChangedAt    TimestamptzString @default(now())
+  createdAt         TimestamptzString @default(now())
+  updatedAt         temporal.updatedAtString()
+
+  order AffiliateOrder? @relation(fields: [orderId], references: [id])
+
+  @@index([merchantId])
+  @@index([state])
+}
+
+model PriceAlert {
+  id              Uuid              @id @default(uuid())
+  userId          Uuid
+  productId       Uuid
+  merchantId      Uuid?
+  targetPrice     Decimal
+  currency        String            @default("INR")
+  status          PriceAlertStatus  @default(ACTIVE)
+  notificationChannel NotificationChannel @default(EMAIL)
+  triggeredAt     TimestamptzString?
+  createdAt       TimestamptzString @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([productId])
+}
+
+model SavedProduct {
+  id        Uuid              @id @default(uuid())
+  userId    Uuid
+  productId Uuid
+  createdAt TimestamptzString @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model SavedSearch {
+  id        Uuid              @id @default(uuid())
+  userId    Uuid
+  query     String
+  intent    String            @default("{}")
+  createdAt TimestamptzString @default(now())
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([userId, revokedAt])
 }
 
-model CustomerSecurityEvent {
-  id        Uuid                    @id @default(uuid())
-  userId    Uuid
-  eventType CustomerSecurityEventType
-  riskLevel CustomerRiskLevel       @default(INFO)
-  metadata  String?
-  ipAddress String?
-  userAgent String?
-  createdAt TimestamptzString       @default(now())
+model CustomerSubmittedFare {
+  id          Uuid              @id @default(uuid())
+  userId      Uuid?
+  sessionId   String?
+  providerSlug String
+  fare        Decimal
+  currency    String            @default("INR")
+  etaMinutes  Int?
+  tripDetails String?
+  confirmed   Boolean           @default(false)
+  createdAt   TimestamptzString @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([userId, createdAt])
-  @@index([eventType])
+  @@index([sessionId])
 }
 
-model Folder {
-  id        Uuid     @id @default(uuid())
-  userId    Uuid
-  name      String
-  parentId  Uuid?
+model CustomerScreenshot {
+  id          Uuid              @id @default(uuid())
+  userId      Uuid?
+  sessionId   String?
+  fileName    String
+  mimeType    String
+  storageKey  String
+  extractedData String?
+  confirmed   Boolean           @default(false)
+  createdAt   TimestamptzString @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId])
+}
+
+model NotificationPreference {
+  id        Uuid              @id @default(uuid())
+  userId    Uuid              @unique
+  email     Boolean           @default(true)
+  push      Boolean           @default(false)
+  inApp     Boolean           @default(true)
   createdAt TimestamptzString @default(now())
   updatedAt temporal.updatedAtString()
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent   Folder?  @relation("FolderTree", fields: [parentId], references: [id])
-  children Folder[] @relation("FolderTree")
-  files    File[]
-
-  @@index([userId])
-  @@index([parentId])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Subscription {
-  id            Uuid               @id @default(uuid())
-  userId        Uuid
-  plan          Plan
-  status        SubscriptionStatus
-  storageQuota  BigInt
-  billingPeriod BillingPeriod?
-  startDate     TimestamptzString  @default(now())
-  renewalDate   TimestamptzString?
-  cancelledAt   TimestamptzString?
-  createdAt     TimestamptzString  @default(now())
-  updatedAt     temporal.updatedAtString()
+model SystemSetting {
+  key       String            @id
+  value     String
+  updatedAt temporal.updatedAtString()
+}
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+model ProviderSyncJob {
+  id          Uuid              @id @default(uuid())
+  providerId  Uuid
+  status      String
+  startedAt   TimestamptzString @default(now())
+  completedAt TimestamptzString?
+  errorMessage String?
+  metadata    String?
 
-  @@index([userId])
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
 }
 
 model AdminUser {
@@ -281,10 +613,8 @@ model AdminUser {
   createdAt              TimestamptzString @default(now())
   updatedAt              temporal.updatedAtString()
 
-  sessions    AdminSession[]
-  auditLogs   AdminAuditLog[]
-
-  @@index([role])
+  sessions  AdminSession[]
+  auditLogs AdminAuditLog[]
 }
 
 model AdminSession {
@@ -300,7 +630,6 @@ model AdminSession {
   adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
 
   @@index([adminUserId])
-  @@index([expiresAt])
 }
 
 model AdminAuditLog {
@@ -329,132 +658,4 @@ model AdminLoginAttempt {
   success     Boolean           @default(false)
 
   @@index([email, attemptedAt])
-  @@index([ipAddress, attemptedAt])
-}
-
-model ContactBackupSettings {
-  userId                Uuid              @id
-  automaticBackupEnabled Boolean          @default(false)
-  lastSuccessfulBackupAt TimestamptzString?
-  lastSyncStatus        String?
-  lastSyncError         String?
-  contactCount          Int               @default(0)
-  contactStorageBytes   BigInt            @default(0)
-  syncCursor            BigInt            @default(0)
-  createdAt             TimestamptzString @default(now())
-  updatedAt             temporal.updatedAtString()
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model CustomerDevice {
-  id          Uuid              @id @default(uuid())
-  userId      Uuid
-  platform    MobilePlatform
-  displayName String
-  appVersion  String?
-  automaticBackupEnabled Boolean @default(true)
-  lastSeenAt  TimestamptzString?
-  lastSyncAt  TimestamptzString?
-  lastSyncStatus String?
-  revokedAt   TimestamptzString?
-  createdAt   TimestamptzString @default(now())
-  updatedAt   temporal.updatedAtString()
-
-  user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokens   CustomerDeviceToken[]
-  mappings DeviceContactMapping[]
-  pairingSessions DevicePairingSession[]
-
-  @@index([userId])
-  @@index([userId, revokedAt])
-}
-
-model DevicePairingSession {
-  id         Uuid              @id @default(uuid())
-  userId     Uuid
-  codeHash   String
-  expiresAt  TimestamptzString
-  consumedAt TimestamptzString?
-  deviceId   Uuid?
-  createdAt  TimestamptzString @default(now())
-
-  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  device CustomerDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([expiresAt])
-}
-
-model CustomerDeviceToken {
-  id         Uuid              @id @default(uuid())
-  deviceId   Uuid
-  tokenHash  String            @unique
-  expiresAt  TimestamptzString
-  createdAt  TimestamptzString @default(now())
-  revokedAt  TimestamptzString?
-
-  device CustomerDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
-
-  @@index([deviceId])
-  @@index([expiresAt])
-}
-
-model CloudContact {
-  id            Uuid              @id @default(uuid())
-  userId        Uuid
-  displayName   String?
-  payloadJson   String
-  payloadBytes  BigInt
-  syncVersion   BigInt
-  securityMode  FileSecurityMode  @default(NORMAL)
-  createdAt     TimestamptzString @default(now())
-  updatedAt     temporal.updatedAtString()
-  deletedAt     TimestamptzString?
-
-  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mappings  DeviceContactMapping[]
-  conflicts ContactSyncConflict[]
-
-  @@index([userId])
-  @@index([userId, deletedAt])
-  @@index([userId, syncVersion])
-}
-
-model DeviceContactMapping {
-  id                 Uuid                  @id @default(uuid())
-  deviceId           Uuid
-  cloudContactId     Uuid
-  localContactId     String
-  lastKnownVersion   BigInt
-  lastLocalModified  TimestamptzString?
-  syncState          ContactMappingSyncState @default(PENDING)
-  createdAt          TimestamptzString     @default(now())
-  updatedAt          temporal.updatedAtString()
-
-  device       CustomerDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
-  cloudContact CloudContact   @relation(fields: [cloudContactId], references: [id], onDelete: Cascade)
-
-  @@unique([deviceId, localContactId])
-  @@index([deviceId])
-  @@index([cloudContactId])
-}
-
-model ContactSyncConflict {
-  id                 Uuid                     @id @default(uuid())
-  userId             Uuid
-  cloudContactId     Uuid
-  deviceId           Uuid?
-  devicePayloadJson  String
-  cloudPayloadJson   String
-  resolution         ContactConflictResolution?
-  resolvedAt         TimestamptzString?
-  createdAt          TimestamptzString        @default(now())
-  updatedAt          temporal.updatedAtString()
-
-  cloudContact CloudContact @relation(fields: [cloudContactId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([cloudContactId])
-  @@index([userId, resolvedAt])
 }
