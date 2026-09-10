@@ -33,7 +33,9 @@ export async function POST(request: Request) {
       });
     }
 
-    const result = await executeSearch(parsed.data.query);
+    const result = await executeSearch(parsed.data.query, {
+      userId: session?.user?.id ?? null,
+    });
 
     return NextResponse.json({
       ...result,

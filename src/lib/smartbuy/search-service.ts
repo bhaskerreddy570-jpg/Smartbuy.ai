@@ -1,6 +1,9 @@
-import { parseIntent } from './intent-parser';
 import { generateRecommendations } from './recommendation';
 import { getActiveProviderAdapters } from './providers/registry';
+import { getAIProvider } from '@/lib/ai';
+import { persistSearch, completeSearch } from './repositories/search-repository';
+import { recordPriceObservation } from './repositories/price-repository';
+import { resolveMerchantIdBySlug } from './repositories/merchant-repository';
 import type { ParsedIntent, ProviderListing, RecommendationResult } from './types';
 
 export interface SearchResponse {
@@ -14,9 +17,16 @@ export interface SearchResponse {
 
 export async function executeSearch(
   query: string,
-  searchId?: string,
+  options?: { searchId?: string; userId?: string | null; sessionId?: string | null },
 ): Promise<SearchResponse> {
-  const intent = parseIntent(query);
+  const searchId = options?.searchId ?? crypto.randomUUID();
+
+  const ai = getAIProvider();
+  const aiResult = await ai.parseIntent(query);
+  const intent = aiResult.intent;
+
+  await persistSearch(searchId, query, intent, options?.userId, options?.sessionId);
+
   const adapters = getActiveProviderAdapters();
 
   const allListings: Array<{ listing: ProviderListing; merchantSlug: string }> = [];
@@ -32,9 +42,13 @@ export async function executeSearch(
 
   for (const settled of results) {
     if (settled.status === 'rejected') {
-      const slug = 'unknown';
-      providerStatuses.push({ provider: slug, status: 'ERROR', count: 0, message: 'Provider temporarily unavailable' });
-      unavailableProviders.push(slug);
+      providerStatuses.push({
+        provider: 'unknown',
+        status: 'ERROR',
+        count: 0,
+        message: 'Provider temporarily unavailable',
+      });
+      unavailableProviders.push('unknown');
       continue;
     }
 
@@ -56,7 +70,7 @@ export async function executeSearch(
         count: 0,
         message: result.message ?? `${adapter.name} temporarily unavailable`,
       });
-      if (result.status === 'UNAVAILABLE' || result.status === 'ERROR') {
+      if (result.status === 'UNAVAILABLE' || result.status === 'ERROR' || result.status === 'NOT_SUPPORTED') {
         unavailableProviders.push(adapter.name);
       }
     }
@@ -64,8 +78,25 @@ export async function executeSearch(
 
   const recommendations = generateRecommendations(allListings, intent);
 
+  void completeSearch(searchId, recommendations);
+
+  for (const item of recommendations.allListings) {
+    if (!item.listing.price || !item.canonicalProductId) continue;
+    const merchantId = await resolveMerchantIdBySlug(item.merchantSlug);
+    if (!merchantId) continue;
+    void recordPriceObservation({
+      productId: item.canonicalProductId,
+      merchantId,
+      listingId: item.canonicalProductId,
+      price: item.listing.price,
+      mrp: item.listing.mrp,
+      availability: item.listing.availability,
+      source: item.merchantSlug,
+    });
+  }
+
   return {
-    searchId: searchId ?? crypto.randomUUID(),
+    searchId,
     query,
     intent,
     recommendations,

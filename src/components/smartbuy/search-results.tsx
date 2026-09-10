@@ -164,6 +164,13 @@ export function SearchResults({ query, recommendations, providerStatuses }: Sear
           </p>
         </div>
       )}
+
+      <p className="text-xs text-zinc-500">
+        Prices and availability may change. Buy links may earn us a commission at no extra cost to you.{' '}
+        <a href="/affiliate-disclosure" className="underline hover:text-zinc-700">
+          Affiliate disclosure
+        </a>
+      </p>
     </div>
   );
 }

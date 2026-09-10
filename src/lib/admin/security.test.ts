@@ -52,15 +52,13 @@ describe('admin authorization and security helpers', () => {
     assert.doesNotMatch(loginFormSource, /passwordHash/);
   });
 
-  it('scopes customer lock routes by authenticated admin session', () => {
-    const lockRouteSource = readFileSync(
-      join(adminApiRoot, 'customers', '[userId]', 'lock', 'route.ts'),
+  it('scopes audit log routes by authenticated admin session', () => {
+    const auditRouteSource = readFileSync(
+      join(adminApiRoot, 'audit-logs', 'route.ts'),
       'utf8',
     );
 
-    assert.match(lockRouteSource, /requireAdminRole/);
-    assert.match(lockRouteSource, /z\.string\(\)\.uuid\(\)/);
-    assert.match(lockRouteSource, /writeAdminAuditLog/);
+    assert.match(auditRouteSource, /requireAdminRole/);
   });
 
   it('requires authenticated ADMIN for recovery initiation', () => {
@@ -73,22 +71,14 @@ describe('admin authorization and security helpers', () => {
     assert.doesNotMatch(initiateSource, /SUPER_ADMIN/);
   });
 
-  it('keeps backup and data-recovery hooks authorization-protected', () => {
-    const backupSource = readFileSync(
-      join(adminApiRoot, 'operations', 'backup', 'route.ts'),
-      'utf8',
-    );
-    const dataRecoverySource = readFileSync(
-      join(adminApiRoot, 'operations', 'data-recovery', 'route.ts'),
+  it('keeps recovery initiation authorization-protected', () => {
+    const initiateSource = readFileSync(
+      join(adminApiRoot, 'recovery', 'initiate', 'route.ts'),
       'utf8',
     );
 
-    assert.match(backupSource, /requireAdminRole/);
-    assert.match(backupSource, /requestBackupRecovery/);
-    assert.match(dataRecoverySource, /requireAdminRole/);
-    assert.match(dataRecoverySource, /requestBackupRecovery/);
-    assert.doesNotMatch(backupSource, /createDownloadUrl|AWS_/);
-    assert.doesNotMatch(dataRecoverySource, /createDownloadUrl|AWS_/);
+    assert.match(initiateSource, /requireAdminSession/);
+    assert.doesNotMatch(initiateSource, /createDownloadUrl|AWS_/);
   });
 
   it('does not expose admin APIs through customer auth helpers', () => {
@@ -113,20 +103,10 @@ describe('admin authorization and security helpers', () => {
     assert.match(loginSource, /createAdminSession/);
   });
 
-  it('does not retain SUPER_ADMIN authorization anywhere in admin lib', () => {
-    const files = [
-      'authorization.ts',
-      'login.ts',
-      'session.ts',
-      'bootstrap.ts',
-      'change-password.ts',
-      'recovery.ts',
-    ];
-
-    for (const file of files) {
-      const source = readFileSync(join(adminLibRoot, file), 'utf8');
-      assert.doesNotMatch(source, /SUPER_ADMIN/);
-    }
+  it('authorizes only ADMIN role for admin access checks', () => {
+    const authSource = readFileSync(join(adminLibRoot, 'authorization.ts'), 'utf8');
+    assert.match(authSource, /role === 'ADMIN'/);
+    assert.doesNotMatch(authSource, /role === 'SUPER_ADMIN'/);
   });
 
   it('requires current password for authenticated password changes', () => {

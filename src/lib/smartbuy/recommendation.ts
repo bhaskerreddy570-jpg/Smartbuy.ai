@@ -9,12 +9,31 @@ import { calculateBusinessScore } from './commission';
 import { calculateSavings, findHighestPrice } from './savings';
 import { groupListingsByProduct } from './product-matcher';
 import { MOCK_MERCHANTS } from './providers/mock-data';
+import { getProviderDefinition } from './providers/definitions';
+import { getRecommendationWeights } from '@/lib/site-config';
 
-const DEFAULT_WEIGHTS: RecommendationWeights = {
-  customerWeight: 0.75,
-  businessWeight: 0.25,
-  matchConfidenceThreshold: 0.85,
-};
+export function getDefaultWeights(): RecommendationWeights {
+  const w = getRecommendationWeights();
+  return {
+    customerWeight: w.customerWeight,
+    businessWeight: w.businessWeight,
+    matchConfidenceThreshold: w.matchConfidenceThreshold,
+  };
+}
+
+function getMerchantCommissionRate(merchantSlug: string): number {
+  const mock = MOCK_MERCHANTS[merchantSlug as keyof typeof MOCK_MERCHANTS];
+  if (mock?.commissionRate) return mock.commissionRate;
+  const def = getProviderDefinition(merchantSlug);
+  return def?.commissionRate ?? 0;
+}
+
+function getMerchantName(merchantSlug: string): string {
+  const mock = MOCK_MERCHANTS[merchantSlug as keyof typeof MOCK_MERCHANTS];
+  if (mock?.name) return mock.name;
+  const def = getProviderDefinition(merchantSlug);
+  return def?.name ?? merchantSlug;
+}
 
 function formatFreshnessLabel(freshness: string, timestamp?: Date): string {
   if (!timestamp) {
@@ -104,34 +123,53 @@ function buildExplanation(
   return reasons.length > 0 ? reasons : ['Matches your search criteria'];
 }
 
+/**
+ * Customer value must dominate: business score cannot override when customer gap is significant.
+ */
+export function applyCustomerFirstRanking(
+  scored: ScoredListing[],
+  weights: RecommendationWeights,
+): ScoredListing[] {
+  const dominanceGap = getRecommendationWeights().customerDominanceGap;
+
+  return [...scored].sort((a, b) => {
+    const customerGap = a.customerScore - b.customerScore;
+    if (Math.abs(customerGap) >= dominanceGap) {
+      return b.customerScore - a.customerScore;
+    }
+    const combinedA =
+      a.customerScore * weights.customerWeight + a.businessScore * weights.businessWeight;
+    const combinedB =
+      b.customerScore * weights.customerWeight + b.businessScore * weights.businessWeight;
+    return combinedB - combinedA;
+  });
+}
+
 export function generateRecommendations(
   allListings: Array<{ listing: ProviderListing; merchantSlug: string }>,
   intent: ParsedIntent,
-  weights: RecommendationWeights = DEFAULT_WEIGHTS,
+  weights: RecommendationWeights = getDefaultWeights(),
 ): RecommendationResult {
   const groups = groupListingsByProduct(allListings, weights.matchConfidenceThreshold);
 
   const scored: ScoredListing[] = [];
 
   for (const { listing, merchantSlug } of allListings) {
-    const merchant = MOCK_MERCHANTS[merchantSlug as keyof typeof MOCK_MERCHANTS];
-    const merchantName = merchant?.name ?? merchantSlug;
-    const commissionRate = merchant?.commissionRate ?? 0;
+    const merchantName = getMerchantName(merchantSlug);
+    const commissionRate = getMerchantCommissionRate(merchantSlug);
 
     const pricesWithMerchant = allListings
       .filter((l) => l.listing.price)
       .map((l) => ({
         price: l.listing.price!,
-        merchant: MOCK_MERCHANTS[l.merchantSlug as keyof typeof MOCK_MERCHANTS]?.name ?? l.merchantSlug,
+        merchant: getMerchantName(l.merchantSlug),
       }));
 
     const sortedPrices = [...pricesWithMerchant].sort((a, b) => a.price - b.price);
     const priceRank = sortedPrices.findIndex((p) => p.price === listing.price);
 
     const customerScore = calculateCustomerScore(listing, intent, priceRank, allListings.length);
-    const businessScore = calculateBusinessScore(true, commissionRate);
-    const combinedScore =
-      customerScore * weights.customerWeight + businessScore * weights.businessWeight;
+    const businessScore = calculateBusinessScore(commissionRate > 0, commissionRate);
 
     const highest = findHighestPrice(pricesWithMerchant);
     let savingsVsHighest: number | undefined;
@@ -151,7 +189,8 @@ export function generateRecommendations(
       merchantName,
       customerScore,
       businessScore,
-      combinedScore,
+      combinedScore:
+        customerScore * weights.customerWeight + businessScore * weights.businessWeight,
       savingsVsHighest,
       savingsPercent,
       dataFreshnessLabel: formatFreshnessLabel(
@@ -162,14 +201,14 @@ export function generateRecommendations(
     });
   }
 
-  scored.sort((a, b) => b.combinedScore - a.combinedScore);
+  const ranked = applyCustomerFirstRanking(scored, weights);
 
-  const validPrices = scored.filter((s) => s.listing.price);
+  const validPrices = ranked.filter((s) => s.listing.price);
   const cheapestByPrice = [...validPrices].sort(
     (a, b) => (a.listing.price ?? 0) - (b.listing.price ?? 0),
   );
 
-  const bestOverall = scored[0] ?? null;
+  const bestOverall = ranked[0] ?? null;
   const cheapest = cheapestByPrice[0] ?? null;
 
   if (bestOverall) {
@@ -198,18 +237,20 @@ export function generateRecommendations(
   const matchedGroups = groups.map((g) => ({
     canonicalKey: g.canonicalKey,
     matchConfidence: g.matchConfidence,
-    listings: g.listings.map(({ listing, merchantSlug }) => {
-      const found = scored.find((s) => s.listing.merchantProductId === listing.merchantProductId);
-      return found!;
-    }).filter(Boolean),
+    listings: g.listings
+      .map(({ listing, merchantSlug }) => {
+        const found = ranked.find((s) => s.listing.merchantProductId === listing.merchantProductId);
+        return found!;
+      })
+      .filter(Boolean),
   }));
 
   return {
     bestOverall,
     cheapest,
-    allListings: scored,
+    allListings: ranked,
     matchedGroups,
   };
 }
 
-export { DEFAULT_WEIGHTS };
+export const DEFAULT_WEIGHTS = getDefaultWeights;

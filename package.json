@@ -7,7 +7,7 @@
     "build": "prisma contract emit && next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-test-module-mocks --import tsx --test src/**/*.test.ts",
+    "test": "node --experimental-test-module-mocks --import tsx --test $(find src -name '*.test.ts' | sort)",
     "test:integration": "node --experimental-test-module-mocks --import tsx --test --test-concurrency=1 src/**/*.integration.test.ts",
     "test:admin-security": "node --experimental-test-module-mocks --import tsx --test --test-concurrency=1 src/lib/admin/**/*.test.ts",
     "check:env": "bash scripts/check-env.sh",
@@ -15,6 +15,7 @@
     "db:status": "bash scripts/migration-status.sh",
     "test:e2e-smoke": "node scripts/e2e-smoke.mjs",
     "admin:bootstrap": "node --import tsx scripts/bootstrap-admin.mjs",
+    "db:seed": "node --import tsx scripts/seed-dev.mjs",
     "postinstall": "prisma skills sync || exit 0",
     "contract:emit": "prisma contract emit"
   },

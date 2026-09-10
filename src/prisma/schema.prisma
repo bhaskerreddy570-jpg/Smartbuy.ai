@@ -124,6 +124,7 @@ model User {
   submittedFares   CustomerSubmittedFare[]
   screenshots      CustomerScreenshot[]
   notificationPrefs NotificationPreference?
+  notifications    Notification[]
 }
 
 model UserSession {
@@ -658,4 +659,32 @@ model AdminLoginAttempt {
   success     Boolean           @default(false)
 
   @@index([email, attemptedAt])
+}
+
+model Notification {
+  id        Uuid                @id @default(uuid())
+  userId    Uuid
+  channel   NotificationChannel @default(IN_APP)
+  title     String
+  body      String
+  readAt    TimestamptzString?
+  metadata  String              @default("{}")
+  createdAt TimestamptzString   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model SystemEvent {
+  id        Uuid              @id @default(uuid())
+  eventType String
+  severity  String            @default("INFO")
+  message   String
+  metadata  String?
+  createdAt TimestamptzString @default(now())
+
+  @@index([eventType])
+  @@index([createdAt])
 }
