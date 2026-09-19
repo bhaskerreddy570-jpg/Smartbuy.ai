@@ -12,6 +12,7 @@ export default async function AccountPage() {
       <SmartBuyHeader />
       <main className="mx-auto max-w-2xl px-4 py-8">
         <h1 className="text-2xl font-bold">My Account</h1>
+        <p className="mt-2 text-sm text-zinc-500">Manage your SmartBuy AI account and security.</p>
         <div className="mt-6 space-y-4 rounded-2xl border border-zinc-200 p-6 dark:border-zinc-800">
           <div>
             <p className="text-sm text-zinc-500">Email</p>
@@ -23,6 +24,9 @@ export default async function AccountPage() {
               <p className="font-medium">{session.user.name}</p>
             </div>
           )}
+          <Link href="/account/profile" className="inline-block rounded-xl bg-zinc-900 px-4 py-3 font-medium text-white">
+            Profile & Security
+          </Link>
         </div>
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <Link href="/alerts" className="rounded-xl border border-zinc-200 p-4 hover:border-emerald-300 dark:border-zinc-800">
