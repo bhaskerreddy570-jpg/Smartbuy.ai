@@ -100,9 +100,14 @@ else
   echo "Runtime database configuration is validated by /api/health/db."
 fi
 
-echo "Ensuring single application ADMIN exists (idempotent runtime bootstrap)..."
-npm run admin:bootstrap || {
-  echo "Admin bootstrap did not complete; runtime health check will retry on first request." >&2
-}
+if [[ -n "$MIGRATE_URL" ]]; then
+  echo "Ensuring single application ADMIN exists (idempotent runtime bootstrap)..."
+  npm run admin:bootstrap || {
+    echo "Admin bootstrap did not complete; runtime health check will retry on first request." >&2
+  }
+else
+  echo "Skipping admin bootstrap: no database URL is available at build time."
+  echo "Admin bootstrap will be handled at runtime when database configuration is available."
+fi
 
 npm run build
