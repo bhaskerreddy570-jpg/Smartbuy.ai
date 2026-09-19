@@ -30,7 +30,7 @@ export const ECOMMERCE_PROVIDER_DEFINITIONS: ProviderDefinition[] = [
     affiliateParam: 'tag',
     commissionRate: 0.02,
     hasMockData: true,
-    envCredentialKeys: ['AMAZON_API_KEY', 'AMAZON_API_SECRET', 'AMAZON_ASSOCIATE_TAG'],
+    envCredentialKeys: ['AMAZON_CREATORS_CLIENT_ID', 'AMAZON_CREATORS_CLIENT_SECRET', 'AMAZON_CREATORS_PARTNER_TAG'],
   },
   {
     slug: 'flipkart',
