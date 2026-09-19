@@ -44,7 +44,7 @@ export function createAuthorizedFeedAdapter(def: ProviderDefinition): ProviderAd
   const token = process.env[`${def.slug.toUpperCase().replace(/[^A-Z0-9]/g, '_')}_API_TOKEN`];
 
   const searchUrl = process.env[`${def.slug.toUpperCase().replace(/[^A-Z0-9]/g, '_')}_API_SEARCH_URL`];
-  const endpoint = searchUrl || (baseUrl ? `${baseUrl.replace(/\\/$/, '')}/search` : undefined);
+  const endpoint = searchUrl || (baseUrl ? `${baseUrl.replace(/\/$/, '')}/search` : undefined);
 
   async function search(query: string, intent: ParsedIntent): Promise<ProviderSearchResult> {
     if (!endpoint || !token) {
