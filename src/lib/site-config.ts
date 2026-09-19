@@ -1,7 +1,4 @@
-/**
- * Central site branding and configuration.
- * Final brand name pending owner approval — use PROJECT_NAME_PLACEHOLDER until then.
- */
+/** Central SmartBuy site configuration. */
 
 export const PROJECT_NAME_PLACEHOLDER = 'PROJECT_NAME_PLACEHOLDER';
 
@@ -10,10 +7,8 @@ export function getSiteName(): string {
 }
 
 export function getSiteTagline(): string {
-  return (
-    process.env.NEXT_PUBLIC_SITE_TAGLINE?.trim() ||
-    'Your personal decision assistant for buying and booking.'
-  );
+  return process.env.NEXT_PUBLIC_SITE_TAGLINE?.trim() ||
+    'Your personal decision assistant for buying and booking.';
 }
 
 export function getSiteUrl(): string {
@@ -24,16 +19,15 @@ export function getSiteUrl(): string {
 }
 
 export function getSiteDescription(): string {
-  return (
-    process.env.NEXT_PUBLIC_SITE_DESCRIPTION?.trim() ||
-    'Search, compare, and decide smarter across Indian ecommerce, travel, and ride options. Customer-first recommendations with transparent affiliate disclosure.'
-  );
+  return process.env.NEXT_PUBLIC_SITE_DESCRIPTION?.trim() ||
+    'Search, compare, and decide smarter across Indian ecommerce, travel, and ride options. Customer-first recommendations with transparent affiliate disclosure.';
 }
 
 export function isMockProvidersEnabled(): boolean {
   const flag = process.env.USE_MOCK_PROVIDERS?.toLowerCase();
+  if (flag === 'true' || flag === '1') return true;
   if (flag === 'false' || flag === '0') return false;
-  return true;
+  return process.env.NODE_ENV !== 'production';
 }
 
 export function getRecommendationWeights() {
@@ -41,7 +35,6 @@ export function getRecommendationWeights() {
     customerWeight: parseFloat(process.env.CUSTOMER_SCORE_WEIGHT ?? '0.75'),
     businessWeight: parseFloat(process.env.BUSINESS_SCORE_WEIGHT ?? '0.25'),
     matchConfidenceThreshold: parseFloat(process.env.MATCH_CONFIDENCE_THRESHOLD ?? '0.85'),
-    /** Business score cannot override when customer gap exceeds this */
     customerDominanceGap: parseFloat(process.env.CUSTOMER_DOMINANCE_GAP ?? '0.15'),
   };
 }
