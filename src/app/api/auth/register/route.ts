@@ -4,14 +4,15 @@ import { z } from 'zod';
 import { db, orm } from '@/lib/db';
 
 const registerSchema = z.object({
-  name: z.string().trim().min(1).max(100).optional(),
+  name: z.string().trim().min(1).max(100),
   email: z.string().email().max(255),
-  password: z
-    .string()
+  password: z.string()
     .min(8)
     .max(128)
-    .regex(/[A-Za-z]/, 'Password must contain at least one letter')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number'),
+  phone: z.string().trim().max(30).optional().nullable(),
 });
 
 export async function POST(request: Request) {
@@ -35,7 +36,8 @@ export async function POST(request: Request) {
     const user = await db.transaction(async (tx) => {
       const createdUser = await tx.orm.public.User.create({
         email,
-        name: parsed.data.name ?? null,
+        name: parsed.data.name,
+        phone: parsed.data.phone?.trim() || null,
         passwordHash,
       });
 
