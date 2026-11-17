@@ -1,6 +1,6 @@
 import { adminConfig } from '@/lib/admin/config';
 
-export const RECOVERY_HANDOFF_COOKIE = 'cloudstorenow_recovery_handoff';
+export const RECOVERY_HANDOFF_COOKIE = 'smartbuy_recovery_handoff';
 const RECOVERY_HANDOFF_MAX_AGE_SECONDS = 300;
 
 export function buildRecoveryHandoffCookie(token: string): string {

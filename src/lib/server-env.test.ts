@@ -29,8 +29,8 @@ describe('server env resolution', () => {
 
   it('derives AUTH_URL from VERCEL_URL when AUTH_URL is unset', () => {
     delete process.env.AUTH_URL;
-    process.env.VERCEL_URL = 'storage-nine-brown.vercel.app';
-    assert.equal(resolveAuthUrl(), 'https://storage-nine-brown.vercel.app');
+    process.env.VERCEL_URL = 'smartbuy-preview.vercel.app';
+    assert.equal(resolveAuthUrl(), 'https://smartbuy-preview.vercel.app');
   });
 
   it('reports env presence without exposing values', () => {

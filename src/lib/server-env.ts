@@ -44,7 +44,7 @@ function deriveAuthSecretFromDatabaseUrl(): string | undefined {
     return undefined;
   }
 
-  const input = `cloudstorenow-customer-auth-v1:${databaseUrl}`;
+  const input = `smartbuy-customer-auth-v1:${databaseUrl}`;
   let h1 = 0x811c9dc5;
   let h2 = 0x01000193;
 

@@ -13,7 +13,7 @@ See `.env.example`. Required:
 | `DATABASE_URL` | PostgreSQL connection string |
 | `AUTH_SECRET` | `openssl rand -base64 32` |
 | `AUTH_URL` | `https://smartbuy.ai` |
-| `USE_MOCK_PROVIDERS` | `true` (until real API credentials are available) |
+| `USE_MOCK_PROVIDERS` | Development only. Ignored when `NODE_ENV=production`. |
 
 ## Vercel deployment
 

@@ -68,4 +68,4 @@ The authentication code is deployment-ready in structure, but production operati
 
 ## Important note
 
-The tracked customer `UserSession` records provide device/session visibility and revocation state, while Auth.js currently owns the browser authentication cookie. A future hardening pass should make revocation authoritative for every authenticated request if the product requires immediate server-side invalidation of an already-issued Auth.js JWT.
+The tracked customer `UserSession` records are authoritative for revocation. Auth.js still issues the browser cookie, and the JWT callback checks the hashed session on each authenticated request. A session with `revokedAt` set, or an expired `expiresAt`, is rejected. Logout, password changes, and the account session API write that revocation state.

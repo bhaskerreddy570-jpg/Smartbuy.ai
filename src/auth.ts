@@ -11,6 +11,7 @@ import { recordCustomerSecurityEvent } from '@/lib/security/customer-events';
 import {
   createCustomerSession,
   hashCustomerSessionToken,
+  isCustomerSessionRevoked,
 } from '@/lib/security/customer-sessions';
 
 type AuthConfig = Record<string, unknown>;
@@ -111,7 +112,7 @@ function buildAuthConfig(): AuthConfig {
       }),
     ],
     callbacks: {
-      jwt({
+      async jwt({
         token,
         user,
       }: {
@@ -132,6 +133,10 @@ function buildAuthConfig(): AuthConfig {
           token.customerSessionTokenHash = hashCustomerSessionToken(
             user.customerSessionToken,
           );
+        }
+        if (typeof token.customerSessionTokenHash === 'string') {
+          const revoked = await isCustomerSessionRevoked(token.customerSessionTokenHash);
+          if (revoked) return null;
         }
         return token;
       },

@@ -19,19 +19,19 @@ export function createNotConfiguredAdapter(def: ProviderDefinition): ProviderAda
     supportedOperations: [],
 
     async search(_query: string, _intent: ParsedIntent): Promise<ProviderSearchResult> {
-      return emptyResult('NOT_SUPPORTED');
+      return emptyResult('NOT_CONFIGURED');
     },
 
     async getProduct(_merchantProductId: string): Promise<ProviderSearchResult> {
-      return emptyResult('NOT_SUPPORTED');
+      return emptyResult('NOT_CONFIGURED');
     },
 
     async getPrice() {
-      return { status: 'NOT_SUPPORTED' };
+      return { status: 'NOT_CONFIGURED' };
     },
 
     async getAffiliateLink(_listing: ProviderListing) {
-      return { status: 'NOT_SUPPORTED' };
+      return { status: 'NOT_CONFIGURED' };
     },
 
     getProductUrl(listing: ProviderListing): string {
