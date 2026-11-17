@@ -1,6 +1,6 @@
-import type { ParsedIntent, ProviderListing, ProviderSearchResult } from '../types';
-import type { ProviderAdapter } from './types';
-import type { ProviderDefinition } from './definitions';
+import type { ParsedIntent, ProviderListing, ProviderSearchResult } from '../../types';
+import type { ProviderAdapter } from '../types';
+import type { ProviderDefinition } from '../definitions';
 
 type GenericResponse = {
   listings?: unknown[];
@@ -9,31 +9,70 @@ type GenericResponse = {
   data?: { listings?: unknown[]; products?: unknown[]; results?: unknown[] };
 };
 
-function normalize(value: any, def: ProviderDefinition): ProviderListing | null {
-  const id = String(value?.merchantProductId ?? value?.id ?? value?.sku ?? value?.productId ?? '').trim();
-  const title = String(value?.title ?? value?.name ?? '').trim();
-  const url = String(value?.affiliateUrl ?? value?.productUrl ?? value?.url ?? '').trim();
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function readString(value: unknown): string {
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return '';
+}
+
+function readNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function readStringRecord(value: unknown): Record<string, string> | undefined {
+  const record = asRecord(value);
+  if (!record) return undefined;
+
+  const entries: Array<[string, string]> = [];
+  for (const [key, entry] of Object.entries(record)) {
+    const text = readString(entry);
+    if (text) entries.push([key, text]);
+  }
+
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
+function normalize(value: unknown, def: ProviderDefinition): ProviderListing | null {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const id = readString(record.merchantProductId ?? record.id ?? record.sku ?? record.productId);
+  const title = readString(record.title ?? record.name);
+  const url = readString(record.affiliateUrl ?? record.productUrl ?? record.url);
   if (!id || !title || !url) return null;
+
+  const brand = readString(record.brand);
+  const model = readString(record.model);
+  const subcategory = readString(record.subcategory);
+  const availability = readString(record.availability);
+  const seller = readString(record.seller);
+  const affiliateUrl = readString(record.affiliateUrl);
+  const imageUrl = readString(record.imageUrl);
 
   return {
     merchantProductId: id,
     title,
-    brand: value?.brand ? String(value.brand) : undefined,
-    model: value?.model ? String(value.model) : undefined,
-    category: String(value?.category ?? def.category),
-    subcategory: value?.subcategory ? String(value.subcategory) : undefined,
-    price: typeof value?.price === 'number' ? value.price : undefined,
-    mrp: typeof value?.mrp === 'number' ? value.mrp : undefined,
-    currency: String(value?.currency ?? 'INR'),
-    availability: value?.availability ? String(value.availability) : undefined,
-    seller: value?.seller ? String(value.seller) : undefined,
-    rating: typeof value?.rating === 'number' ? value.rating : undefined,
-    reviewCount: typeof value?.reviewCount === 'number' ? value.reviewCount : undefined,
+    brand: brand || undefined,
+    model: model || undefined,
+    category: readString(record.category) || def.category,
+    subcategory: subcategory || undefined,
+    price: readNumber(record.price),
+    mrp: readNumber(record.mrp),
+    currency: readString(record.currency) || 'INR',
+    availability: availability || undefined,
+    seller: seller || undefined,
+    rating: readNumber(record.rating),
+    reviewCount: readNumber(record.reviewCount),
     url,
-    affiliateUrl: value?.affiliateUrl ? String(value.affiliateUrl) : undefined,
-    imageUrl: value?.imageUrl ? String(value.imageUrl) : undefined,
-    specifications: value?.specifications && typeof value.specifications === 'object' ? value.specifications : undefined,
-    identifiers: value?.identifiers && typeof value.identifiers === 'object' ? value.identifiers : undefined,
+    affiliateUrl: affiliateUrl || undefined,
+    imageUrl: imageUrl || undefined,
+    specifications: readStringRecord(record.specifications),
+    identifiers: readStringRecord(record.identifiers),
     dataFreshness: 'LIVE',
     sourceTimestamp: new Date(),
   };
@@ -49,7 +88,7 @@ export function createAuthorizedFeedAdapter(def: ProviderDefinition): ProviderAd
   async function search(query: string, intent: ParsedIntent): Promise<ProviderSearchResult> {
     if (!endpoint || !token) {
       return {
-        status: 'NOT_SUPPORTED',
+        status: 'NOT_CONFIGURED',
         listings: [],
         providerSlug: def.slug,
         message: `${def.name} is not configured with an authorized API/feed endpoint.`,

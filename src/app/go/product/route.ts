@@ -5,7 +5,8 @@ import {
   isAllowedRedirectUrl,
   validateRedirectParams,
 } from '@/lib/smartbuy/affiliate-redirect';
-import { MOCK_LISTINGS, MOCK_MERCHANTS } from '@/lib/smartbuy/providers/mock-data';
+import { hasAmazonCreatorsCredentials } from '@/lib/smartbuy/providers/adapters/amazon-creators-adapter';
+import { getProviderAdapter } from '@/lib/smartbuy/providers/registry';
 import { recordAffiliateClick } from '@/lib/smartbuy/repositories/affiliate-repository';
 import { resolveMerchantIdBySlug } from '@/lib/smartbuy/repositories/merchant-repository';
 
@@ -20,18 +21,37 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Invalid request parameters' }, { status: 400 });
   }
 
-  const listings = MOCK_LISTINGS[merchantSlug!];
-  if (!listings) {
+  const adapter = getProviderAdapter(merchantSlug!);
+  if (!adapter) {
     return NextResponse.json({ error: 'Unknown merchant' }, { status: 404 });
   }
+  if (!adapter.getProduct) {
+    return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+  }
 
-  const listing = listings.find((l) => l.merchantProductId === productId);
-  if (!listing) {
+  const product = await adapter.getProduct(productId!);
+  const listing = product.status === 'OK' ? product.listings[0] : undefined;
+  if (!listing?.url) {
     return NextResponse.json({ error: 'Product not found' }, { status: 404 });
   }
 
   if (!isAllowedRedirectUrl(listing.url, merchantSlug!)) {
     return NextResponse.json({ error: 'Invalid redirect destination' }, { status: 400 });
+  }
+
+  let destinationUrl: string;
+  try {
+    if (merchantSlug === 'amazon' && hasAmazonCreatorsCredentials() && adapter.getAffiliateLink) {
+      const link = await adapter.getAffiliateLink(listing);
+      if (!link.url || !isAllowedRedirectUrl(link.url, merchantSlug)) {
+        return NextResponse.json({ error: 'Invalid redirect destination' }, { status: 400 });
+      }
+      destinationUrl = link.url;
+    } else {
+      destinationUrl = buildAffiliateUrl(listing.url, merchantSlug!).url;
+    }
+  } catch {
+    return NextResponse.json({ error: 'Unable to generate affiliate link' }, { status: 500 });
   }
 
   const session = await auth();
@@ -48,10 +68,10 @@ export async function GET(request: Request) {
       sessionId,
       searchId,
       merchantId,
-      destinationUrl: listing.url,
+      destinationUrl,
       ipAddress: ip,
       deviceInfo: userAgent,
-      affiliateProgram: MOCK_MERCHANTS[merchantSlug as keyof typeof MOCK_MERCHANTS]?.name ?? merchantSlug,
+      affiliateProgram: adapter.name,
     });
   } else {
     console.info('Affiliate click (merchant not in DB)', {
@@ -61,15 +81,8 @@ export async function GET(request: Request) {
     });
   }
 
-  try {
-    const { url } = buildAffiliateUrl(listing.url, merchantSlug!);
-    const merchant = MOCK_MERCHANTS[merchantSlug as keyof typeof MOCK_MERCHANTS];
-
-    const response = NextResponse.redirect(url, 302);
-    response.headers.set('X-Affiliate-Click-Id', clickId);
-    response.headers.set('X-Merchant', merchant?.name ?? merchantSlug!);
-    return response;
-  } catch {
-    return NextResponse.json({ error: 'Unable to generate affiliate link' }, { status: 500 });
-  }
+  const response = NextResponse.redirect(destinationUrl, 302);
+  response.headers.set('X-Affiliate-Click-Id', clickId);
+  response.headers.set('X-Merchant', adapter.name);
+  return response;
 }

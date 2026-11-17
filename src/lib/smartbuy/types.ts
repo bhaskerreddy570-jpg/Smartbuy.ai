@@ -1,4 +1,4 @@
-export type ProviderOperationStatus = 'OK' | 'NOT_SUPPORTED' | 'ERROR' | 'UNAVAILABLE';
+export type ProviderOperationStatus = 'OK' | 'NOT_CONFIGURED' | 'NOT_SUPPORTED' | 'ERROR' | 'UNAVAILABLE';
 
 export interface ParsedIntent {
   category?: string;

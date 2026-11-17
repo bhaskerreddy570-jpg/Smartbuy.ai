@@ -70,7 +70,12 @@ export async function executeSearch(
         count: 0,
         message: result.message ?? `${adapter.name} temporarily unavailable`,
       });
-      if (result.status === 'UNAVAILABLE' || result.status === 'ERROR' || result.status === 'NOT_SUPPORTED') {
+      if (
+        result.status === 'UNAVAILABLE' ||
+        result.status === 'ERROR' ||
+        result.status === 'NOT_SUPPORTED' ||
+        result.status === 'NOT_CONFIGURED'
+      ) {
         unavailableProviders.push(adapter.name);
       }
     }

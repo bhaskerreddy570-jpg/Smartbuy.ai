@@ -1,5 +1,5 @@
-import type { ParsedIntent, ProviderListing, ProviderSearchResult } from '../types';
-import type { ProviderAdapter } from './types';
+import type { ParsedIntent, ProviderListing, ProviderSearchResult } from '../../types';
+import type { ProviderAdapter } from '../types';
 
 type AmazonItem = {
   asin?: string;
@@ -134,7 +134,7 @@ export function createAmazonCreatorsAdapter(): ProviderAdapter {
 
     async search(query: string, intent: ParsedIntent) {
       if (!hasAmazonCreatorsCredentials()) {
-        return result('NOT_SUPPORTED', [], 'Amazon Creators API credentials are not configured.');
+        return result('NOT_CONFIGURED', [], 'Amazon Creators API credentials are not configured.');
       }
       try {
         const payload: Record<string, unknown> = {
@@ -165,7 +165,7 @@ export function createAmazonCreatorsAdapter(): ProviderAdapter {
     },
 
     async getProduct(merchantProductId: string) {
-      if (!hasAmazonCreatorsCredentials()) return result('NOT_SUPPORTED', [], 'Amazon Creators API credentials are not configured.');
+      if (!hasAmazonCreatorsCredentials()) return result('NOT_CONFIGURED', [], 'Amazon Creators API credentials are not configured.');
       try {
         const data = await callAmazon('/catalog/v1/getItems', {
           itemIds: [merchantProductId],

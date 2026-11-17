@@ -1,3 +1,4 @@
+import { isMockProvidersEnabled } from '@/lib/site-config';
 import { MOCK_MERCHANTS } from './providers/mock-data';
 import { getAllowedDomainsMap, getProviderDefinition } from './providers/definitions';
 
@@ -20,12 +21,10 @@ export function isAllowedRedirectUrl(url: string, merchantSlug: string): boolean
 }
 
 function getAffiliateTag(merchantSlug: string): string | undefined {
-  const mock = MOCK_MERCHANTS[merchantSlug as keyof typeof MOCK_MERCHANTS];
-  if (mock?.affiliateTag) return mock.affiliateTag;
-
-  const def = getProviderDefinition(merchantSlug);
   if (merchantSlug === 'amazon') {
-    const tag = process.env.AMAZON_ASSOCIATE_TAG?.trim();
+    const tag =
+      process.env.AMAZON_CREATORS_PARTNER_TAG?.trim() ||
+      process.env.AMAZON_ASSOCIATE_TAG?.trim();
     if (tag) return tag;
   }
   if (merchantSlug === 'flipkart') {
@@ -33,7 +32,10 @@ function getAffiliateTag(merchantSlug: string): string | undefined {
     if (id) return id;
   }
 
-  return undefined;
+  if (!isMockProvidersEnabled()) return undefined;
+
+  const mock = MOCK_MERCHANTS[merchantSlug as keyof typeof MOCK_MERCHANTS];
+  return mock?.affiliateTag;
 }
 
 export function buildAffiliateUrl(
@@ -44,13 +46,18 @@ export function buildAffiliateUrl(
     throw new Error('Redirect URL not in merchant allowlist');
   }
 
+  const def = getProviderDefinition(merchantSlug);
+  const paramName = def?.affiliateParam ?? (merchantSlug === 'amazon' ? 'tag' : 'affid');
+  const parsed = new URL(productUrl);
+  if (parsed.searchParams.has(paramName)) {
+    return { url: productUrl, isAffiliate: true };
+  }
+
   const tag = getAffiliateTag(merchantSlug);
   if (!tag) {
     return { url: productUrl, isAffiliate: false };
   }
 
-  const def = getProviderDefinition(merchantSlug);
-  const paramName = def?.affiliateParam ?? (merchantSlug === 'amazon' ? 'tag' : 'affid');
   const separator = productUrl.includes('?') ? '&' : '?';
 
   return {

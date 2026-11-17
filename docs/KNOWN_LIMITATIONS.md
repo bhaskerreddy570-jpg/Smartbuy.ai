@@ -9,9 +9,10 @@ This document lists intentional limitations and gaps. Do not present these as fu
 ## Provider integrations
 
 ### Live ecommerce data
-- **Amazon, Flipkart, Croma**: Mock data only in development (`USE_MOCK_PROVIDERS=true`). Real PA-API / affiliate API adapters are not implemented.
-- **Reliance Digital, Vijay Sales, Tata CLiQ, Myntra, AJIO, Nykaa, Meesho**: Return `NOT_SUPPORTED` / `NOT_CONFIGURED`. No unauthorized scraping.
-- **Status**: BLOCKED until authorized API credentials and affiliate program approval.
+- **Amazon**: The Creators API adapter runs only when `AMAZON_CREATORS_CLIENT_ID`, `AMAZON_CREATORS_CLIENT_SECRET`, and `AMAZON_CREATORS_PARTNER_TAG` are all present. Otherwise Amazon stays `NOT_CONFIGURED` and returns no listings.
+- **Flipkart, Croma, and other catalog merchants**: An authorized feed adapter is used only when that merchant's API base URL and token are configured. Otherwise the provider stays `NOT_CONFIGURED`.
+- Mock providers do not run when `NODE_ENV=production`, even if `USE_MOCK_PROVIDERS=true`.
+- **Status**: Live results still require each merchant's authorized credentials. No provider fabricates prices when credentials are absent.
 
 ### Ride providers (Uber, Ola, Rapido)
 - Live fares are **not available** through authorized connections.
@@ -22,7 +23,7 @@ This document lists intentional limitations and gaps. Do not present these as fu
 
 ## Affiliate & commerce
 
-- `/go/product` resolves products from mock listings when database merchant listings are not synced.
+- `/go/product` resolves the product through the active provider adapter. Mock catalog redirects are used only while mock providers are enabled. Without a configured provider, the redirect returns not found instead of a fabricated merchant URL.
 - Commission tracking creates CLICKED records on redirect; order confirmation depends on affiliate network postbacks.
 - Estimated, confirmed, and paid commission amounts are separate fields but postback integration with real networks is not tested.
 - Admin merchant/provider pages may display mock configuration alongside database records.

@@ -85,10 +85,17 @@ export async function revokeOtherCustomerSessions(userId: string, currentSession
   return revoked;
 }
 
-export async function isCustomerSessionRevoked(sessionTokenHash: string): Promise<boolean> {
-  const session = await orm.UserSession.where({ sessionTokenHash }).select('revokedAt', 'expiresAt').first();
+export function isStoredCustomerSessionRevoked(session: {
+  revokedAt?: string | null;
+  expiresAt?: string | null;
+} | null): boolean {
   if (!session) return false;
   if (session.revokedAt) return true;
   if (session.expiresAt && new Date(session.expiresAt).getTime() <= Date.now()) return true;
   return false;
+}
+
+export async function isCustomerSessionRevoked(sessionTokenHash: string): Promise<boolean> {
+  const session = await orm.UserSession.where({ sessionTokenHash }).select('revokedAt', 'expiresAt').first();
+  return isStoredCustomerSessionRevoked(session);
 }
